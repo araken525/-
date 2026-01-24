@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { ArrowRight, Calendar, Smartphone, Zap } from "lucide-react";
+import Link from "next/link"; // ★追加
+import { ArrowRight, Calendar, Smartphone, Zap, Plus } from "lucide-react"; // ★Plusを追加
 
 export default function Home() {
   async function jumpToEvent(formData: FormData) {
@@ -10,7 +11,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-900 p-6 relative overflow-hidden">
-      {/* 背景の装飾（薄い円） */}
+      {/* 背景の装飾 */}
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-blue-100 rounded-full blur-3xl opacity-50 pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-indigo-100 rounded-full blur-3xl opacity-50 pointer-events-none" />
 
@@ -57,10 +58,15 @@ export default function Home() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-slate-100">
-            <p className="text-xs text-center text-slate-400 font-medium">
-              合言葉を知っている人のみ閲覧できます
-            </p>
+          {/* ★ここに追加：新規作成リンク */}
+          <div className="mt-6 pt-6 border-t border-slate-100 text-center">
+            <Link 
+              href="/create" 
+              className="inline-flex items-center text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline decoration-2 underline-offset-4"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              新しいイベントを作成する
+            </Link>
           </div>
         </div>
 
