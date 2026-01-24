@@ -1,31 +1,27 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* ここから下が追加・調整分です */
+@theme {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
 
-/* bodyへのスタイル適用は、@applyを使わず標準CSSで書くことでエラーを回避します */
+/* その他の設定 */
 body {
-  background-color: #f8fafc; /* bg-slate-50 と同じ色 */
-  color: #0f172a;            /* text-slate-900 と同じ色 */
-  
-  /* フォントを滑らかに見せる設定 */
+  background-color: #f8fafc;
+  color: #0f172a;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 html {
-  -webkit-tap-highlight-color: transparent; /* スマホタップ時の青ハイライト消し */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* スクロールバー非表示用 */
-@layer utilities {
-  .no-scrollbar::-webkit-scrollbar {
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
     display: none;
   }
-  
-  .no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
