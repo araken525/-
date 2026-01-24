@@ -4,24 +4,22 @@
 
 /* ここから下が追加・調整分です */
 
-@layer base {
-  /* スマホでの見え方を調整 */
-  html {
-    -webkit-tap-highlight-color: transparent; /* タップ時の青いハイライトを消す */
-  }
+/* bodyへのスタイル適用は、@applyを使わず標準CSSで書くことでエラーを回避します */
+body {
+  background-color: #f8fafc; /* bg-slate-50 と同じ色 */
+  color: #0f172a;            /* text-slate-900 と同じ色 */
   
-  body {
-    @apply bg-slate-50 text-slate-900;
-    /* フォントを少し太く滑らかに見せる（視認性向上） */
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
+  /* フォントを滑らかに見せる設定 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+html {
+  -webkit-tap-highlight-color: transparent; /* スマホタップ時の青ハイライト消し */
+}
+
+/* スクロールバー非表示用 */
 @layer utilities {
-  /* .no-scrollbar 
-    横スクロールバーを見えなくするが、スクロール機能は維持するクラス
-  */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
