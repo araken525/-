@@ -36,6 +36,7 @@ function groupByStartTime(items: any[]) {
   }
   return Array.from(map.entries()).map(([time, items]) => ({
     time,
+    // ★復活：ここで sort_order 順に並べ替える
     items: items.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
   }));
 }
@@ -45,10 +46,13 @@ function isNow(start: string, end?: string | null) {
   const [sh, sm] = start.slice(0, 5).split(":").map(Number);
   const s = new Date();
   s.setHours(sh, sm, 0, 0);
+  
   if (!end) return false;
+  
   const [eh, em] = end.slice(0, 5).split(":").map(Number);
   const e = new Date();
   e.setHours(eh, em, 0, 0);
+  
   return now >= s && now <= e;
 }
 
@@ -89,6 +93,7 @@ export default async function Page({
   const sp = await searchParams;
   const target = sp?.t ?? "all";
 
+  /* 1. イベント情報を取得 */
   const { data: event } = await supabase
     .from("events")
     .select("*")
@@ -105,6 +110,8 @@ export default async function Page({
     );
   }
 
+  /* 2. スケジュールを取得 */
+  /* ★復活：order("sort_order") を追加 */
   const { data: items } = await supabase
     .from("schedule_items")
     .select("*")
@@ -112,18 +119,22 @@ export default async function Page({
     .order("start_time", { ascending: true })
     .order("sort_order", { ascending: true });
 
+  /* 最終更新日時の計算 */
   const candidates: Date[] = [];
   const evUpd = toDate((event as any).updated_at);
   if (evUpd) candidates.push(evUpd);
+  
   for (const it of items ?? []) {
     const d = toDate((it as any).updated_at) || toDate((it as any).created_at);
     if (d) candidates.push(d);
   }
+  
   const lastUpdated =
     candidates.length > 0
       ? new Date(Math.max(...candidates.map((d) => d.getTime())))
       : null;
 
+  /* フィルタリング */
   const filtered =
     target === "all"
       ? items ?? []
@@ -144,7 +155,7 @@ export default async function Page({
   return (
     <main className="min-h-screen bg-slate-50 pb-12 sm:pb-16">
       <div className="mx-auto max-w-md md:max-w-2xl">
-        {/* ヘッダー & コントロール */}
+        {/* ヘッダー部分 */}
         <div className="bg-white sticky top-0 z-10 shadow-sm border-b border-slate-200">
           <div className="px-4 pt-4 pb-3">
             <div className="flex justify-between items-start mb-2">
@@ -185,7 +196,6 @@ export default async function Page({
             </div>
           </div>
 
-          {/* 最終更新 */}
           {lastUpdated && (
             <div className="bg-slate-50 px-4 py-1.5 flex items-center justify-end text-xs text-slate-500 border-t border-slate-100">
               <RefreshCw className="w-3 h-3 mr-1" />
@@ -194,17 +204,19 @@ export default async function Page({
           )}
         </div>
 
-        {/* タイムラインリスト */}
+        {/* タイムライン表示部分 */}
         <section className="px-3 py-4 space-y-6">
           {groups.map((group) => (
             <div key={group.time} className="relative">
               <div className="flex gap-3">
+                {/* 時刻 */}
                 <div className="w-14 pt-1 flex-shrink-0 text-right">
                   <div className="text-xl font-black text-slate-900 leading-none">
                     {group.time}
                   </div>
                 </div>
 
+                {/* 予定カード */}
                 <div className="flex-1 space-y-3 pt-0.5">
                   {group.items.map((it: any) => {
                     const now = isNow(it.start_time, it.end_time);
@@ -260,7 +272,9 @@ export default async function Page({
                             {(it.location || it.note) && (
                               <div
                                 className={`mt-2 pt-2 border-t ${
-                                  now ? "border-blue-200/50" : "border-slate-100"
+                                  now
+                                    ? "border-blue-200/50"
+                                    : "border-slate-100"
                                 } text-sm text-slate-600 space-y-1`}
                               >
                                 {it.location && (
