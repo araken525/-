@@ -3,10 +3,10 @@ export const dynamic = "force-dynamic";
 import { supabase } from "@/lib/supabaseClient";
 import ShareButtons from "@/components/ShareButtons";
 import Link from "next/link";
-import { Clock, MapPin, AlignLeft, RefreshCw, Info } from "lucide-react";
+import { Clock, MapPin, AlignLeft, RefreshCw, Info, ChevronRight } from "lucide-react";
 
 /* ==========================================
-   ロジック部（一切変更なし）
+   ロジック部（変更なし）
    ========================================== */
 function hhmm(time: string) {
   return String(time).slice(0, 5);
@@ -83,7 +83,7 @@ function relativeJa(d: Date) {
 }
 
 /* ==========================================
-   コンポーネント本体（UIフルリニューアル）
+   UI部（ヘッダー分離・Twitterスタイル）
    ========================================== */
 export default async function Page({
   params,
@@ -96,7 +96,6 @@ export default async function Page({
   const sp = await searchParams;
   const target = sp?.t ?? "all";
 
-  // データ取得
   const { data: event } = await supabase
     .from("events")
     .select("*")
@@ -121,7 +120,7 @@ export default async function Page({
     .order("start_time", { ascending: true })
     .order("sort_order", { ascending: true });
 
-  // 更新日時計算
+  // 更新日時
   const candidates: Date[] = [];
   const evUpd = toDate((event as any).updated_at);
   if (evUpd) candidates.push(evUpd);
@@ -131,11 +130,10 @@ export default async function Page({
   }
   const lastUpdated = candidates.length > 0 ? new Date(Math.max(...candidates.map((d) => d.getTime()))) : null;
 
-  // フィルタリング & グループ化
+  // フィルタ & グループ化
   const filtered = target === "all" ? items ?? [] : (items ?? []).filter((it) => it.target === target || it.target === "all");
   const groups = groupByStartTime(filtered);
 
-  // タブ設定
   const tabs = [
     { key: "all", label: "全員" },
     { key: "woodwinds", label: "木管" },
@@ -145,84 +143,81 @@ export default async function Page({
   ];
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-safe">
-      {/* Header Area 
-        スクロールしても「タイトル」と「タブ」だけは常に上部に残す 
-      */}
-      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm">
-        {/* Top Bar: Title & Share */}
-        <div className="px-4 py-3 flex justify-between items-center">
-          <h1 className="text-lg font-black text-slate-900 truncate pr-2">
+    <main className="min-h-screen bg-slate-50 font-sans pb-20">
+      
+      {/* 1. 情報エリア (スクロールで消える) */}
+      <div className="bg-white px-5 pt-8 pb-6 border-b border-slate-100">
+        {/* タイトル & シェアボタン */}
+        <div className="flex justify-between items-start mb-4">
+          <h1 className="text-2xl font-black text-slate-900 leading-tight tracking-tight pr-4">
             {event.title}
           </h1>
-          <ShareButtons slug={slug} currentKey={target} tabs={tabs} />
-        </div>
-
-        {/* Filter Tabs: Horizontal Scroll */}
-        <div className="px-4 pb-2">
-          <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
-            {tabs.map((t) => {
-              const isActive = target === t.key;
-              return (
-                <Link
-                  key={t.key}
-                  href={`/e/${slug}?t=${t.key}`}
-                  scroll={false}
-                  className={`
-                    flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all
-                    ${isActive 
-                      ? "bg-slate-900 text-white shadow-md" 
-                      : "bg-slate-100 text-slate-500 hover:bg-slate-200"}
-                  `}
-                >
-                  {t.label}
-                </Link>
-              );
-            })}
+          <div className="shrink-0 pt-1">
+            <ShareButtons slug={slug} currentKey={target} tabs={tabs} />
           </div>
         </div>
-      </div>
 
-      {/* Info Card 
-        固定せず、スクロールと一緒に流す
-      */}
-      <div className="mx-4 mt-4 mb-8 bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-        <div className="space-y-3 text-sm">
-          <div className="flex items-center text-slate-700">
-            <Clock className="w-4 h-4 mr-3 text-slate-400" />
+        {/* 日時・場所 */}
+        <div className="space-y-2 text-sm text-slate-600 mb-4">
+          <div className="flex items-center">
+            <Clock className="w-4 h-4 mr-2 text-slate-400" />
             <span className="font-bold">{event.date}</span>
           </div>
-          <div className="flex items-center text-slate-700">
-            <MapPin className="w-4 h-4 mr-3 text-slate-400" />
+          <div className="flex items-center">
+            <MapPin className="w-4 h-4 mr-2 text-slate-400" />
             <span className="font-medium">{event.venue_name ?? "未設定"}</span>
           </div>
-          {lastUpdated && (
-            <div className="flex items-center text-xs text-slate-400 pt-2 border-t border-slate-50">
-              <RefreshCw className="w-3 h-3 mr-2" />
-              最終更新: {relativeJa(lastUpdated)}
-            </div>
-          )}
         </div>
+        
+        {/* 最終更新 */}
+        {lastUpdated && (
+          <div className="flex items-center text-[10px] text-slate-400 font-medium">
+            <RefreshCw className="w-3 h-3 mr-1.5" />
+            最終更新: {relativeJa(lastUpdated)}
+          </div>
+        )}
       </div>
 
-      {/* Timeline List 
-        時間を「上」に、カードを「全幅」にするレイアウト
-      */}
-      <div className="px-4 space-y-8 pb-20">
+      {/* 2. 操作エリア (画面上部に張り付く) */}
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div className="flex space-x-2 overflow-x-auto no-scrollbar px-4 py-3">
+          {tabs.map((t) => {
+            const isActive = target === t.key;
+            return (
+              <Link
+                key={t.key}
+                href={`/e/${slug}?t=${t.key}`}
+                scroll={false}
+                className={`
+                  flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all select-none
+                  ${isActive 
+                    ? "bg-slate-900 text-white shadow-md scale-105" 
+                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"}
+                `}
+              >
+                {t.label}
+              </Link>
+            );
+          })}
+        </div>
+        {/* 右端のフェード効果 */}
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/90 to-transparent pointer-events-none"></div>
+      </div>
+
+      {/* 3. タイムラインエリア (横幅いっぱい) */}
+      <div className="px-4 py-6 space-y-8">
         {groups.map((group) => (
           <div key={group.time} className="relative">
             {/* 時間ヘッダー */}
-            <div className="sticky top-[110px] z-10 flex items-center mb-3">
-              <div className="bg-slate-900 text-white text-sm font-bold px-3 py-1 rounded-full shadow-sm font-mono">
+            <div className="flex items-center mb-3 pl-1">
+              <span className="text-xl font-black text-slate-900 font-mono tracking-tight mr-3">
                 {group.time}
-              </div>
-              <div className="h-px bg-slate-200 flex-1 ml-3"></div>
+              </span>
+              <div className="h-px bg-slate-200 flex-1"></div>
             </div>
 
-            {/* カード群 */}
-            <div className="space-y-3 pl-2">
-              <div className="absolute left-[1.1rem] top-8 bottom-0 w-0.5 bg-slate-200 -z-10"></div>
-              
+            {/* カードリスト */}
+            <div className="space-y-3">
               {group.items.map((it: any) => {
                 const now = isNow(it.start_time, it.end_time);
                 const tConf = targetConfig(it.target);
@@ -231,57 +226,51 @@ export default async function Page({
                   <div
                     key={it.id}
                     className={`
-                      relative rounded-2xl p-4 border transition-all
+                      relative overflow-hidden rounded-2xl transition-all
                       ${now 
-                        ? "bg-white border-blue-500 shadow-lg shadow-blue-500/20 ring-1 ring-blue-500 z-10" 
-                        : "bg-white border-slate-100 shadow-sm"}
+                        ? "bg-white shadow-[0_8px_30px_rgba(59,130,246,0.15)] ring-2 ring-blue-500 z-10" 
+                        : "bg-white border border-slate-100 shadow-sm"}
                     `}
                   >
-                    {/* NOW Badge */}
+                    {/* NOWインジケーター */}
                     {now && (
-                      <div className="absolute -top-3 right-4 bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-                        </span>
+                      <div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-black px-2 py-1 rounded-bl-xl shadow-sm">
                         NOW
                       </div>
                     )}
 
-                    <div className="space-y-3">
-                      {/* Header: Badge & Title */}
-                      <div className="flex flex-col gap-1.5">
-                        <span className={`self-start inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${tConf.bg} ${tConf.text}`}>
+                    <div className="p-4">
+                      {/* ラベル & タイトル */}
+                      <div className="mb-3">
+                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mb-1.5 ${tConf.bg} ${tConf.text}`}>
                           {tConf.label}
                         </span>
-                        <h3 className={`text-lg font-bold leading-snug ${now ? "text-slate-900" : "text-slate-700"}`}>
+                        <h3 className={`text-lg font-bold leading-snug ${now ? "text-slate-900" : "text-slate-800"}`}>
                           {it.title}
                         </h3>
                       </div>
 
-                      {/* Details: End Time, Loc, Note */}
+                      {/* 詳細情報 */}
                       {(it.end_time || it.location || it.note) && (
-                        <div className="pt-3 border-t border-slate-50 space-y-2 text-sm text-slate-500">
+                        <div className="pt-3 border-t border-slate-50 space-y-2">
                           {it.end_time && (
-                            <div className="flex items-center font-mono text-slate-400 text-xs">
-                              <span className="mr-2">終了予定</span>
-                              <span className="font-bold text-slate-600">{hhmm(it.end_time)}</span>
+                            <div className="flex items-center text-xs font-bold text-slate-500">
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-300 mr-2"></span>
+                              {hhmm(it.end_time)} 終了予定
                             </div>
                           )}
                           
                           {it.location && (
-                            <div className="flex items-start">
-                              <MapPin className="w-4 h-4 mr-2 mt-0.5 shrink-0 text-slate-400" />
-                              <span>{it.location}</span>
+                            <div className="flex items-start text-xs font-medium text-slate-500">
+                              <MapPin className="w-3.5 h-3.5 mr-2 shrink-0 text-slate-400" />
+                              {it.location}
                             </div>
                           )}
                           
                           {it.note && (
-                            <div className="flex items-start bg-slate-50 p-2.5 rounded-lg">
+                            <div className="flex items-start mt-2 bg-slate-50 p-2.5 rounded-lg text-sm text-slate-600 leading-relaxed">
                               <Info className="w-4 h-4 mr-2 mt-0.5 shrink-0 text-slate-400" />
-                              <span className="whitespace-pre-wrap leading-relaxed text-slate-600">
-                                {it.note}
-                              </span>
+                              <span className="whitespace-pre-wrap">{it.note}</span>
                             </div>
                           )}
                         </div>
@@ -293,10 +282,11 @@ export default async function Page({
             </div>
           </div>
         ))}
-        
-        {/* Footer Space */}
-        <div className="h-12 flex items-center justify-center text-slate-300 text-xs font-bold tracking-widest uppercase">
-          Takt
+
+        <div className="h-10 text-center flex items-center justify-center">
+          <span className="w-1 h-1 bg-slate-300 rounded-full mx-1"></span>
+          <span className="w-1 h-1 bg-slate-300 rounded-full mx-1"></span>
+          <span className="w-1 h-1 bg-slate-300 rounded-full mx-1"></span>
         </div>
       </div>
     </main>
