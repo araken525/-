@@ -2,24 +2,33 @@
 
 import { useState, use, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { Lock, Unlock, ArrowUpRight, LogOut, Save, X, Trash2, Edit3, Plus, RefreshCw, MapPin, AlignLeft, ChevronDown } from "lucide-react";
 
+/* ===== ヘルパー関数 (ロジック維持) ===== */
 function hhmm(t: string) {
   return String(t).slice(0, 5);
 }
+
 function targetLabel(t: string) {
   switch (t) {
-    case "all":
-      return "全員";
-    case "woodwinds":
-      return "木管";
-    case "brass":
-      return "金管";
-    case "perc":
-      return "打楽器";
-    case "staff":
-      return "スタッフ";
-    default:
-      return t;
+    case "all": return "全員";
+    case "woodwinds": return "木管";
+    case "brass": return "金管";
+    case "perc": return "打楽器";
+    case "staff": return "スタッフ";
+    default: return t;
+  }
+}
+
+// バッジの色設定（公開ページと合わせる）
+function targetColor(t: string) {
+  switch (t) {
+    case "all": return "bg-slate-100 text-slate-600";
+    case "woodwinds": return "bg-emerald-100 text-emerald-700";
+    case "brass": return "bg-amber-100 text-amber-800";
+    case "perc": return "bg-fuchsia-100 text-fuchsia-700";
+    case "staff": return "bg-rose-100 text-rose-700";
+    default: return "bg-slate-100 text-slate-600";
   }
 }
 
@@ -39,7 +48,7 @@ export default function EditPage({
   const [items, setItems] = useState<any[]>([]);
   const [editing, setEditing] = useState<any | null>(null);
 
-  // form
+  // form state
   const [startTime, setStartTime] = useState("10:00");
   const [endTime, setEndTime] = useState("");
   const [title, setTitle] = useState("");
@@ -48,7 +57,7 @@ export default function EditPage({
   const [target, setTarget] = useState("all");
   const [sortOrder, setSortOrder] = useState(0);
 
-  // イベント取得（id + title）
+  // 初期ロード
   useEffect(() => {
     (async () => {
       const { data } = await supabase
@@ -76,11 +85,12 @@ export default function EditPage({
     if (eventId) loadItems();
   }, [eventId]);
 
-  // 既に通過済みなら復元
+  // 認証状態の復元
   useEffect(() => {
     if (sessionStorage.getItem(`edit-ok:${slug}`)) setOk(true);
   }, [slug]);
 
+  // 認証処理
   async function checkPassword() {
     setStatus("確認中...");
 
@@ -113,6 +123,7 @@ export default function EditPage({
     setEditing(null);
   }
 
+  // 保存処理
   async function saveItem() {
     if (!eventId) return setStatus("イベントが見つかりません");
     if (!title.trim()) return setStatus("タイトル必須です");
@@ -140,21 +151,32 @@ export default function EditPage({
     if (res.error) return setStatus("エラー: " + res.error.message);
 
     setStatus(editing ? "更新しました" : "追加しました");
-    setEditing(null);
-    setTitle("");
-    setLocation("");
-    setNote("");
-    loadItems();
+    
+    // 成功したらフォームリセット（編集モード解除）
+    if (!res.error) {
+      setEditing(null);
+      setTitle("");
+      setLocation("");
+      setNote("");
+      // 時間はそのまま残したほうが連続入力しやすいのでリセットしない
+      loadItems();
+      
+      // 3秒後にメッセージ消去
+      setTimeout(() => setStatus(""), 3000);
+    }
   }
 
+  // 削除処理
   async function removeItem(id: string) {
-    if (!confirm("削除しますか？")) return;
+    if (!confirm("本当に削除しますか？")) return;
     const { error } = await supabase.from("schedule_items").delete().eq("id", id);
     if (error) return setStatus("エラー: " + error.message);
     setStatus("削除しました");
     loadItems();
+    setTimeout(() => setStatus(""), 3000);
   }
 
+  // 編集開始
   function startEdit(it: any) {
     setEditing(it);
     setStartTime(hhmm(it.start_time));
@@ -164,10 +186,11 @@ export default function EditPage({
     setNote(it.note ?? "");
     setTarget(it.target ?? "all");
     setSortOrder(it.sort_order ?? 0);
-    setStatus("");
+    setStatus("編集モード: " + it.title);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  // 編集キャンセル
   function cancelEdit() {
     setEditing(null);
     setTitle("");
@@ -176,378 +199,312 @@ export default function EditPage({
     setStatus("");
   }
 
-  // ===== ログイン前（パスワード） =====
+  // ==========================================
+  // 1. ログイン前画面（認証）
+  // ==========================================
   if (!ok) {
     return (
-      <main
-        style={{
-          minHeight: "100vh",
-          background: "#f6f7f9",
-          display: "grid",
-          placeItems: "center",
-          padding: 20,
-        }}
-      >
-        <div
-          style={{
-            width: 360,
-            background: "#fff",
-            borderRadius: 16,
-            padding: 20,
-            boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
-          }}
-        >
-          <div style={{ fontSize: 12, opacity: 0.7 }}>
-            公開ページ：
-            <a
-              href={`/e/${slug}`}
-              style={{ marginLeft: 6, textDecoration: "underline" }}
+      <main className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl p-8 space-y-6 text-center">
+          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400 mb-4">
+            <Lock className="w-8 h-8" />
+          </div>
+          
+          <div className="space-y-1">
+            <h1 className="text-xl font-black text-slate-900">編集モード</h1>
+            <p className="text-sm text-slate-500">パスワードを入力してください</p>
+          </div>
+
+          <div className="space-y-4">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="パスワード"
+              className="w-full h-14 px-4 bg-slate-50 border-2 border-slate-100 rounded-xl text-center text-lg font-bold focus:ring-4 focus:ring-slate-100 focus:border-slate-300 outline-none transition-all"
+            />
+            <button
+              onClick={checkPassword}
+              className="w-full h-14 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
-              /e/{slug}
-            </a>
+              <Unlock className="w-5 h-5" />
+              認証する
+            </button>
           </div>
-
-          <h1 style={{ marginTop: 10, fontSize: 18, fontWeight: 800 }}>
-            編集用パスワード
-          </h1>
-
-          <div style={{ marginTop: 8, fontSize: 13, opacity: 0.75 }}>
-            合言葉を知っている人だけ編集できます（ログイン不要）
-          </div>
-
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="パスワード"
-            style={{
-              width: "100%",
-              padding: 10,
-              marginTop: 12,
-              borderRadius: 10,
-              border: "1px solid rgba(0,0,0,0.15)",
-            }}
-          />
-
-          <button
-            onClick={checkPassword}
-            style={{
-              width: "100%",
-              marginTop: 12,
-              padding: 10,
-              borderRadius: 10,
-              border: "none",
-              background: "#111827",
-              color: "#fff",
-              fontWeight: 800,
-              cursor: "pointer",
-            }}
-          >
-            編集する
-          </button>
 
           {status && (
-            <div style={{ marginTop: 10, fontSize: 13, color: "#dc2626" }}>
+            <div className="text-sm font-bold text-red-500 bg-red-50 py-2 rounded-lg animate-pulse">
               {status}
             </div>
           )}
+          
+          <a href={`/e/${slug}`} className="block text-xs text-slate-400 hover:text-slate-600 underline decoration-slate-300 underline-offset-4 mt-8">
+            公開ページに戻る
+          </a>
         </div>
       </main>
     );
   }
 
-  // ===== 編集モード =====
+  // ==========================================
+  // 2. 編集画面メイン
+  // ==========================================
   return (
-    <main style={{ minHeight: "100vh", background: "#f6f7f9", padding: 20 }}>
-      <div style={{ maxWidth: 820, margin: "0 auto" }}>
-        {/* 上部バー */}
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: 16,
-            padding: 16,
-            boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
-          }}
-        >
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                padding: "4px 10px",
-                borderRadius: 999,
-                background: "#eef6ff",
-              }}
-            >
-              編集モード
+    <main className="min-h-screen bg-slate-50 pb-24">
+      {/* Header */}
+      <div className="bg-white sticky top-0 z-30 border-b border-slate-200 px-4 py-3 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-600">
+              <Edit3 className="w-4 h-4" />
             </div>
-
-            <div style={{ fontWeight: 800 }}>
-              {eventTitle ? eventTitle : slug}
-            </div>
-
-            <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-              <a
-                href={`/e/${slug}`}
-                style={{
-                  padding: "8px 10px",
-                  borderRadius: 12,
-                  background: "#fff",
-                  border: "1px solid rgba(0,0,0,0.15)",
-                  textDecoration: "none",
-                  fontWeight: 700,
-                }}
-              >
-                公開ページを見る
-              </a>
-              <button
-                onClick={resetLock}
-                style={{
-                  padding: "8px 10px",
-                  borderRadius: 12,
-                  background: "#fff",
-                  border: "1px solid rgba(0,0,0,0.15)",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                }}
-              >
-                編集権限を解除
-              </button>
+            <div className="font-bold text-slate-900 text-sm truncate max-w-[140px]">
+              {eventTitle || slug}
             </div>
           </div>
-
-          <div style={{ marginTop: 10, fontSize: 13, opacity: 0.75 }}>
-            ※ 合言葉が漏れたら編集されます。運営メンバーだけに共有してください。
+          
+          <div className="flex items-center gap-2">
+            <a
+              href={`/e/${slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors"
+              title="公開ページを確認"
+            >
+              <ArrowUpRight className="w-5 h-5" />
+            </a>
+            <button
+              onClick={resetLock}
+              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+              title="ログアウト"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* 追加/編集フォーム */}
-        <div
-          style={{
-            marginTop: 14,
-            background: "#fff",
-            borderRadius: 16,
-            padding: 16,
-            boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
-          }}
-        >
-          <div style={{ fontWeight: 800 }}>
-            {editing ? "予定を編集" : "予定を追加"}
+      <div className="max-w-xl mx-auto p-4 space-y-6">
+        
+        {/* Status Message (Floating) */}
+        {status && (
+          <div className={`
+            fixed bottom-6 left-4 right-4 z-50 p-4 rounded-xl shadow-2xl text-center font-bold text-white text-sm
+            ${status.includes("エラー") ? "bg-red-500" : "bg-slate-900"}
+            animate-in slide-in-from-bottom-5 fade-in duration-300
+          `}>
+            {status}
+          </div>
+        )}
+
+        {/* Form Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className={`px-4 py-3 border-b border-slate-100 flex items-center justify-between ${editing ? "bg-blue-50" : "bg-slate-50"}`}>
+            <h2 className={`font-bold text-sm flex items-center gap-2 ${editing ? "text-blue-700" : "text-slate-700"}`}>
+              {editing ? <Edit3 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {editing ? "予定を編集" : "新しい予定を追加"}
+            </h2>
+            {editing && (
+              <button onClick={cancelEdit} className="text-xs font-bold text-slate-400 bg-white px-2 py-1 rounded-md border border-slate-200">
+                キャンセル
+              </button>
+            )}
           </div>
 
-          <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <label style={{ fontSize: 13 }}>
-                開始
+          <div className="p-4 space-y-4">
+            {/* 時間入力 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-400 ml-1">開始</label>
                 <input
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  style={{ width: "100%", padding: 10, marginTop: 6, borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)" }}
+                  className="w-full h-12 bg-slate-50 rounded-xl border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-center font-bold text-lg outline-none transition-all"
                 />
-              </label>
-              <label style={{ fontSize: 13 }}>
-                終了（任意）
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-400 ml-1">終了 (任意)</label>
                 <input
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  style={{ width: "100%", padding: 10, marginTop: 6, borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)" }}
+                  className="w-full h-12 bg-slate-50 rounded-xl border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-center font-bold text-lg outline-none transition-all"
                 />
-              </label>
+              </div>
             </div>
 
-            <label style={{ fontSize: 13 }}>
-              タイトル
+            {/* タイトル */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-400 ml-1">タイトル</label>
               <input
+                type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="例：集合 / 全体リハ / 本番"
-                style={{ width: "100%", padding: 10, marginTop: 6, borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)" }}
+                placeholder="例: リハーサル"
+                className="w-full h-12 px-4 bg-slate-50 rounded-xl border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 font-bold outline-none transition-all placeholder:font-normal placeholder:text-slate-300"
               />
-            </label>
+            </div>
 
-            <label style={{ fontSize: 13 }}>
-              場所（任意）
-              <input
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="例：ホワイエ / リハ室A"
-                style={{ width: "100%", padding: 10, marginTop: 6, borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)" }}
-              />
-            </label>
+            {/* 場所とターゲット */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-400 ml-1">場所 (任意)</label>
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="ホール"
+                  className="w-full h-12 px-3 bg-slate-50 rounded-xl border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-sm font-bold outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-400 ml-1">対象</label>
+                <div className="relative">
+                  <select
+                    value={target}
+                    onChange={(e) => setTarget(e.target.value)}
+                    className="w-full h-12 px-3 bg-slate-50 rounded-xl border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-sm font-bold outline-none appearance-none transition-all"
+                  >
+                    <option value="all">全員</option>
+                    <option value="woodwinds">木管</option>
+                    <option value="brass">金管</option>
+                    <option value="perc">打楽器</option>
+                    <option value="staff">スタッフ</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-4 w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
+              </div>
+            </div>
 
-            <label style={{ fontSize: 13 }}>
-              メモ（任意）
+            {/* メモ */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-400 ml-1">メモ (任意)</label>
               <input
+                type="text"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="例：名札配布 / 搬入導線注意"
-                style={{ width: "100%", padding: 10, marginTop: 6, borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)" }}
+                placeholder="持ち物など"
+                className="w-full h-12 px-4 bg-slate-50 rounded-xl border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-sm font-medium outline-none transition-all"
               />
-            </label>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <label style={{ fontSize: 13 }}>
-                対象
-                <select
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  style={{ width: "100%", padding: 10, marginTop: 6, borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)" }}
-                >
-                  <option value="all">全員</option>
-                  <option value="woodwinds">木管</option>
-                  <option value="brass">金管</option>
-                  <option value="perc">打楽器</option>
-                  <option value="staff">スタッフ</option>
-                </select>
-              </label>
-
-              <label style={{ fontSize: 13 }}>
-                並び順（小さいほど上）
-                <input
-                  type="number"
-                  value={sortOrder}
-                  onChange={(e) => setSortOrder(parseInt(e.target.value || "0", 10))}
-                  style={{ width: "100%", padding: 10, marginTop: 6, borderRadius: 10, border: "1px solid rgba(0,0,0,0.15)" }}
-                />
-              </label>
             </div>
 
-            <div style={{ display: "flex", gap: 10 }}>
+            {/* ソート順 (Advanced) */}
+            <div className="pt-2 border-t border-slate-100">
+               <details className="group">
+                  <summary className="text-xs font-bold text-slate-400 cursor-pointer list-none flex items-center gap-1">
+                    <ChevronDown className="w-3 h-3 transition-transform group-open:rotate-180" />
+                    詳細設定（並び順）
+                  </summary>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-xs text-slate-400">優先度:</span>
+                    <input
+                      type="number"
+                      value={sortOrder}
+                      onChange={(e) => setSortOrder(parseInt(e.target.value || "0", 10))}
+                      className="w-20 h-8 px-2 bg-slate-50 rounded-lg text-sm text-center border-none"
+                    />
+                    <span className="text-[10px] text-slate-400">※同じ時間の時に小さい方が上</span>
+                  </div>
+               </details>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-2">
               <button
                 onClick={saveItem}
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: 12,
-                  border: "none",
-                  background: "#111827",
-                  color: "#fff",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
+                className={`w-full h-12 rounded-xl font-bold text-white shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2
+                  ${editing ? "bg-blue-600 hover:bg-blue-500 shadow-blue-200" : "bg-slate-900 hover:bg-slate-800 shadow-slate-200"}
+                `}
               >
-                {editing ? "更新" : "追加"}
-              </button>
-
-              {editing && (
-                <button
-                  onClick={cancelEdit}
-                  style={{
-                    padding: "10px 14px",
-                    borderRadius: 12,
-                    border: "1px solid rgba(0,0,0,0.15)",
-                    background: "#fff",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  キャンセル
-                </button>
-              )}
-
-              <button
-                onClick={loadItems}
-                style={{
-                  marginLeft: "auto",
-                  padding: "10px 14px",
-                  borderRadius: 12,
-                  border: "1px solid rgba(0,0,0,0.15)",
-                  background: "#fff",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                再読み込み
+                {editing ? <RefreshCw className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                {editing ? "更新する" : "追加する"}
               </button>
             </div>
-
-            {status && (
-              <div style={{ fontSize: 13, opacity: 0.8, whiteSpace: "pre-wrap" }}>
-                {status}
-              </div>
-            )}
           </div>
         </div>
 
-        {/* 一覧 */}
-        <div style={{ marginTop: 14 }}>
-          <div style={{ fontWeight: 800, marginBottom: 8 }}>
-            既存予定（{items.length}件）
+        {/* Existing Items List */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-2">
+            <h3 className="font-bold text-slate-500 text-sm">登録済みの予定 ({items.length})</h3>
+            <button onClick={loadItems} className="text-slate-400 hover:text-slate-600 p-1">
+              <RefreshCw className="w-4 h-4" />
+            </button>
           </div>
 
-          <div style={{ display: "grid", gap: 10 }}>
+          <div className="space-y-3 pb-10">
             {items.map((it) => (
               <div
                 key={it.id}
-                style={{
-                  background: "#fff",
-                  borderRadius: 14,
-                  padding: 14,
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
-                }}
+                className={`
+                  relative bg-white p-4 rounded-xl border transition-all group
+                  ${editing?.id === it.id ? "border-blue-500 ring-2 ring-blue-100 shadow-md" : "border-slate-100 shadow-sm hover:border-slate-200"}
+                `}
               >
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <div style={{ fontWeight: 800, minWidth: 70 }}>
-                    {hhmm(it.start_time)}
-                    {it.end_time ? `–${hhmm(it.end_time)}` : ""}
+                <div className="flex items-start gap-4">
+                  {/* Time Column */}
+                  <div className="w-14 shrink-0 text-right space-y-0.5">
+                    <div className="font-black text-slate-900 leading-none">{hhmm(it.start_time)}</div>
+                    {it.end_time && (
+                      <div className="text-xs font-bold text-slate-400 leading-none">{hhmm(it.end_time)}</div>
+                    )}
                   </div>
-                  <div style={{ fontWeight: 800 }}>{it.title}</div>
-                  <div
-                    style={{
-                      marginLeft: "auto",
-                      fontSize: 12,
-                      padding: "4px 10px",
-                      borderRadius: 999,
-                      background: "#eef1f6",
-                    }}
-                  >
-                    {targetLabel(it.target)}
-                  </div>
-                </div>
 
-                {(it.location || it.note) && (
-                  <div style={{ marginTop: 8, fontSize: 13, opacity: 0.8 }}>
-                    {it.location && <div>📍 {it.location}</div>}
-                    {it.note && <div style={{ marginTop: 4 }}>{it.note}</div>}
-                  </div>
-                )}
+                  {/* Content Column */}
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${targetColor(it.target)}`}>
+                        {targetLabel(it.target)}
+                      </span>
+                      <h4 className="font-bold text-slate-900 leading-tight break-words">
+                        {it.title}
+                      </h4>
+                    </div>
 
-                <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                  <button
-                    onClick={() => startEdit(it)}
-                    style={{
-                      padding: "8px 10px",
-                      borderRadius: 12,
-                      border: "1px solid rgba(0,0,0,0.15)",
-                      background: "#fff",
-                      cursor: "pointer",
-                      fontWeight: 700,
-                    }}
-                  >
-                    編集
-                  </button>
-                  <button
-                    onClick={() => removeItem(it.id)}
-                    style={{
-                      padding: "8px 10px",
-                      borderRadius: 12,
-                      border: "1px solid rgba(0,0,0,0.15)",
-                      background: "#fff",
-                      cursor: "pointer",
-                      fontWeight: 700,
-                    }}
-                  >
-                    削除
-                  </button>
+                    {(it.location || it.note) && (
+                      <div className="text-xs text-slate-500 space-y-0.5">
+                        {it.location && (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3 opacity-50" />
+                            {it.location}
+                          </div>
+                        )}
+                        {it.note && (
+                          <div className="flex items-center gap-1 opacity-80">
+                            <AlignLeft className="w-3 h-3 opacity-50" />
+                            <span className="truncate">{it.note}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions Column */}
+                  <div className="shrink-0 flex flex-col gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => startEdit(it)}
+                      className="w-8 h-8 flex items-center justify-center bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-lg transition-colors"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => removeItem(it.id)}
+                      className="w-8 h-8 flex items-center justify-center bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
-          </div>
-        </div>
 
-        <div style={{ marginTop: 18, fontSize: 12, opacity: 0.65 }}>
-          TIP：編集URL（/edit）は運営だけ。参加者には公開URL（/e/...）を送るのが安全です。
+            {items.length === 0 && (
+              <div className="text-center py-10 text-slate-300 font-bold text-sm bg-white rounded-xl border border-dashed border-slate-200">
+                まだ予定がありません
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </main>
