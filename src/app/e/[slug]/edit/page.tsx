@@ -2,34 +2,43 @@
 
 import { useState, use, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Lock, Unlock, ArrowUpRight, LogOut, Save, X, Trash2, Edit3, Plus, RefreshCw, MapPin, AlignLeft, ChevronDown } from "lucide-react";
+import { Lock, Unlock, ArrowUpRight, LogOut, Save, Plus, RefreshCw, MapPin, AlignLeft, ChevronDown, Edit3, Trash2, Tag } from "lucide-react";
 
-/* ===== ヘルパー関数 (ロジック維持) ===== */
+/* ===== ヘルパー関数 ===== */
 function hhmm(t: string) {
   return String(t).slice(0, 5);
 }
 
-function targetLabel(t: string) {
-  switch (t) {
-    case "all": return "全員";
-    case "woodwinds": return "木管";
-    case "brass": return "金管";
-    case "perc": return "打楽器";
-    case "staff": return "スタッフ";
-    default: return t;
+// ターゲット名から色を自動生成する関数（ハッシュ化）
+// 毎回同じ文字には同じ色が割り当てられます
+function getTargetColor(t: string) {
+  const colors = [
+    "bg-red-100 text-red-700",
+    "bg-orange-100 text-orange-800",
+    "bg-amber-100 text-amber-800",
+    "bg-yellow-100 text-yellow-800",
+    "bg-lime-100 text-lime-800",
+    "bg-green-100 text-green-700",
+    "bg-emerald-100 text-emerald-700",
+    "bg-teal-100 text-teal-800",
+    "bg-cyan-100 text-cyan-800",
+    "bg-sky-100 text-sky-800",
+    "bg-blue-100 text-blue-800",
+    "bg-indigo-100 text-indigo-700",
+    "bg-violet-100 text-violet-700",
+    "bg-purple-100 text-purple-800",
+    "bg-fuchsia-100 text-fuchsia-800",
+    "bg-pink-100 text-pink-800",
+    "bg-rose-100 text-rose-800",
+  ];
+  if (t === "all" || t === "全員") return "bg-slate-100 text-slate-600";
+  
+  // 文字列の合計値を計算して色を決める
+  let sum = 0;
+  for (let i = 0; i < t.length; i++) {
+    sum += t.charCodeAt(i);
   }
-}
-
-// バッジの色設定（公開ページと合わせる）
-function targetColor(t: string) {
-  switch (t) {
-    case "all": return "bg-slate-100 text-slate-600";
-    case "woodwinds": return "bg-emerald-100 text-emerald-700";
-    case "brass": return "bg-amber-100 text-amber-800";
-    case "perc": return "bg-fuchsia-100 text-fuchsia-700";
-    case "staff": return "bg-rose-100 text-rose-700";
-    default: return "bg-slate-100 text-slate-600";
-  }
+  return colors[sum % colors.length];
 }
 
 export default function EditPage({
@@ -54,8 +63,13 @@ export default function EditPage({
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
   const [note, setNote] = useState("");
-  const [target, setTarget] = useState("all");
+  
+  // ★変更点：targetは自由入力なので初期値は空文字か'全員'
+  const [target, setTarget] = useState("全員");
   const [sortOrder, setSortOrder] = useState(0);
+
+  // 既に使用されているタグのリスト（サジェスト用）
+  const [recentTags, setRecentTags] = useState<string[]>(["全員"]);
 
   // 初期ロード
   useEffect(() => {
@@ -79,13 +93,21 @@ export default function EditPage({
       .order("start_time", { ascending: true })
       .order("sort_order", { ascending: true });
     setItems(data ?? []);
+
+    // ★使われているタグを収集してリスト化
+    if (data) {
+      const tags = new Set<string>(["全員"]);
+      data.forEach((it) => {
+        if (it.target) tags.add(it.target);
+      });
+      setRecentTags(Array.from(tags));
+    }
   }
 
   useEffect(() => {
     if (eventId) loadItems();
   }, [eventId]);
 
-  // 認証状態の復元
   useEffect(() => {
     if (sessionStorage.getItem(`edit-ok:${slug}`)) setOk(true);
   }, [slug]);
@@ -93,7 +115,6 @@ export default function EditPage({
   // 認証処理
   async function checkPassword() {
     setStatus("確認中...");
-
     const { data } = await supabase
       .from("events")
       .select("edit_password")
@@ -128,6 +149,9 @@ export default function EditPage({
     if (!eventId) return setStatus("イベントが見つかりません");
     if (!title.trim()) return setStatus("タイトル必須です");
 
+    // ★ターゲットが空なら"全員"にする
+    const finalTarget = target.trim() || "全員";
+
     const payload = {
       event_id: eventId,
       start_time: startTime + ":00",
@@ -135,7 +159,7 @@ export default function EditPage({
       title: title.trim(),
       location: location.trim() || null,
       note: note.trim() || null,
-      target,
+      target: finalTarget,
       sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
     };
 
@@ -152,21 +176,17 @@ export default function EditPage({
 
     setStatus(editing ? "更新しました" : "追加しました");
     
-    // 成功したらフォームリセット（編集モード解除）
     if (!res.error) {
       setEditing(null);
       setTitle("");
       setLocation("");
       setNote("");
-      // 時間はそのまま残したほうが連続入力しやすいのでリセットしない
+      // 時間とターゲットは連続入力のために維持する
       loadItems();
-      
-      // 3秒後にメッセージ消去
       setTimeout(() => setStatus(""), 3000);
     }
   }
 
-  // 削除処理
   async function removeItem(id: string) {
     if (!confirm("本当に削除しますか？")) return;
     const { error } = await supabase.from("schedule_items").delete().eq("id", id);
@@ -176,7 +196,6 @@ export default function EditPage({
     setTimeout(() => setStatus(""), 3000);
   }
 
-  // 編集開始
   function startEdit(it: any) {
     setEditing(it);
     setStartTime(hhmm(it.start_time));
@@ -184,13 +203,12 @@ export default function EditPage({
     setTitle(it.title ?? "");
     setLocation(it.location ?? "");
     setNote(it.note ?? "");
-    setTarget(it.target ?? "all");
+    setTarget(it.target ?? "全員");
     setSortOrder(it.sort_order ?? 0);
     setStatus("編集モード: " + it.title);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // 編集キャンセル
   function cancelEdit() {
     setEditing(null);
     setTitle("");
@@ -200,7 +218,7 @@ export default function EditPage({
   }
 
   // ==========================================
-  // 1. ログイン前画面（認証）
+  // 1. ログイン前画面
   // ==========================================
   if (!ok) {
     return (
@@ -209,12 +227,10 @@ export default function EditPage({
           <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400 mb-4">
             <Lock className="w-8 h-8" />
           </div>
-          
           <div className="space-y-1">
             <h1 className="text-xl font-black text-slate-900">編集モード</h1>
             <p className="text-sm text-slate-500">パスワードを入力してください</p>
           </div>
-
           <div className="space-y-4">
             <input
               type="password"
@@ -231,13 +247,11 @@ export default function EditPage({
               認証する
             </button>
           </div>
-
           {status && (
             <div className="text-sm font-bold text-red-500 bg-red-50 py-2 rounded-lg animate-pulse">
               {status}
             </div>
           )}
-          
           <a href={`/e/${slug}`} className="block text-xs text-slate-400 hover:text-slate-600 underline decoration-slate-300 underline-offset-4 mt-8">
             公開ページに戻る
           </a>
@@ -250,7 +264,7 @@ export default function EditPage({
   // 2. 編集画面メイン
   // ==========================================
   return (
-    <main className="min-h-screen bg-slate-50 pb-24">
+    <main className="min-h-screen bg-slate-50 pb-24 font-sans">
       {/* Header */}
       <div className="bg-white sticky top-0 z-30 border-b border-slate-200 px-4 py-3 shadow-sm">
         <div className="flex items-center justify-between">
@@ -262,7 +276,6 @@ export default function EditPage({
               {eventTitle || slug}
             </div>
           </div>
-          
           <div className="flex items-center gap-2">
             <a
               href={`/e/${slug}`}
@@ -285,8 +298,6 @@ export default function EditPage({
       </div>
 
       <div className="max-w-xl mx-auto p-4 space-y-6">
-        
-        {/* Status Message (Floating) */}
         {status && (
           <div className={`
             fixed bottom-6 left-4 right-4 z-50 p-4 rounded-xl shadow-2xl text-center font-bold text-white text-sm
@@ -312,7 +323,7 @@ export default function EditPage({
           </div>
 
           <div className="p-4 space-y-4">
-            {/* 時間入力 */}
+            {/* 時間 */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-400 ml-1">開始</label>
@@ -346,50 +357,74 @@ export default function EditPage({
               />
             </div>
 
-            {/* 場所とターゲット */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-400 ml-1">場所 (任意)</label>
+            {/* ★自由入力になったターゲット設定 */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-400 ml-1">対象（誰の予定？）</label>
+              <div className="relative">
+                <Tag className="absolute left-4 top-4 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="ホール"
-                  className="w-full h-12 px-3 bg-slate-50 rounded-xl border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-sm font-bold outline-none transition-all"
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                  placeholder="例: 全員, 木管, スタッフ, 1年生"
+                  className="w-full h-12 pl-10 pr-4 bg-slate-50 rounded-xl border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 font-bold text-sm outline-none transition-all placeholder:font-normal"
+                  list="target-suggestions"
                 />
+                {/* ブラウザ標準のサジェスト機能 */}
+                <datalist id="target-suggestions">
+                  <option value="全員" />
+                  <option value="木管" />
+                  <option value="金管" />
+                  <option value="打楽器" />
+                  <option value="弦楽器" />
+                  <option value="スタッフ" />
+                </datalist>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-400 ml-1">対象</label>
-                <div className="relative">
-                  <select
-                    value={target}
-                    onChange={(e) => setTarget(e.target.value)}
-                    className="w-full h-12 px-3 bg-slate-50 rounded-xl border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-sm font-bold outline-none appearance-none transition-all"
-                  >
-                    <option value="all">全員</option>
-                    <option value="woodwinds">木管</option>
-                    <option value="brass">金管</option>
-                    <option value="perc">打楽器</option>
-                    <option value="staff">スタッフ</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-4 w-4 h-4 text-slate-400 pointer-events-none" />
+
+              {/* よく使うタグ（クリックで入力） */}
+              {recentTags.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {recentTags.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setTarget(t)}
+                      className={`text-[10px] px-2 py-1 rounded-md font-bold transition-all border
+                        ${target === t 
+                          ? "bg-slate-800 text-white border-slate-800" 
+                          : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}
+                      `}
+                    >
+                      {t}
+                    </button>
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* メモ */}
+            {/* 場所・メモ */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-400 ml-1">場所 (任意)</label>
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="例: ホール、リハ室A"
+                className="w-full h-12 px-4 bg-slate-50 rounded-xl border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-sm font-bold outline-none transition-all"
+              />
+            </div>
+
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-400 ml-1">メモ (任意)</label>
               <input
                 type="text"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="持ち物など"
+                placeholder="例: 譜面台持参"
                 className="w-full h-12 px-4 bg-slate-50 rounded-xl border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-sm font-medium outline-none transition-all"
               />
             </div>
 
-            {/* ソート順 (Advanced) */}
+            {/* 詳細設定 */}
             <div className="pt-2 border-t border-slate-100">
                <details className="group">
                   <summary className="text-xs font-bold text-slate-400 cursor-pointer list-none flex items-center gap-1">
@@ -404,7 +439,6 @@ export default function EditPage({
                       onChange={(e) => setSortOrder(parseInt(e.target.value || "0", 10))}
                       className="w-20 h-8 px-2 bg-slate-50 rounded-lg text-sm text-center border-none"
                     />
-                    <span className="text-[10px] text-slate-400">※同じ時間の時に小さい方が上</span>
                   </div>
                </details>
             </div>
@@ -424,87 +458,71 @@ export default function EditPage({
           </div>
         </div>
 
-        {/* Existing Items List */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="font-bold text-slate-500 text-sm">登録済みの予定 ({items.length})</h3>
-            <button onClick={loadItems} className="text-slate-400 hover:text-slate-600 p-1">
-              <RefreshCw className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="space-y-3 pb-10">
-            {items.map((it) => (
-              <div
-                key={it.id}
-                className={`
-                  relative bg-white p-4 rounded-xl border transition-all group
-                  ${editing?.id === it.id ? "border-blue-500 ring-2 ring-blue-100 shadow-md" : "border-slate-100 shadow-sm hover:border-slate-200"}
-                `}
-              >
-                <div className="flex items-start gap-4">
-                  {/* Time Column */}
-                  <div className="w-14 shrink-0 text-right space-y-0.5">
-                    <div className="font-black text-slate-900 leading-none">{hhmm(it.start_time)}</div>
-                    {it.end_time && (
-                      <div className="text-xs font-bold text-slate-400 leading-none">{hhmm(it.end_time)}</div>
-                    )}
+        {/* List */}
+        <div className="space-y-3 pb-10">
+          {items.map((it) => (
+            <div
+              key={it.id}
+              className={`
+                relative bg-white p-4 rounded-xl border transition-all group
+                ${editing?.id === it.id ? "border-blue-500 ring-2 ring-blue-100 shadow-md" : "border-slate-100 shadow-sm hover:border-slate-200"}
+              `}
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-14 shrink-0 text-right space-y-0.5">
+                  <div className="font-black text-slate-900 leading-none">{hhmm(it.start_time)}</div>
+                  {it.end_time && (
+                    <div className="text-xs font-bold text-slate-400 leading-none">{hhmm(it.end_time)}</div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${getTargetColor(it.target)}`}>
+                      {it.target || "全員"}
+                    </span>
+                    <h4 className="font-bold text-slate-900 leading-tight break-words">
+                      {it.title}
+                    </h4>
                   </div>
-
-                  {/* Content Column */}
-                  <div className="flex-1 min-w-0 space-y-1.5">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${targetColor(it.target)}`}>
-                        {targetLabel(it.target)}
-                      </span>
-                      <h4 className="font-bold text-slate-900 leading-tight break-words">
-                        {it.title}
-                      </h4>
+                  {(it.location || it.note) && (
+                    <div className="text-xs text-slate-500 space-y-0.5">
+                      {it.location && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3 opacity-50" />
+                          {it.location}
+                        </div>
+                      )}
+                      {it.note && (
+                        <div className="flex items-center gap-1 opacity-80">
+                          <AlignLeft className="w-3 h-3 opacity-50" />
+                          <span className="truncate">{it.note}</span>
+                        </div>
+                      )}
                     </div>
-
-                    {(it.location || it.note) && (
-                      <div className="text-xs text-slate-500 space-y-0.5">
-                        {it.location && (
-                          <div className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3 opacity-50" />
-                            {it.location}
-                          </div>
-                        )}
-                        {it.note && (
-                          <div className="flex items-center gap-1 opacity-80">
-                            <AlignLeft className="w-3 h-3 opacity-50" />
-                            <span className="truncate">{it.note}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions Column */}
-                  <div className="shrink-0 flex flex-col gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => startEdit(it)}
-                      className="w-8 h-8 flex items-center justify-center bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-lg transition-colors"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => removeItem(it.id)}
-                      className="w-8 h-8 flex items-center justify-center bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  )}
+                </div>
+                <div className="shrink-0 flex flex-col gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => startEdit(it)}
+                    className="w-8 h-8 flex items-center justify-center bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-lg transition-colors"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => removeItem(it.id)}
+                    className="w-8 h-8 flex items-center justify-center bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-            ))}
-
-            {items.length === 0 && (
-              <div className="text-center py-10 text-slate-300 font-bold text-sm bg-white rounded-xl border border-dashed border-slate-200">
-                まだ予定がありません
-              </div>
-            )}
-          </div>
+            </div>
+          ))}
+          {items.length === 0 && (
+            <div className="text-center py-10 text-slate-300 font-bold text-sm bg-white rounded-xl border border-dashed border-slate-200">
+              まだ予定がありません
+            </div>
+          )}
         </div>
       </div>
     </main>
