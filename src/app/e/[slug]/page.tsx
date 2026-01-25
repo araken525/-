@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { supabase } from "@/lib/supabaseClient";
 import EventHeader from "@/components/EventHeader";
+import RealtimeListener from "@/components/RealtimeListener"; // ★追加
 import Link from "next/link";
 import { RefreshCw, MapPin, Calendar, Clock, Filter } from "lucide-react";
 
