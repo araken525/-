@@ -5,9 +5,10 @@ import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RefreshBadge from "@/components/RefreshBadge";
 import Link from "next/link";
-import { MapPin, Calendar, Clock, Filter, X, Printer, Edit3 } from "lucide-react";
+// ▼ 編集・印刷ボタンを削除したので、Edit3, Printer のインポートも削除して整理しました
+import { MapPin, Calendar, Clock, Filter, X } from "lucide-react";
 
-/* === ヘルパー関数 === */
+/* === ヘルパー関数 (ロジックは一切変更なし) === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
 
 function getDayNumber(dateStr: string) {
@@ -153,15 +154,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   }
   const lastUpdated = candidates.length > 0 ? new Date(Math.max(...candidates.map((d) => d.getTime()))) : null;
 
-  // 印刷ページへ渡すためのURLパラメータ
-  const printUrl = `/print/${slug}${rawT ? `?t=${encodeURIComponent(rawT)}` : ""}`;
-
   return (
     <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white pb-20">
       <EventHeader title={event.title} slug={slug} />
 
-      {/* ★変更ポイント: max-w-6xl に拡張し、iPadでの横幅を確保。余白も md:px-8 に増量 */}
-      <div className="pt-24 px-4 md:px-8 w-full max-w-lg md:max-w-6xl mx-auto space-y-8">
+      {/* ★修正ポイント1: max-w-7xl に拡張し、iPad Proの横幅もフル活用。余白も広げました */}
+      <div className="pt-24 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-8">
         
         {/* イベント情報カード */}
         <section className="relative bg-white rounded-[2rem] p-8 overflow-hidden shadow-sm h-full min-h-[160px]">
@@ -238,25 +236,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               </div>
             )}
           </div>
-
-          <div className="shrink-0 pl-3 border-l border-slate-100 hidden sm:flex items-center gap-2">
-            
-            <Link 
-              href={`/edit/${slug}`}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-colors"
-            >
-              <Edit3 className="w-4 h-4" /> 編集
-            </Link>
-
-            <Link 
-              href={printUrl} 
-              target="_blank"
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 text-white rounded-xl text-xs font-black hover:bg-slate-900 transition-colors shadow-sm"
-            >
-              <Printer className="w-4 h-4" /> 印刷
-            </Link>
-
-          </div>
+          
+          {/* ★修正ポイント2: ここにあった編集・印刷ボタンを削除しました（ヘッダーにあるため） */}
         </section>
 
         {/* タイムライン */}
@@ -266,43 +247,63 @@ export default async function Page({ params, searchParams }: { params: Promise<{
              <h2 className="text-2xl font-black text-slate-800 tracking-tight">タイムスケジュール</h2>
           </div>
 
-          {groups.map((group) => (
-            <div key={group.time}>
-              <div className="flex items-center mb-6 pl-2">
-                <span className="text-3xl font-black text-slate-800 tracking-tight font-sans">
-                  {group.time}
-                </span>
-                <div className="h-1.5 w-1.5 bg-slate-300 rounded-full mx-4"></div>
-                <div className="h-px bg-slate-200 flex-1 rounded-full"></div>
-              </div>
+          {groups.map((group) => {
+             // ★修正ポイント3: アイテム数に応じたスマートなグリッド調整
+             const itemCount = group.items.length;
+             let gridClass = "";
+             
+             if (itemCount === 1) {
+               // 1個のとき: 幅を広げすぎないように3xlに制限しつつ、1列で大きく表示
+               gridClass = "grid-cols-1 max-w-3xl"; 
+             } else if (itemCount === 2) {
+               // 2個のとき: 画面を半分ずつ使う（幅制限は少し緩く）
+               gridClass = "grid-cols-1 md:grid-cols-2 max-w-5xl";
+             } else if (itemCount === 3) {
+               // 3個のとき: iPad以上で3列
+               gridClass = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
+             } else {
+               // 4個以上のとき: フル活用
+               gridClass = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+             }
 
-              {/* Gridレイアウトはそのまま。親コンテナが広がったので、3列・4列表示が綺麗に機能します */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                {group.items.map((it: any) => {
-                  const now = isNow(it.start_time, it.end_time);
-                  const emoji = it.emoji || detectEmoji(it.title);
-                  const duration = getDuration(it.start_time, it.end_time);
-                  const primaryTag = it.target ? it.target.split(",")[0] : "全員";
-                  const badgeColor = getTargetColor(primaryTag);
-                  const startHhmm = hhmm(it.start_time);
-                  const endHhmm = it.end_time ? hhmm(it.end_time) : null;
+             return (
+              <div key={group.time}>
+                <div className="flex items-center mb-6 pl-2">
+                  <span className="text-3xl font-black text-slate-800 tracking-tight font-sans">
+                    {group.time}
+                  </span>
+                  <div className="h-1.5 w-1.5 bg-slate-300 rounded-full mx-4"></div>
+                  <div className="h-px bg-slate-200 flex-1 rounded-full"></div>
+                </div>
 
-                  return (
-                    <ScheduleItemCard
-                      key={it.id}
-                      it={it}
-                      now={now}
-                      emoji={emoji}
-                      duration={duration}
-                      badgeColor={badgeColor}
-                      startHhmm={startHhmm}
-                      endHhmm={endHhmm}
-                    />
-                  );
-                })}
+                {/* スマートグリッドを適用 */}
+                <div className={`grid gap-4 md:gap-6 ${gridClass}`}>
+                  {group.items.map((it: any) => {
+                    const now = isNow(it.start_time, it.end_time);
+                    const emoji = it.emoji || detectEmoji(it.title);
+                    const duration = getDuration(it.start_time, it.end_time);
+                    const primaryTag = it.target ? it.target.split(",")[0] : "全員";
+                    const badgeColor = getTargetColor(primaryTag);
+                    const startHhmm = hhmm(it.start_time);
+                    const endHhmm = it.end_time ? hhmm(it.end_time) : null;
+
+                    return (
+                      <ScheduleItemCard
+                        key={it.id}
+                        it={it}
+                        now={now}
+                        emoji={emoji}
+                        duration={duration}
+                        badgeColor={badgeColor}
+                        startHhmm={startHhmm}
+                        endHhmm={endHhmm}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {groups.length === 0 && (
              <div className="text-center py-20 bg-white rounded-[2rem] border-2 border-dashed border-slate-100">
