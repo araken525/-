@@ -9,23 +9,23 @@ export default function CreateEventPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // フォーム入力 (ロジック維持)
+  // フォーム入力
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [slug, setSlug] = useState("");
   const [venue, setVenue] = useState("");
   const [password, setPassword] = useState("");
 
-  // ★追加: URL ID入力欄の表示/非表示ステート
+  // URL ID入力欄の表示/非表示ステート
   const [showUrlId, setShowUrlId] = useState(false);
 
-  // 作成後のURL (ロジック維持)
+  // 作成後のURL
   const [publicUrl, setPublicUrl] = useState("");
   const [editUrl, setEditUrl] = useState("");
   const [copiedPublic, setCopiedPublic] = useState(false);
   const [copiedEdit, setCopiedEdit] = useState(false);
 
-  // ロジック関数 (変更なし)
+  // ロジック関数
   async function createEvent() {
     if (!title || !date || !password) {
       setError("必須項目（タイトル、日付、パスワード）を入力してください 🙇‍♂️");
@@ -76,13 +76,13 @@ export default function CreateEventPage() {
     }
   };
 
-  // LINEシェア (変更なし)
+  // LINEシェア
   const shareToLine = (text: string, url: string) => {
     const message = `${text}\n${url}`;
     window.open(`https://line.me/R/msg/text/?${encodeURIComponent(message)}`, '_blank');
   };
 
-  // メールシェア (変更なし)
+  // メールシェア
   const shareToMail = (subject: string, body: string, url: string) => {
     const message = `${body}\n${url}`;
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
@@ -95,65 +95,64 @@ export default function CreateEventPage() {
       {step === "form" && (
         <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
           
-          {/* ★タイトル変更 */}
           <h1 className="text-2xl sm:text-3xl font-black text-slate-800 text-center mb-6 tracking-tight">新しいタイスケを作成</h1>
 
-          {/* 基本情報カード (スマホのはみ出し防止のためにpx-4へ縮小、min-w-0徹底) */}
+          {/* 基本情報カード */}
           <div className="bg-white rounded-[1.5rem] sm:rounded-[2rem] shadow-xl overflow-hidden mb-6">
             <div className="divide-y divide-slate-100/80">
               
-              {/* 1. タイトル */}
+              {/* 1. タイトル (★プレースホルダー変更・中央揃え) */}
               <div className="flex items-center justify-between py-3.5 px-4 sm:px-6">
                  <label className="flex items-center gap-2 text-sm font-bold text-slate-600 shrink-0">
                     <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center"><Type className="w-3.5 h-3.5 sm:w-4 sm:h-4"/></div>
                     イベント名<span className="text-red-400">*</span>
                  </label>
-                 <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="入力..." className="flex-1 min-w-0 ml-2 text-right font-bold text-slate-800 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"/>
+                 <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="定期演奏会" className="flex-1 min-w-0 ml-2 text-center font-black text-slate-800 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"/>
               </div>
 
-              {/* 2. 日付 */}
+              {/* 2. 日付 (★中央揃え) */}
               <div className="flex items-center justify-between py-3.5 px-4 sm:px-6">
                  <label className="flex items-center gap-2 text-sm font-bold text-slate-600 shrink-0">
                     <div className="w-7 h-7 sm:w-8 sm:h-8 bg-green-100 text-green-500 rounded-full flex items-center justify-center"><Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4"/></div>
                     開催日<span className="text-red-400">*</span>
                  </label>
-                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="flex-1 min-w-0 ml-2 text-right font-bold text-slate-800 outline-none bg-transparent h-10 appearance-none relative z-10 cursor-pointer"/>
+                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="flex-1 min-w-0 ml-2 text-center font-black text-slate-800 outline-none bg-transparent h-10 appearance-none relative z-10 cursor-pointer"/>
               </div>
 
-              {/* 3. 場所 */}
+              {/* 3. 場所 (★プレースホルダー変更・中央揃え) */}
               <div className="flex items-center justify-between py-3.5 px-4 sm:px-6">
                  <label className="flex items-center gap-2 text-sm font-bold text-slate-600 shrink-0">
                     <div className="w-7 h-7 sm:w-8 sm:h-8 bg-purple-100 text-purple-500 rounded-full flex items-center justify-center"><MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4"/></div>
                     場所
                  </label>
-                 <input type="text" value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="未定" className="flex-1 min-w-0 ml-2 text-right font-bold text-slate-800 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"/>
+                 <input type="text" value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="ミューザ" className="flex-1 min-w-0 ml-2 text-center font-black text-slate-800 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"/>
               </div>
             </div>
           </div>
           
-          {/* 設定グループ (パスワード ＋ URL) */}
+          {/* 設定グループ */}
           <div className="bg-white rounded-[1.5rem] sm:rounded-[2rem] shadow-xl overflow-hidden mb-8">
              <div className="divide-y divide-slate-100/80">
                
-               {/* 4. パスワード */}
+               {/* 4. パスワード (★プレースホルダー変更・中央揃え) */}
                <div className="flex items-center justify-between py-3.5 px-4 sm:px-6">
                   <label className="flex items-center gap-2 text-sm font-bold text-slate-600 shrink-0">
                      <div className="w-7 h-7 sm:w-8 sm:h-8 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center"><Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4"/></div>
-                     編集パスワード<span className="text-red-400">*</span>
+                     パスワード<span className="text-red-400">*</span>
                   </label>
-                  <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="設定する" className="flex-1 min-w-0 ml-2 text-right font-bold text-orange-500 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"/>
+                  <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="0000" className="flex-1 min-w-0 ml-2 text-center font-black text-orange-500 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"/>
                </div>
 
-               {/* ★変更: URL IDはオプションで隠す */}
+               {/* 5. URL ID (★プレースホルダー変更・中央揃え) */}
                {showUrlId ? (
                  <div className="flex items-center justify-between py-3.5 px-4 sm:px-6 bg-slate-50/50 animate-in fade-in slide-in-from-top-2">
                     <label className="flex items-center gap-2 text-sm font-bold text-slate-600 shrink-0">
                        <div className="w-7 h-7 sm:w-8 sm:h-8 bg-cyan-100 text-cyan-500 rounded-full flex items-center justify-center"><LinkIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4"/></div>
                        URL ID
                     </label>
-                    <div className="flex-1 min-w-0 flex items-center justify-end gap-1 ml-2">
+                    <div className="flex-1 min-w-0 flex items-center justify-center gap-1 ml-2">
                        <span className="text-slate-400 font-bold text-sm shrink-0">/e/</span>
-                       <input type="text" value={slug} onChange={(e) => setSlug(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))} placeholder="ランダム" className="flex-1 min-w-0 text-right font-bold text-slate-800 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"/>
+                       <input type="text" value={slug} onChange={(e) => setSlug(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))} placeholder="regularconcert2026" className="flex-1 min-w-0 text-center font-black text-slate-800 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"/>
                     </div>
                  </div>
                ) : (
@@ -166,7 +165,6 @@ export default function CreateEventPage() {
 
           {error && <div className="mb-6 flex items-center justify-center gap-2 text-sm font-bold text-red-500 bg-red-50 py-3 rounded-2xl animate-pulse px-4 text-center"><AlertCircle className="w-4 h-4 shrink-0"/>{error}</div>}
 
-          {/* ★ボタン文言変更 */}
           <button 
             onClick={createEvent} 
             disabled={loading}
@@ -181,10 +179,8 @@ export default function CreateEventPage() {
       {step === "done" && (
         <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-500">
           
+          {/* ★変更: 動くアイコンを削除 */}
           <div className="text-center mb-6">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-500 shadow-sm mb-4 animate-bounce">
-               <Check className="w-8 h-8 sm:w-10 sm:h-10" />
-            </div>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-800">準備できました！🎉</h2>
           </div>
 
@@ -210,12 +206,21 @@ export default function CreateEventPage() {
                   </div>
                </div>
 
-               <button 
-                 onClick={() => shareToLine(`${title}の招待状です！\n📅 ${date}\n\n▼参加はこちらから`, publicUrl)}
-                 className="w-full h-12 sm:h-14 bg-[#06c755] hover:bg-[#05b34c] text-white rounded-xl sm:rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all text-sm sm:text-base"
-               >
-                 LINEで送る
-               </button>
+               {/* ★変更: LINEとメールの2ボタンに分割 */}
+               <div className="flex gap-2">
+                 <button 
+                   onClick={() => shareToLine(`${title}の招待状です！\n📅 ${date}\n\n▼参加はこちらから`, publicUrl)}
+                   className="flex-1 h-12 sm:h-14 bg-[#06c755] hover:bg-[#05b34c] text-white rounded-xl sm:rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all text-sm sm:text-base"
+                 >
+                   LINEで送る
+                 </button>
+                 <button 
+                   onClick={() => shareToMail(`${title} タイムスケジュール`, `イベント: ${title}\n日付: ${date}\n\n▼タイムスケジュールはこちら\n`, publicUrl)}
+                   className="flex-1 h-12 sm:h-14 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-xl sm:rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all text-sm sm:text-base"
+                 >
+                   <Mail className="w-4 h-4"/> メール
+                 </button>
+               </div>
             </div>
           </div>
 
