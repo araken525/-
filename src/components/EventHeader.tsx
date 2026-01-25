@@ -13,18 +13,11 @@ export default function EventHeader({ title, slug }: Props) {
   const [isStaffUrl, setIsStaffUrl] = useState(false);
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState("");
-  
-  // スクロール状態: 0=トップ, 1=少しスクロール, 2=ヒーロー通過(白背景へ)
-  const [scrollState, setScrollState] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     setOrigin(window.location.origin);
-    const handleScroll = () => {
-      const y = window.scrollY;
-      if (y > 200) setScrollState(2); // タイトル表示
-      else if (y > 10) setScrollState(1); // 背景白化開始
-      else setScrollState(0); // 透明
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -44,13 +37,12 @@ export default function EventHeader({ title, slug }: Props) {
     <>
       <header 
         className={`fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-5 transition-all duration-300
-          ${scrollState >= 1 ? "bg-white/90 backdrop-blur-md shadow-sm" : "bg-transparent"}
+          ${scrolled ? "bg-white/95 backdrop-blur-md shadow-sm" : "bg-transparent"}
         `}
       >
-        {/* タイトルはスクロールして青背景が消えたら出る */}
         <h1 
-          className={`flex-1 text-sm font-black truncate pr-4 transition-all duration-300 transform
-            ${scrollState === 2 ? "opacity-100 translate-y-0 text-slate-800" : "opacity-0 translate-y-2 pointer-events-none"}
+          className={`flex-1 text-sm font-black truncate pr-4 transition-opacity duration-300
+            ${scrolled ? "opacity-100 text-slate-800" : "opacity-0"}
           `}
         >
           {title}
@@ -59,7 +51,7 @@ export default function EventHeader({ title, slug }: Props) {
         <button
           onClick={() => setIsOpen(true)}
           className={`w-9 h-9 ml-auto flex items-center justify-center rounded-full shadow-lg active-bounce transition-all
-             ${scrollState >= 1 ? "bg-slate-100 text-slate-600" : "bg-white/20 text-white backdrop-blur-md border border-white/30"}
+             ${scrolled ? "bg-slate-100 text-slate-600" : "bg-white text-[#00c2e8]"}
           `}
         >
           <Share2 className="w-4 h-4" />

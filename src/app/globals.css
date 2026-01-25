@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --background: #f7f9fb; /* 限りなく白に近いグレー */
-  --foreground: #202125; /* 視認性の高い黒 */
-  --wolt-blue: #00c2e8; /* Wolt Sky Blue */
+  --background: #f7f9fb;
+  --foreground: #202125;
+  --wolt-blue: #00c2e8;
 }
 
 body {
@@ -18,22 +18,15 @@ body {
 }
 
 @layer utilities {
-  /* Wolt風の深く柔らかい影 */
   .shadow-wolt {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   }
   
-  .shadow-card {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  }
-
-  /* 押した時の心地よいバウンス */
   .active-bounce:active {
-    transform: scale(0.96);
+    transform: scale(0.97);
     transition: transform 0.1s;
   }
 
-  /* スクロールバー隠し */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
