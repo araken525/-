@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Calendar, Smartphone, Zap, Plus, Search, ChevronDown, Music, Clapperboard, Briefcase, Heart, MapPin, Clock } from "lucide-react";
+import { Calendar, Smartphone, Zap, Plus, Search, ChevronDown, Music, Clapperboard, Briefcase, Heart } from "lucide-react";
 
 export default function Home() {
   const [showSearch, setShowSearch] = useState(false);
@@ -49,13 +49,14 @@ export default function Home() {
       </header>
 
       {/* === ヒーローセクション === */}
-      <section className="pt-24 px-6 max-w-xl mx-auto relative z-10 text-center">
+      {/* ★変更: pt-24 -> pt-32 に増やしてヘッダーとの距離を確保 */}
+      <section className="pt-32 px-6 max-w-xl mx-auto relative z-10 text-center">
         
-        {/* ★背景として浮遊するUIモックアップ（配置を四隅に逃がして被りを回避） */}
+        {/* ★背景として浮遊するUIモックアップ */}
         <div className="absolute inset-0 pointer-events-none z-[-1] overflow-visible">
            
-           {/* ① 上のカード（ゲネプロ）：左上に配置して、タイトルより上に見切れさせる */}
-           <div className="absolute -top-16 -left-8 w-[260px] bg-white/60 backdrop-blur-sm rounded-[1.5rem] p-4 flex gap-3 items-center shadow-lg border border-white/50 animate-float rotate-[-6deg] opacity-70 scale-90 sm:scale-100">
+           {/* ① 上のカード：位置を下げてヘッダー被りを回避 (top-0に変更) */}
+           <div className="absolute top-0 -left-8 w-[260px] bg-white/60 backdrop-blur-sm rounded-[1.5rem] p-4 flex gap-3 items-center shadow-lg border border-white/50 animate-float rotate-[-6deg] opacity-70 scale-90 sm:scale-100">
               <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-2xl">🎻</div>
               <div className="flex-1 min-w-0 text-left">
                  <h3 className="text-sm font-black text-slate-800 truncate">ゲネプロ (全体)</h3>
@@ -63,8 +64,7 @@ export default function Home() {
               </div>
            </div>
 
-           {/* ② 下のカード（お昼休憩）：右下に配置して、ボタンより下に見切れさせる */}
-           {/* topではなく bottom 指定で位置を固定 */}
+           {/* ② 下のカード：位置調整 */}
            <div className="absolute -bottom-10 -right-6 w-[240px] bg-white/60 backdrop-blur-sm rounded-[1.5rem] p-4 flex gap-3 items-center shadow-lg border border-white/50 animate-float-delayed rotate-[6deg] opacity-70 scale-90 sm:scale-100">
               <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-2xl">🍱</div>
               <div className="flex-1 min-w-0 text-left">
@@ -113,14 +113,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* === 3つの特徴 (★固定・静的配置) === */}
+      {/* === 3つの特徴 (固定・静的配置) === */}
       <section className="mt-32 px-6 grid grid-cols-1 gap-5 relative z-10">
         {[
           { icon: Zap, color: "from-amber-400 to-orange-500", title: "アプリ・ログイン不要", desc: "URLをクリックするだけ。面倒な会員登録やインストールは一切必要ありません。" },
           { icon: Smartphone, color: "from-purple-500 to-indigo-600", title: "スマホで一番見やすい", desc: "PDFを拡大するストレスから解放。自分の出番や進行状況が一目でわかるデザイン。" },
           { icon: Calendar, color: "from-[#00c2e8] to-cyan-500", title: "急な変更も1秒で共有", desc: "当日の急なスケジュール変更も、手元のスマホから即座に全員へ反映。" },
         ].map((item, i) => (
-          // カード自体は固定(アニメーションなし)
           <div key={i} className="bg-white/80 backdrop-blur-xl p-6 rounded-[2rem] shadow-sm border border-white/60">
             <div className="flex items-start gap-5">
                <div className={`w-12 h-12 bg-gradient-to-br ${item.color} text-white rounded-[1rem] flex items-center justify-center shrink-0 shadow-md`}>
@@ -135,7 +134,7 @@ export default function Home() {
         ))}
       </section>
 
-      {/* === 利用シーン (★リッチなリストデザイン) === */}
+      {/* === 利用シーン (リッチなリストデザイン) === */}
       <section className="mt-24 px-6 relative z-10 pb-20">
         <p className="text-xs font-black text-slate-400 mb-8 text-center tracking-widest uppercase">こんなイベントで使われています</p>
         <div className="space-y-3 max-w-md mx-auto">
