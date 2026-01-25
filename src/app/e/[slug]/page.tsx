@@ -101,7 +101,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { slug } = await params;
   const sp = await searchParams;
   
-  // URLから選択されたタグを取得 (カンマ区切りを配列に)
+  // URLから選択されたタグを取得
   const rawT = sp?.t ? decodeURIComponent(sp.t) : "";
   const selectedTags = rawT ? rawT.split(",") : [];
 
@@ -111,7 +111,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { data: items } = await supabase.from("schedule_items").select("*").eq("event_id", event.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
   const allItems = items ?? [];
 
-  // 全てのタグを収集 (重複排除)
+  // 全てのタグを収集
   const tagsSet = new Set<string>();
   allItems.forEach(item => {
     if (item.target && item.target !== "all" && item.target !== "全員") {
@@ -120,15 +120,10 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   });
   const dynamicTabs = Array.from(tagsSet).sort();
 
-  // フィルタリングロジック
+  // フィルタリング
   const filtered = allItems.filter(it => {
-    // 1. "全員"タグは常に表示
     if (!it.target || it.target === "all" || it.target === "全員") return true;
-    
-    // 2. 何も選択されていない場合は全員表示 (初期状態)
     if (selectedTags.length === 0) return true;
-
-    // 3. 選択されたタグのいずれかが含まれていれば表示 (部分一致・複数対応)
     const itemTags = it.target.split(",").map((t: string) => t.trim());
     return itemTags.some((tag: string) => selectedTags.includes(tag));
   });
@@ -149,16 +144,16 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white pb-20">
       <EventHeader title={event.title} slug={slug} />
 
-      {/* コンテナ幅: スマホは狭く、PC/iPadは広く */}
-      <div className="pt-24 px-4 w-full max-w-lg md:max-w-6xl mx-auto">
+      {/* iPad/PC用: コンテナ幅を最大化 (max-w-7xl) */}
+      <div className="pt-24 px-4 w-full max-w-lg md:max-w-7xl mx-auto">
         
-        {/* レスポンシブグリッド: スマホ1列、PC/iPad2列(5:7) */}
+        {/* iPad/PC用: 左カラムを狭く(4)、タイムラインを広く(8)確保 */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 items-start">
           
-          {/* === 左カラム: 情報 & フィルター (PC/iPadでは固定) === */}
-          <div className="space-y-6 md:col-span-5 md:sticky md:top-24">
+          {/* === 左カラム: 情報 & フィルター (固定) === */}
+          <div className="space-y-6 md:col-span-4 md:sticky md:top-24">
             
-            {/* カード1: イベント基本情報 */}
+            {/* イベント情報 */}
             <section className="relative rounded-[2rem] p-8 overflow-hidden group shadow-wolt transition-transform hover:scale-[1.01]">
                <div className="absolute inset-0 bg-[conic-gradient(at_top_left,_var(--tw-gradient-stops))] from-cyan-200 via-blue-100 to-[#00c2e8] opacity-80"></div>
                <div className="absolute inset-0 bg-[radial-gradient(at_bottom_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent mix-blend-soft-light"></div>
@@ -183,7 +178,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                </div>
             </section>
 
-            {/* カード2: フィルター */}
+            {/* フィルター */}
             <section className="bg-white rounded-[1.5rem] p-6 shadow-wolt">
                <div className="flex items-center justify-between mb-4 px-1">
                   <div className="flex items-center gap-2">
@@ -236,8 +231,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </div>
 
 
-          {/* === 右カラム: タイムライン (スクロール) === */}
-          <div className="space-y-8 md:col-span-7">
+          {/* === 右カラム: タイムライン (★ここを抜本的に変更) === */}
+          <div className="space-y-8 md:col-span-8">
             <div className="pl-2 flex items-center gap-2">
                <Clock className="w-5 h-5 text-slate-300" />
                <h2 className="text-lg font-black text-slate-800 tracking-tight">タイムスケジュール</h2>
@@ -245,6 +240,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
             {groups.map((group) => (
               <div key={group.time}>
+                {/* 時間ヘッダー */}
                 <div className="flex items-center mb-4 pl-2">
                   <span className="text-2xl font-black text-slate-800 tracking-tight font-sans">
                     {group.time}
@@ -252,7 +248,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                   <div className="h-px bg-slate-200 flex-1 ml-4 rounded-full"></div>
                 </div>
 
-                <div className="space-y-4">
+                {/* ★変更ポイント: グリッドレイアウトの適用 
+                   スマホ: grid-cols-1 (縦積み)
+                   iPad/PC: grid-cols-2 〜 grid-cols-3 (横並び)
+                   gap-4: カード間の隙間
+                */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {group.items.map((it: any) => {
                     const now = isNow(it.start_time, it.end_time);
                     const emoji = it.emoji || detectEmoji(it.title);
@@ -264,8 +265,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                     return (
                       <div
                         key={it.id}
+                        /* h-full: 隣のカードと高さを合わせる */
                         className={`
-                          relative bg-white rounded-[1.5rem] p-5 flex gap-5 items-stretch overflow-hidden transition-all hover:shadow-lg
+                          relative bg-white rounded-[1.5rem] p-5 flex gap-4 items-start overflow-hidden transition-all hover:shadow-lg h-full flex-col sm:flex-row sm:items-stretch
                           ${now 
                             ? "shadow-xl ring-2 ring-[#00c2e8] scale-[1.02] z-10" 
                             : "shadow-wolt border border-transparent"}
@@ -277,45 +279,48 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                           </div>
                         )}
 
-                        <div className="absolute -bottom-5 -right-2 text-[5rem] font-black text-slate-100/50 select-none watermark-text leading-none z-0">
+                        {/* 背景の時間は邪魔にならないよう薄く */}
+                        <div className="absolute -bottom-5 -right-2 text-[4rem] font-black text-slate-100/50 select-none watermark-text leading-none z-0">
                           {hhmm(it.start_time)}
                         </div>
 
-                        <div className="relative z-10 w-14 shrink-0 flex items-start pt-1 justify-center">
-                          <div className="text-[2.5rem] leading-none drop-shadow-sm filter grayscale-[0.2]">
+                        {/* アイコン */}
+                        <div className="relative z-10 shrink-0 flex items-start pt-1 justify-center sm:w-14">
+                          <div className="text-[2rem] sm:text-[2.5rem] leading-none drop-shadow-sm filter grayscale-[0.2]">
                             {emoji}
                           </div>
                         </div>
 
-                        <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-between">
+                        {/* コンテンツ */}
+                        <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-between w-full">
                           <div>
-                            <div className="flex justify-between items-start mb-1">
-                               <h3 className={`text-xl font-black leading-tight tracking-tight ${now ? "text-[#00c2e8]" : "text-slate-900"}`}>
+                            <div className="flex flex-wrap justify-between items-start mb-1 gap-2">
+                               <h3 className={`text-lg sm:text-xl font-black leading-tight tracking-tight ${now ? "text-[#00c2e8]" : "text-slate-900"}`}>
                                  {it.title}
                                </h3>
-                               <span className={`ml-3 shrink-0 px-2 py-0.5 rounded-md text-[10px] font-black ${badgeColor}`}>
+                               <span className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-black ${badgeColor}`}>
                                  {it.target && it.target !== "all" ? it.target.replace(/,/g, "・") : "全員"}
                                </span>
                             </div>
 
                             {it.end_time && (
-                               <div className="flex items-center text-sm font-bold text-[#00c2e8] mb-2">
+                               <div className="flex items-center text-xs sm:text-sm font-bold text-[#00c2e8] mb-2">
                                  <Clock className="w-3.5 h-3.5 mr-1" />
                                  <span>~{hhmm(it.end_time)} まで</span>
                                </div>
                             )}
 
                             {it.note && (
-                              <div className="text-sm text-slate-600 leading-relaxed font-medium mb-3">
+                              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium mb-3">
                                 {it.note}
                               </div>
                             )}
                           </div>
 
-                          <div className="flex items-center gap-3 pt-3 border-t border-slate-50 mt-1">
+                          <div className="flex items-center gap-3 pt-3 border-t border-slate-50 mt-auto">
                              {it.location ? (
-                                <div className="flex items-center text-xs font-bold text-slate-500">
-                                   <MapPin className="w-3.5 h-3.5 mr-1 text-slate-300" />
+                                <div className="flex items-center text-xs font-bold text-slate-500 truncate">
+                                   <MapPin className="w-3.5 h-3.5 mr-1 text-slate-300 shrink-0" />
                                    {it.location}
                                 </div>
                              ) : <div className="flex-1"></div>}
@@ -323,7 +328,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                              {it.location && <div className="w-px h-3 bg-slate-200"></div>}
 
                              {duration && (
-                               <div className="text-xs font-bold text-slate-400">
+                               <div className="text-xs font-bold text-slate-400 shrink-0">
                                  ⏳ {duration}
                                </div>
                              )}
