@@ -1,27 +1,34 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
 }
 
-/* その他の設定 */
+/* Anka風の背景：全体に淡い青のグラデーション */
 body {
-  background-color: #f8fafc;
-  color: #0f172a;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(to bottom, #E0F2FE 0%, #F0F9FF 30%, #FFFFFF 100%);
+  background-attachment: fixed; /* スクロールしても背景を固定 */
+  min-height: 100vh;
 }
 
-html {
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* スクロールバー非表示用 */
-@utility no-scrollbar {
-  &::-webkit-scrollbar {
-    display: none;
+/* オーロラのような光の効果（ユーティリティとして定義） */
+@layer utilities {
+  .aurora-bg {
+    background: 
+      radial-gradient(circle at 0% 0%, rgba(186, 230, 253, 0.4) 0%, transparent 50%),
+      radial-gradient(circle at 100% 0%, rgba(167, 139, 250, 0.15) 0%, transparent 50%);
   }
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  
+  .glass-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+  }
+
+  .anka-gradient {
+    background: linear-gradient(90deg, #3B82F6 0%, #06B6D4 100%);
+  }
 }

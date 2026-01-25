@@ -4,11 +4,10 @@ import { Metadata } from "next";
 import { supabase } from "@/lib/supabaseClient";
 import ShareButtons from "@/components/ShareButtons";
 import Link from "next/link";
-import { Clock, MapPin, RefreshCw, Info } from "lucide-react";
+import { Clock, MapPin, RefreshCw, Info, Calendar } from "lucide-react";
 
 /* ==========================================
-   1. メタデータ生成 (OGP設定)
-   LINEやXでシェアした時にタイトル画像が出るようにします
+   メタデータ (OGP)
    ========================================== */
 export async function generateMetadata({
   params,
@@ -17,7 +16,6 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   
-  // イベント情報を取得
   const { data: event } = await supabase
     .from("events")
     .select("title, date, venue_name")
@@ -25,9 +23,7 @@ export async function generateMetadata({
     .maybeSingle();
 
   if (!event) {
-    return {
-      title: "イベントが見つかりません | Takt",
-    };
+    return { title: "イベントが見つかりません | Takt" };
   }
 
   const desc = `${event.date} @${event.venue_name ?? "未設定"} | リアルタイム進行共有`;
@@ -42,44 +38,40 @@ export async function generateMetadata({
       locale: "ja_JP",
       type: "website",
     },
-    twitter: {
-      card: "summary",
-      title: event.title,
-      description: desc,
-    },
   };
 }
 
 /* ==========================================
-   2. 便利関数群
+   便利関数
    ========================================== */
 function hhmm(time: string) {
   return String(time).slice(0, 5);
 }
 
-// ターゲット名から色を自動生成（ハッシュ化）
+// バッジの色も「パステル調」に変更
 function getTargetColor(t: string) {
+  // Anka風にするため、少し淡く、しかし文字はくっきりさせる
   const colors = [
-    "bg-red-100 text-red-700",
-    "bg-orange-100 text-orange-800",
-    "bg-amber-100 text-amber-800",
-    "bg-yellow-100 text-yellow-800",
-    "bg-lime-100 text-lime-800",
-    "bg-green-100 text-green-700",
-    "bg-emerald-100 text-emerald-700",
-    "bg-teal-100 text-teal-800",
-    "bg-cyan-100 text-cyan-800",
-    "bg-sky-100 text-sky-800",
-    "bg-blue-100 text-blue-800",
-    "bg-indigo-100 text-indigo-700",
-    "bg-violet-100 text-violet-700",
-    "bg-purple-100 text-purple-800",
-    "bg-fuchsia-100 text-fuchsia-800",
-    "bg-pink-100 text-pink-800",
-    "bg-rose-100 text-rose-800",
+    "bg-red-50 text-red-600",
+    "bg-orange-50 text-orange-700",
+    "bg-amber-50 text-amber-700",
+    "bg-yellow-50 text-yellow-700",
+    "bg-lime-50 text-lime-700",
+    "bg-green-50 text-green-700",
+    "bg-emerald-50 text-emerald-700",
+    "bg-teal-50 text-teal-700",
+    "bg-cyan-50 text-cyan-700",
+    "bg-sky-50 text-sky-700",
+    "bg-blue-50 text-blue-700",
+    "bg-indigo-50 text-indigo-700",
+    "bg-violet-50 text-violet-700",
+    "bg-purple-50 text-purple-700",
+    "bg-fuchsia-50 text-fuchsia-700",
+    "bg-pink-50 text-pink-700",
+    "bg-rose-50 text-rose-700",
   ];
   
-  if (!t || t === "all" || t === "全員") return "bg-slate-100 text-slate-600";
+  if (!t || t === "all" || t === "全員") return "bg-slate-100 text-slate-500";
   
   let sum = 0;
   for (let i = 0; i < t.length; i++) {
@@ -133,7 +125,7 @@ function relativeJa(d: Date) {
 }
 
 /* ==========================================
-   3. ページコンポーネント本体
+   UI コンポーネント (Anka Style)
    ========================================== */
 export default async function Page({
   params,
@@ -144,12 +136,10 @@ export default async function Page({
 }) {
   const { slug } = await params;
   const sp = await searchParams;
-  
-  // URLパラメータ（t=全員 など）を取得。デフォルトは "全員"
   const rawTarget = sp?.t ? decodeURIComponent(sp.t) : "全員";
   const target = rawTarget === "all" ? "全員" : rawTarget;
 
-  /* イベント情報取得 */
+  /* データ取得 */
   const { data: event } = await supabase
     .from("events")
     .select("*")
@@ -158,16 +148,17 @@ export default async function Page({
 
   if (!event) {
     return (
-      <main className="flex min-h-screen items-center justify-center p-6 bg-slate-50">
-        <div className="text-center">
-          <h1 className="text-lg font-bold text-slate-400">イベントが見つかりません</h1>
-          <Link href="/" className="mt-4 inline-block text-sm text-slate-900 underline">トップへ戻る</Link>
+      <main className="flex min-h-screen items-center justify-center p-6 text-slate-500">
+        <div className="text-center bg-white/50 backdrop-blur-xl p-8 rounded-3xl shadow-sm">
+          <h1 className="text-lg font-bold mb-4">イベントが見つかりません</h1>
+          <Link href="/" className="px-6 py-3 rounded-full bg-blue-500 text-white font-bold shadow-lg shadow-blue-200">
+            トップへ戻る
+          </Link>
         </div>
       </main>
     );
   }
 
-  /* スケジュール取得 */
   const { data: items } = await supabase
     .from("schedule_items")
     .select("*")
@@ -177,30 +168,24 @@ export default async function Page({
 
   const allItems = items ?? [];
 
-  /* タグの自動生成（DBにあるものだけタブにする） */
+  /* タブ生成 */
   const tagsSet = new Set<string>();
   allItems.forEach(item => {
     if (item.target && item.target !== "all" && item.target !== "全員") {
       tagsSet.add(item.target);
     }
   });
-
-  // タブリスト作成： [全員, ...見つかったタグ]
   const dynamicTabs = ["全員", ...Array.from(tagsSet).sort()];
+  const tabs = dynamicTabs.map(t => ({ key: t, label: t }));
 
-  const tabs = dynamicTabs.map(t => ({
-    key: t,
-    label: t 
-  }));
-
-  /* フィルタリング */
+  /* フィルタ & グループ化 */
   const filtered = target === "全員"
     ? allItems
     : allItems.filter(it => it.target === target || it.target === "全員");
 
   const groups = groupByStartTime(filtered);
 
-  /* 最終更新日時 */
+  /* 更新日時 */
   const candidates: Date[] = [];
   const evUpd = toDate((event as any).updated_at);
   if (evUpd) candidates.push(evUpd);
@@ -211,81 +196,80 @@ export default async function Page({
   const lastUpdated = candidates.length > 0 ? new Date(Math.max(...candidates.map((d) => d.getTime()))) : null;
 
   return (
-    <main className="min-h-screen bg-slate-50 font-sans pb-20">
+    // 背景は globals.css の body で設定済みだが、念のため透過を指定
+    <main className="min-h-screen pb-24 font-sans aurora-bg">
       
-      {/* --- 情報エリア (スクロールで消える) --- */}
-      <div className="bg-white px-5 pt-8 pb-6 border-b border-slate-100">
-        {/* タイトル & シェアボタン */}
-        <div className="flex justify-between items-start mb-4">
-          <h1 className="text-2xl font-black text-slate-900 leading-tight tracking-tight pr-4">
-            {event.title}
-          </h1>
-          <div className="shrink-0 pt-1">
-            <ShareButtons slug={slug} currentKey={target} tabs={tabs} />
-          </div>
-        </div>
-
-        {/* 日時・場所 */}
-        <div className="space-y-2 text-sm text-slate-600 mb-4">
-          <div className="flex items-center">
-            <Clock className="w-4 h-4 mr-2 text-slate-400" />
-            <span className="font-bold">{event.date}</span>
-          </div>
-          <div className="flex items-center">
-            <MapPin className="w-4 h-4 mr-2 text-slate-400" />
-            <span className="font-medium">{event.venue_name ?? "未設定"}</span>
-          </div>
-        </div>
-        
-        {/* 最終更新 */}
-        {lastUpdated && (
-          <div className="flex items-center text-[10px] text-slate-400 font-medium">
-            <RefreshCw className="w-3 h-3 mr-1.5" />
-            最終更新: {relativeJa(lastUpdated)}
-          </div>
-        )}
-      </div>
-
-      {/* --- 操作エリア (画面上部に張り付くタブ) --- */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
-        <div className="flex space-x-2 overflow-x-auto no-scrollbar px-4 py-3">
-          {tabs.map((t) => {
-            const isActive = target === t.key;
-            return (
-              <Link
-                key={t.key}
-                href={`/e/${slug}?t=${encodeURIComponent(t.key)}`}
-                scroll={false}
-                className={`
-                  flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all select-none
-                  ${isActive 
-                    ? "bg-slate-900 text-white shadow-md scale-105" 
-                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"}
-                `}
-              >
-                {t.label}
-              </Link>
-            );
-          })}
-        </div>
-        {/* 右端のフェード効果 */}
-        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/90 to-transparent pointer-events-none"></div>
-      </div>
-
-      {/* --- タイムラインエリア (横幅いっぱい) --- */}
-      <div className="px-4 py-6 space-y-8">
-        {groups.map((group) => (
-          <div key={group.time} className="relative">
-            {/* 時間ヘッダー */}
-            <div className="flex items-center mb-3 pl-1">
-              <span className="text-xl font-black text-slate-900 font-mono tracking-tight mr-3">
-                {group.time}
-              </span>
-              <div className="h-px bg-slate-200 flex-1"></div>
+      {/* 1. ヘッダーエリア 
+         白背景ではなく、スクロールで「すりガラス」になるように
+      */}
+      <div className="sticky top-0 z-40">
+        <div className="glass-card border-b-0 shadow-sm">
+          
+          {/* タイトル部分 */}
+          <div className="px-6 pt-6 pb-2">
+            <div className="flex justify-between items-start mb-3">
+              <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-tight drop-shadow-sm">
+                {event.title}
+              </h1>
+              {/* シェアボタン等はコンポーネント側でスタイル調整推奨だが、ここでは配置のみ */}
+              <div className="shrink-0 pt-1 pl-2">
+                <ShareButtons slug={slug} currentKey={target} tabs={tabs} />
+              </div>
             </div>
 
-            {/* カードリスト */}
-            <div className="space-y-3">
+            {/* 日付・場所 (チップ風に) */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-blue-50/50 text-blue-900 text-xs font-bold backdrop-blur-sm border border-blue-100">
+                <Calendar className="w-3.5 h-3.5 mr-1.5 opacity-70" />
+                {event.date}
+              </div>
+              <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-indigo-50/50 text-indigo-900 text-xs font-bold backdrop-blur-sm border border-indigo-100">
+                <MapPin className="w-3.5 h-3.5 mr-1.5 opacity-70" />
+                {event.venue_name ?? "場所未定"}
+              </div>
+            </div>
+          </div>
+
+          {/* タブ (Anka風: 選択中はグラデーション) */}
+          <div className="px-6 pb-4 overflow-x-auto no-scrollbar">
+            <div className="flex space-x-3">
+              {tabs.map((t) => {
+                const isActive = target === t.key;
+                return (
+                  <Link
+                    key={t.key}
+                    href={`/e/${slug}?t=${encodeURIComponent(t.key)}`}
+                    scroll={false}
+                    className={`
+                      flex-shrink-0 px-5 py-2.5 rounded-2xl text-xs font-bold transition-all duration-300 select-none
+                      ${isActive 
+                        ? "anka-gradient text-white shadow-lg shadow-blue-200 scale-105" 
+                        : "bg-white text-slate-500 shadow-sm border border-slate-100 hover:bg-slate-50"}
+                    `}
+                  >
+                    {t.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. タイムラインエリア */}
+      <div className="px-5 py-6 space-y-8">
+        {groups.map((group) => (
+          <div key={group.time} className="relative">
+            
+            {/* 時間ヘッダー (シンプルに) */}
+            <div className="flex items-center mb-4 pl-1">
+              <span className="text-xl font-black text-slate-800 font-mono tracking-tighter mr-3 opacity-90">
+                {group.time}
+              </span>
+              <div className="h-0.5 bg-gradient-to-r from-slate-200 to-transparent flex-1 rounded-full"></div>
+            </div>
+
+            <div className="space-y-4">
               {group.items.map((it: any) => {
                 const now = isNow(it.start_time, it.end_time);
                 const badgeColor = getTargetColor(it.target);
@@ -294,49 +278,57 @@ export default async function Page({
                   <div
                     key={it.id}
                     className={`
-                      relative overflow-hidden rounded-2xl transition-all
+                      relative overflow-hidden rounded-3xl transition-all duration-300
                       ${now 
-                        ? "bg-white shadow-[0_8px_30px_rgba(59,130,246,0.15)] ring-2 ring-blue-500 z-10" 
-                        : "bg-white border border-slate-100 shadow-sm"}
+                        ? "bg-white shadow-xl shadow-blue-200/50 ring-2 ring-blue-400 transform scale-[1.01]" 
+                        : "bg-white shadow-[0_4px_20px_-12px_rgba(0,0,0,0.05)] border border-slate-50 hover:shadow-md"}
                     `}
                   >
-                    {/* NOWインジケーター */}
+                    {/* NOWグラデーションボーダー (Ankaボタン風) */}
                     {now && (
-                      <div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-black px-2 py-1 rounded-bl-xl shadow-sm">
-                        NOW
-                      </div>
+                      <div className="absolute top-0 left-0 right-0 h-1.5 anka-gradient"></div>
                     )}
 
-                    <div className="p-4">
+                    <div className="p-5">
                       {/* ラベル & タイトル */}
                       <div className="mb-3">
-                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mb-1.5 ${badgeColor}`}>
-                          {it.target || "全員"}
-                        </span>
-                        <h3 className={`text-lg font-bold leading-snug ${now ? "text-slate-900" : "text-slate-800"}`}>
+                        <div className="flex justify-between items-start">
+                           <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-bold mb-2 ${badgeColor}`}>
+                            {it.target || "全員"}
+                          </span>
+                          {/* NOWバッジ */}
+                          {now && (
+                             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black animate-pulse">
+                               <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                               NOW
+                             </span>
+                          )}
+                        </div>
+                       
+                        <h3 className={`text-lg font-bold leading-snug tracking-tight ${now ? "text-slate-900" : "text-slate-700"}`}>
                           {it.title}
                         </h3>
                       </div>
 
                       {/* 詳細情報 */}
                       {(it.end_time || it.location || it.note) && (
-                        <div className="pt-3 border-t border-slate-50 space-y-2">
+                        <div className="pt-3 border-t border-slate-50 space-y-2.5">
                           {it.end_time && (
-                            <div className="flex items-center text-xs font-bold text-slate-500">
-                              <span className="w-1.5 h-1.5 rounded-full bg-slate-300 mr-2"></span>
-                              {hhmm(it.end_time)} 終了予定
+                            <div className="flex items-center text-xs font-bold text-slate-400">
+                              <Clock className="w-3.5 h-3.5 mr-2 opacity-50" />
+                              {hhmm(it.end_time)} <span className="text-[10px] font-normal ml-1">まで</span>
                             </div>
                           )}
                           
                           {it.location && (
-                            <div className="flex items-start text-xs font-medium text-slate-500">
-                              <MapPin className="w-3.5 h-3.5 mr-2 shrink-0 text-slate-400" />
+                            <div className="flex items-start text-xs font-bold text-slate-500">
+                              <MapPin className="w-3.5 h-3.5 mr-2 shrink-0 opacity-50 text-indigo-400" />
                               {it.location}
                             </div>
                           )}
                           
                           {it.note && (
-                            <div className="flex items-start mt-2 bg-slate-50 p-2.5 rounded-lg text-sm text-slate-600 leading-relaxed">
+                            <div className="flex items-start mt-1 bg-slate-50/80 p-3 rounded-2xl text-sm text-slate-600 leading-relaxed border border-slate-100/50">
                               <Info className="w-4 h-4 mr-2 mt-0.5 shrink-0 text-slate-400" />
                               <span className="whitespace-pre-wrap">{it.note}</span>
                             </div>
@@ -351,18 +343,32 @@ export default async function Page({
           </div>
         ))}
         
+        {/* 空の状態 */}
         {groups.length === 0 && (
-          <div className="text-center py-10 text-slate-400 text-sm">
-             予定が見つかりません
+          <div className="flex flex-col items-center justify-center py-20 text-slate-400 space-y-4">
+             <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
+                <Calendar className="w-8 h-8 opacity-20" />
+             </div>
+             <p className="text-sm font-bold opacity-50">予定が見つかりません</p>
           </div>
         )}
 
-        <div className="h-10 text-center flex items-center justify-center">
-          <span className="w-1 h-1 bg-slate-300 rounded-full mx-1"></span>
-          <span className="w-1 h-1 bg-slate-300 rounded-full mx-1"></span>
-          <span className="w-1 h-1 bg-slate-300 rounded-full mx-1"></span>
+        {/* フッター代わりの装飾 */}
+        <div className="h-20 flex items-center justify-center opacity-30">
+           <div className="w-12 h-1 rounded-full bg-slate-200"></div>
         </div>
       </div>
+      
+      {/* 最終更新 (画面右下に固定で浮かせる) */}
+      {lastUpdated && (
+        <div className="fixed bottom-6 right-6 z-30 pointer-events-none">
+          <div className="glass-card px-3 py-1.5 rounded-full flex items-center shadow-lg text-[10px] font-bold text-slate-500">
+             <RefreshCw className="w-3 h-3 mr-1.5" />
+             {relativeJa(lastUpdated)} 更新
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
