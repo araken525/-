@@ -89,15 +89,12 @@ export default function CreateEventPage() {
   };
 
   return (
-    // ★変更: pt-20 pb-20 を追加し、縦の余白を確保 (スマホ/PC共通のベースレイアウト)
     <main className="min-h-screen bg-[#f7f9fb] p-4 sm:p-6 font-sans text-slate-800 selection:bg-[#00c2e8] selection:text-white pt-10 md:pt-24 pb-20">
       
-      {/* ★変更: コンテナ幅を最大6xlまで拡張 (iPad/PC対応) */}
       <div className="w-full max-w-lg md:max-w-6xl mx-auto transition-all duration-500">
       
       {/* === 入力画面 === */}
       {step === "form" && (
-        // ★変更: Gridレイアウトの導入 (スマホ1列 : PC2列)
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start animate-in fade-in zoom-in-95 duration-500">
           
           {/* 左カラム: タイトル & ガイド (PC/iPadで固定表示) */}
@@ -110,7 +107,7 @@ export default function CreateEventPage() {
              </p>
           </div>
 
-          {/* 右カラム: フォーム (PCでも広がりすぎないよう max-w-lg で制限) */}
+          {/* 右カラム: フォーム */}
           <div className="md:col-span-7 w-full max-w-md md:max-w-lg mx-auto md:mx-0">
             
             {/* 基本情報カード */}
@@ -123,7 +120,14 @@ export default function CreateEventPage() {
                       <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center"><Type className="w-3.5 h-3.5 sm:w-4 sm:h-4"/></div>
                       イベント名<span className="text-red-400">*</span>
                    </label>
-                   <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="定期演奏会" className="flex-1 min-w-0 ml-2 text-center font-black text-slate-800 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"/>
+                   {/* ▼変更: placeholder変更 & text-leftで左寄せ */}
+                   <input 
+                     type="text" 
+                     value={title} 
+                     onChange={(e) => setTitle(e.target.value)} 
+                     placeholder="第5回 定期演奏会" 
+                     className="flex-1 min-w-0 ml-2 text-left font-black text-slate-800 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"
+                   />
                 </div>
 
                 {/* 2. 日付 */}
@@ -132,7 +136,13 @@ export default function CreateEventPage() {
                       <div className="w-7 h-7 sm:w-8 sm:h-8 bg-green-100 text-green-500 rounded-full flex items-center justify-center"><Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4"/></div>
                       開催日<span className="text-red-400">*</span>
                    </label>
-                   <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="flex-1 min-w-0 ml-2 text-center font-black text-slate-800 outline-none bg-transparent h-10 appearance-none relative z-10 cursor-pointer"/>
+                   {/* ▼変更: text-leftで左寄せ */}
+                   <input 
+                     type="date" 
+                     value={date} 
+                     onChange={(e) => setDate(e.target.value)} 
+                     className="flex-1 min-w-0 ml-2 text-left font-black text-slate-800 outline-none bg-transparent h-10 appearance-none relative z-10 cursor-pointer"
+                   />
                 </div>
 
                 {/* 3. 場所 */}
@@ -141,7 +151,14 @@ export default function CreateEventPage() {
                       <div className="w-7 h-7 sm:w-8 sm:h-8 bg-purple-100 text-purple-500 rounded-full flex items-center justify-center"><MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4"/></div>
                       場所
                    </label>
-                   <input type="text" value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="ミューザ" className="flex-1 min-w-0 ml-2 text-center font-black text-slate-800 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"/>
+                   {/* ▼変更: placeholder変更 & text-leftで左寄せ */}
+                   <input 
+                     type="text" 
+                     value={venue} 
+                     onChange={(e) => setVenue(e.target.value)} 
+                     placeholder="〇〇市民会館 大ホール" 
+                     className="flex-1 min-w-0 ml-2 text-left font-black text-slate-800 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"
+                   />
                 </div>
               </div>
             </div>
@@ -156,7 +173,14 @@ export default function CreateEventPage() {
                        <div className="w-7 h-7 sm:w-8 sm:h-8 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center"><Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4"/></div>
                        パスワード<span className="text-red-400">*</span>
                     </label>
-                    <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="0000" className="flex-1 min-w-0 ml-2 text-center font-black text-orange-500 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"/>
+                    {/* ▼変更: placeholder変更 & text-leftで左寄せ */}
+                    <input 
+                      type="text" 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)} 
+                      placeholder="1234" 
+                      className="flex-1 min-w-0 ml-2 text-left font-black text-orange-500 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"
+                    />
                  </div>
 
                  {/* 5. URL ID */}
@@ -166,9 +190,16 @@ export default function CreateEventPage() {
                          <div className="w-7 h-7 sm:w-8 sm:h-8 bg-cyan-100 text-cyan-500 rounded-full flex items-center justify-center"><LinkIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4"/></div>
                          URL ID
                       </label>
-                      <div className="flex-1 min-w-0 flex items-center justify-center gap-1 ml-2">
+                      <div className="flex-1 min-w-0 flex items-center justify-start gap-1 ml-2">
                          <span className="text-slate-400 font-bold text-sm shrink-0">/e/</span>
-                         <input type="text" value={slug} onChange={(e) => setSlug(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))} placeholder="regularconcert2026" className="flex-1 min-w-0 text-center font-black text-slate-800 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"/>
+                         {/* ▼変更: placeholder変更 & text-leftで左寄せ */}
+                         <input 
+                           type="text" 
+                           value={slug} 
+                           onChange={(e) => setSlug(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))} 
+                           placeholder="concert-2026" 
+                           className="flex-1 min-w-0 text-left font-black text-slate-800 placeholder:text-slate-300 outline-none bg-transparent h-10 truncate"
+                         />
                       </div>
                    </div>
                  ) : (
@@ -194,7 +225,6 @@ export default function CreateEventPage() {
 
       {/* === 完了画面 === */}
       {step === "done" && (
-        // ★変更: Gridレイアウトの導入
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start animate-in fade-in slide-in-from-bottom-8 duration-500">
           
           {/* 左カラム: タイトル & ガイド */}
