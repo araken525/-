@@ -14,9 +14,18 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f9fb] font-sans text-slate-800 selection:bg-[#00c2e8] selection:text-white pb-20 pt-16">
+    // ★相対配置(relative)にし、オーバーフローを隠す設定を追加
+    <main className="min-h-screen bg-[#f7f9fb] font-sans text-slate-800 selection:bg-[#00c2e8] selection:text-white pb-20 pt-16 relative overflow-hidden">
       
-      {/* === 1. ヘッダー (固定バーを追加) === */}
+      {/* === ★追加: 背景の透かし文字 === */}
+      {/* 画面からはみ出るくらい巨大に、ごく薄く配置 */}
+      <div className="absolute inset-x-0 top-24 flex justify-center pointer-events-none select-none z-0">
+        <span className="text-[12rem] sm:text-[16rem] font-black text-slate-900/5 tracking-tighter uppercase whitespace-nowrap">
+          Time Schedule
+        </span>
+      </div>
+
+      {/* === ヘッダー === */}
       <header className="fixed top-0 inset-x-0 h-16 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-6 z-50">
         <div className="flex items-center gap-2 font-black text-2xl text-slate-800 tracking-tighter">
           <div className="w-8 h-8 bg-[#00c2e8] rounded-xl flex items-center justify-center text-white text-base shadow-sm">🎵</div>
@@ -30,11 +39,11 @@ export default function Home() {
         </Link>
       </header>
 
-      {/* === ヒーローセクション (キャッチコピー変更) === */}
-      <section className="pt-24 px-6 flex flex-col items-center text-center max-w-2xl mx-auto">
+      {/* === ヒーローセクション === */}
+      {/* ★z-indexを追加して透かしより前面に来るようにする */}
+      <section className="pt-24 px-6 flex flex-col items-center text-center max-w-2xl mx-auto relative z-10">
         <span className="px-3 py-1 bg-cyan-50 text-[#00c2e8] text-xs font-black rounded-full mb-6">無料・ログイン不要</span>
         
-        {/* ★変更: キャッチコピー */}
         <h1 className="text-4xl sm:text-5xl font-black leading-tight tracking-tight text-slate-900 mb-6">
           当日のタイスケ、<br />みんなのスマホへ。
         </h1>
@@ -43,7 +52,7 @@ export default function Home() {
           TaiSuke（タイスケ）は、PDFより見やすく、Excelより手軽な、イベント進行表の共有ツールです。
         </p>
 
-        {/* メインCTA（タイスケ作成） */}
+        {/* メインCTA */}
         <Link 
           href="/create"
           className="w-full sm:w-auto min-w-[300px] h-16 bg-[#00c2e8] text-white rounded-[1.5rem] font-black text-lg shadow-xl shadow-cyan-200/50 hover:bg-cyan-500 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 mb-6"
@@ -51,7 +60,7 @@ export default function Home() {
           <Plus className="w-6 h-6" /> タイスケを作成する
         </Link>
 
-        {/* サブアクション（ID検索） */}
+        {/* サブアクション */}
         <div className="w-full max-w-sm mx-auto">
           {!showSearch ? (
             <button 
@@ -80,7 +89,7 @@ export default function Home() {
       </section>
 
       {/* === 3つの特徴 === */}
-      <section className="mt-20 px-6 max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <section className="mt-20 px-6 max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 relative z-10">
         <div className="bg-white p-6 rounded-[2rem] shadow-sm">
           <div className="w-12 h-12 bg-cyan-50 text-[#00c2e8] rounded-2xl flex items-center justify-center mb-4">
             <Zap className="w-6 h-6" />
@@ -113,7 +122,7 @@ export default function Home() {
       </section>
 
       {/* === 利用シーン === */}
-      <section className="mt-20 px-6 text-center">
+      <section className="mt-20 px-6 text-center relative z-10">
         <p className="text-xs font-black text-slate-400 mb-6 tracking-widest">こんなイベントで使われています</p>
         <div className="flex flex-wrap justify-center gap-3 max-w-2xl mx-auto">
           <div className="flex items-center gap-1.5 px-4 py-2.5 bg-white rounded-full shadow-sm text-sm font-bold text-slate-700"><Music className="w-4 h-4 text-pink-500"/> 定期演奏会・発表会</div>
@@ -125,7 +134,7 @@ export default function Home() {
       </section>
 
       {/* === ボトムCTA === */}
-      <section className="mt-24 px-6 text-center max-w-lg mx-auto">
+      <section className="mt-24 px-6 text-center max-w-lg mx-auto relative z-10">
         <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-50">
           <h2 className="text-2xl font-black text-slate-800 mb-2">さあ、準備を始めましょう。</h2>
           <p className="text-xs font-bold text-slate-400 mb-8">URLを発行するのにかかる時間は、わずか10秒です。</p>
