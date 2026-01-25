@@ -5,7 +5,7 @@ import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RefreshBadge from "@/components/RefreshBadge";
 import Link from "next/link";
-import { MapPin, Calendar, Clock, Filter, X, Printer } from "lucide-react";
+import { MapPin, Calendar, Clock, Filter, X, Printer, Edit3 } from "lucide-react"; // ★ Edit3 を追加
 
 /* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
@@ -153,7 +153,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   }
   const lastUpdated = candidates.length > 0 ? new Date(Math.max(...candidates.map((d) => d.getTime()))) : null;
 
-  // ★追加：印刷ページへ渡すためのURLパラメータを生成
+  // 印刷ページへ渡すためのURLパラメータ
   const printUrl = `/print/${slug}${rawT ? `?t=${encodeURIComponent(rawT)}` : ""}`;
 
   return (
@@ -238,8 +238,18 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             )}
           </div>
 
-          {/* ★追加：フィルターの状態を引き継ぐ「印刷ボタン」 */}
-          <div className="shrink-0 pl-3 border-l border-slate-100 hidden sm:block">
+          {/* ★修正ポイント：編集ボタンと印刷ボタンを両方表示 */}
+          <div className="shrink-0 pl-3 border-l border-slate-100 hidden sm:flex items-center gap-2">
+            
+            {/* ✏️ 編集画面へのリンク */}
+            <Link 
+              href={`/edit/${slug}`}
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-colors"
+            >
+              <Edit3 className="w-4 h-4" /> 編集
+            </Link>
+
+            {/* 🖨️ 印刷画面へのリンク */}
             <Link 
               href={printUrl} 
               target="_blank"
@@ -247,6 +257,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             >
               <Printer className="w-4 h-4" /> 印刷
             </Link>
+
           </div>
         </section>
 
