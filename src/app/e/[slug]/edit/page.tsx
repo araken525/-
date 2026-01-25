@@ -211,7 +211,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
         <div className="w-full max-w-sm bg-white rounded-[2rem] shadow-xl p-8 space-y-6 text-center">
           <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 mb-4"><Lock className="w-8 h-8" /></div>
           <h1 className="text-xl font-black text-slate-800">編集モード 🔐</h1>
-          {/* type="text" になっているので、日本語パスワードも入力可能です */}
           <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="w-full h-14 px-4 bg-slate-50 rounded-2xl text-center text-lg font-black outline-none focus:ring-4 focus:ring-cyan-50 transition-all"/>
           <button onClick={checkPassword} className="w-full h-14 bg-[#00c2e8] text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"><Unlock className="w-5 h-5" /> 認証する</button>
           {status && <div className="text-sm font-bold text-red-500 animate-pulse">{status}</div>}
@@ -235,70 +234,96 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
          </div>
       </header>
 
-      {/* ★修正: ステータス通知 (animate-bounce を削除し、フェードインに変更) */}
+      {/* ステータス通知 (フェードイン形式) */}
       {status && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-xl bg-slate-800/90 text-white text-sm font-bold animate-in fade-in slide-in-from-top-2 duration-300 backdrop-blur-md whitespace-nowrap">
           {status}
         </div>
       )}
 
-      <div className="pt-20 px-4 max-w-lg mx-auto space-y-6">
-        {/* イベント情報カード */}
-        {event && (
-          <section className="bg-white rounded-[1.5rem] p-4 shadow-sm flex items-center justify-between">
-             <div>
-               <h1 className="text-lg font-black text-slate-800 leading-tight">{event.title}</h1>
-               <div className="flex items-center gap-3 text-xs font-bold text-slate-500 mt-1">
-                  <div className="flex items-center"><Calendar className="w-3 h-3 mr-1 text-slate-400"/>{event.date}</div>
-                  <div className="flex items-center"><MapPin className="w-3 h-3 mr-1 text-slate-400"/>{event.venue_name}</div>
-               </div>
-             </div>
-          </section>
-        )}
+      {/* ★変更点: コンテナ幅拡大 & 2カラムレイアウト化 */}
+      <div className="pt-20 px-4 w-full max-w-lg md:max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+          
+          {/* 左カラム: イベント情報 (固定) */}
+          <div className="md:col-span-4 md:sticky md:top-24 space-y-6">
+            {event && (
+              <section className="bg-white rounded-[1.5rem] p-6 shadow-sm">
+                 <div>
+                   <h1 className="text-xl font-black text-slate-800 leading-tight mb-3">{event.title}</h1>
+                   <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-bold text-slate-500 bg-slate-50 p-2 rounded-lg">
+                        <Calendar className="w-4 h-4 text-slate-400"/>
+                        {event.date}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm font-bold text-slate-500 bg-slate-50 p-2 rounded-lg">
+                        <MapPin className="w-4 h-4 text-slate-400"/>
+                        {event.venue_name || "未設定"}
+                      </div>
+                   </div>
+                   <div className="mt-4 pt-4 border-t border-slate-100">
+                      <p className="text-xs font-bold text-slate-400 mb-2">編集のヒント</p>
+                      <ul className="text-xs text-slate-500 space-y-1 list-disc pl-4">
+                        <li>右下の「＋」ボタンで追加</li>
+                        <li>項目タップで編集</li>
+                        <li>ゴミ箱アイコンで削除</li>
+                      </ul>
+                   </div>
+                 </div>
+              </section>
+            )}
+          </div>
 
-        {/* リスト */}
-        <section className="space-y-4">
-          {items.map((it) => {
-             const badgeColor = getTargetColor(it.target);
-             const emoji = it.emoji || detectEmoji(it.title);
-             const duration = getDuration(it.start_time, it.end_time);
-             const displayTarget = it.target && it.target !== "all" ? it.target.replace(/,/g, "・") : "全員";
-             
-             return (
-              <div key={it.id} className="group relative bg-white rounded-[1.5rem] p-5 flex gap-5 items-stretch shadow-sm border border-transparent transition-all hover:shadow-md">
-                <div className="flex flex-col items-center shrink-0 space-y-2">
-                   <div className="text-lg font-black text-slate-800 leading-none">{hhmm(it.start_time)}</div>
-                   <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-3xl">{emoji}</div>
-                </div>
-                <div className="flex-1 min-w-0 flex flex-col justify-center py-1">
-                  <div className="flex justify-between items-start mb-1">
-                     <h3 className="text-lg font-black leading-tight text-slate-900">{it.title}</h3>
-                     <span className={`ml-2 shrink-0 px-2 py-0.5 rounded-md text-[10px] font-black ${badgeColor}`}>{displayTarget}</span>
+          {/* 右カラム: 編集リスト (スクロール) */}
+          <section className="space-y-4 md:col-span-8">
+            <div className="flex items-center gap-2 mb-2 px-1 md:hidden">
+               <span className="text-xs font-bold text-slate-400">スケジュール一覧</span>
+            </div>
+            
+            {items.map((it) => {
+               const badgeColor = getTargetColor(it.target);
+               const emoji = it.emoji || detectEmoji(it.title);
+               const duration = getDuration(it.start_time, it.end_time);
+               const displayTarget = it.target && it.target !== "all" ? it.target.replace(/,/g, "・") : "全員";
+               
+               return (
+                <div key={it.id} className="group relative bg-white rounded-[1.5rem] p-5 flex gap-5 items-stretch shadow-sm border border-transparent transition-all hover:shadow-md">
+                  <div className="flex flex-col items-center shrink-0 space-y-2">
+                     <div className="text-lg font-black text-slate-800 leading-none">{hhmm(it.start_time)}</div>
+                     <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-3xl">{emoji}</div>
                   </div>
-                  {it.end_time && <div className="flex items-center text-sm font-bold text-[#00c2e8] mb-1"><Clock className="w-3.5 h-3.5 mr-1"/>~{hhmm(it.end_time)} まで</div>}
-                  {it.note && <div className="text-xs text-slate-600 leading-relaxed font-medium mb-2 line-clamp-2">{it.note}</div>}
-                  <div className="flex items-center gap-3 text-xs font-bold text-slate-400">
-                     {it.location && <div className="flex items-center"><MapPin className="w-3 h-3 mr-1 text-slate-300"/>{it.location}</div>}
-                     {duration && <div>⏳ {duration}</div>}
+                  <div className="flex-1 min-w-0 flex flex-col justify-center py-1">
+                    <div className="flex justify-between items-start mb-1">
+                       <h3 className="text-lg font-black leading-tight text-slate-900">{it.title}</h3>
+                       <span className={`ml-2 shrink-0 px-2 py-0.5 rounded-md text-[10px] font-black ${badgeColor}`}>{displayTarget}</span>
+                    </div>
+                    {it.end_time && <div className="flex items-center text-sm font-bold text-[#00c2e8] mb-1"><Clock className="w-3.5 h-3.5 mr-1"/>~{hhmm(it.end_time)} まで</div>}
+                    {it.note && <div className="text-xs text-slate-600 leading-relaxed font-medium mb-2 line-clamp-2">{it.note}</div>}
+                    <div className="flex items-center gap-3 text-xs font-bold text-slate-400">
+                       {it.location && <div className="flex items-center"><MapPin className="w-3 h-3 mr-1 text-slate-300"/>{it.location}</div>}
+                       {duration && <div>⏳ {duration}</div>}
+                    </div>
+                  </div>
+                  {/* PCでも押しやすいようホバー表示 */}
+                  <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[1px] rounded-[1.5rem] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end p-4 gap-2">
+                     <button onClick={() => openSheet(it)} className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-blue-500 hover:bg-blue-50 active:scale-95 transition-all" title="編集"><Edit3 className="w-5 h-5"/></button>
+                     <button onClick={() => removeItem(it.id)} className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-red-500 hover:bg-red-50 active:scale-95 transition-all" title="削除"><Trash2 className="w-5 h-5"/></button>
                   </div>
                 </div>
-                <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[1px] rounded-[1.5rem] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end p-4 gap-2">
-                   <button onClick={() => openSheet(it)} className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-blue-500 hover:bg-blue-50 active:scale-95 transition-all"><Edit3 className="w-5 h-5"/></button>
-                   <button onClick={() => removeItem(it.id)} className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-red-500 hover:bg-red-50 active:scale-95 transition-all"><Trash2 className="w-5 h-5"/></button>
-                </div>
-              </div>
-             );
-          })}
-          {items.length === 0 && <div className="text-center py-12 text-slate-400 font-bold text-sm">予定がありません。「＋」ボタンで追加しましょう！</div>}
-        </section>
+               );
+            })}
+            {items.length === 0 && <div className="text-center py-12 text-slate-400 font-bold text-sm">予定がありません。「＋」ボタンで追加しましょう！</div>}
+          </section>
+
+        </div>
       </div>
 
       {/* FAB */}
-      <button onClick={() => openSheet()} className="fixed bottom-6 right-6 w-14 h-14 bg-[#00c2e8] rounded-full shadow-lg text-white flex items-center justify-center active:scale-90 transition-all z-30">
+      <button onClick={() => openSheet()} className="fixed bottom-6 right-6 w-14 h-14 bg-[#00c2e8] rounded-full shadow-lg text-white flex items-center justify-center active:scale-90 transition-all z-30 hover:scale-105">
         <Plus className="w-8 h-8" />
       </button>
 
-      {/* === 入力フォーム === */}
+      {/* === 入力フォーム (ロジック・デザイン維持) === */}
       <div className={`fixed inset-0 z-50 flex items-end justify-center pointer-events-none ${isSheetOpen ? "visible" : "invisible"}`}>
          <div className={`absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${isSheetOpen ? "opacity-100 pointer-events-auto" : "opacity-0"}`} onClick={closeSheet}></div>
          
