@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Clock, MapPin, ChevronDown, ChevronUp } from "lucide-react";
 
-// page.tsx で計算されたデータを受け取る型定義
 type ScheduleItemCardProps = {
   it: any;
   now: boolean;
@@ -23,20 +22,19 @@ export default function ScheduleItemCard({
   startHhmm,
   endHhmm,
 }: ScheduleItemCardProps) {
-  // メモが開いているかどうかの状態
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // メモが長いかどうかを判定（80文字以上、または改行が3回以上ある場合にボタンを表示）
   const hasLongNote =
     it.note && (it.note.length > 80 || it.note.split("\n").length > 3);
 
   return (
     <div
       className={`
-        relative bg-white rounded-[1.5rem] p-6 flex gap-4 items-start overflow-hidden transition-all hover:shadow-xl h-full flex-col
+        relative bg-white rounded-[1.5rem] p-6 flex gap-4 items-start overflow-hidden h-full flex-col
+        /* ▼▼ アニメーションを削除し、固定デザインに変更 ▼▼ */
         ${now 
-          ? "shadow-2xl ring-4 ring-[#00c2e8]/20 border-2 border-[#00c2e8] scale-[1.02] z-10" 
-          : "shadow-wolt border border-transparent"}
+          ? "shadow-lg border-2 border-[#00c2e8] z-10" 
+          : "shadow-sm border border-slate-50"}
       `}
     >
       {now && (
@@ -73,7 +71,6 @@ export default function ScheduleItemCard({
             </div>
           )}
 
-          {/* ▼▼▼ 修正ポイント：メモの表示部分 ▼▼▼ */}
           {it.note && (
             <div className="mb-4">
               <div
@@ -86,7 +83,7 @@ export default function ScheduleItemCard({
               {hasLongNote && (
                 <button
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="mt-2 flex items-center gap-1 text-xs font-bold text-[#00c2e8] hover:text-cyan-700 transition-colors"
+                  className="mt-2 flex items-center gap-1 text-xs font-bold text-[#00c2e8]"
                 >
                   {isExpanded ? (
                     <>
@@ -101,7 +98,6 @@ export default function ScheduleItemCard({
               )}
             </div>
           )}
-          {/* ▲▲▲ 修正ポイント：メモの表示部分 ▲▲▲ */}
 
           <div className="flex items-center gap-3 pt-3 border-t border-slate-50 mt-auto">
             {it.location ? (
