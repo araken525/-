@@ -21,7 +21,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Takt - タイムスケジュール共有",
+  title: "TaiSuke - タイムスケジュール共有",
   description: "舞台・イベントの進行状況をリアルタイムで共有",
 
   // favicon / app icon
@@ -32,14 +32,14 @@ export const metadata: Metadata = {
 
   // SNS（OGP / Twitter）
   openGraph: {
-    title: "Takt - タイムスケジュール共有",
+    title: "TaiSuke - タイムスケジュール共有",
     description: "舞台・イベントの進行状況をリアルタイムで共有",
     images: [
       {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "Takt - タイムスケジュール共有",
+        alt: "TaiSuke - タイムスケジュール共有",
       },
     ],
     locale: "ja_JP",
@@ -47,13 +47,13 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Takt - タイムスケジュール共有",
+    title: "TaiSuke - タイムスケジュール共有",
     description: "舞台・イベントの進行状況をリアルタイムで共有",
     images: ["/og.png"],
   },
 
   appleWebApp: {
-    title: "Takt",
+    title: "TaiSuke",
     statusBarStyle: "default",
   },
 };
