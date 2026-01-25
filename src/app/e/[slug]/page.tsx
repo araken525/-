@@ -16,6 +16,13 @@ function getDayNumber(dateStr: string) {
   return parts.length === 3 ? parts[2] : "";
 }
 
+function getJaDate(dateStr: string) {
+  if (!dateStr) return "";
+  const parts = dateStr.split(/[-/]/);
+  if (parts.length !== 3) return dateStr;
+  return `${Number(parts[1])}月${Number(parts[2])}日`;
+}
+
 function getDuration(start: string, end?: string | null) {
   if (!end) return null;
   const [sh, sm] = start.split(":").map(Number);
@@ -116,37 +123,35 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
       <div className="pt-20 px-4 max-w-lg mx-auto space-y-6">
         
-        {/* === カード1: イベント基本情報 (メッシュグラデーションver.) === */}
-        <section className="relative rounded-[2.5rem] p-8 overflow-hidden group shadow-xl shadow-cyan-500/20 transition-all hover:scale-[1.01]">
-           {/* 背景: メッシュグラデーション */}
-           <div className="absolute inset-0 bg-[conic-gradient(at_top_left,_var(--tw-gradient-stops))] from-cyan-200 via-blue-100 to-[#00c2e8] opacity-80"></div>
-           <div className="absolute inset-0 bg-[radial-gradient(at_bottom_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent mix-blend-soft-light"></div>
+        {/* === カード1: イベント基本情報 (クリーン・日本表記ver.) === */}
+        <section className="relative bg-white rounded-[2rem] p-8 shadow-wolt overflow-hidden min-h-[180px] flex flex-col justify-center">
            
-           {/* 背景装飾: 光の反射 */}
-           <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/40 rounded-full blur-3xl mix-blend-overlay animate-pulse-slow"></div>
-
-           {/* 透かし: 巨大な日付 (白く、大胆に配置) */}
-           <div className="absolute -bottom-12 -right-4 text-[160px] font-black text-white/40 select-none leading-none z-0 tracking-tighter -rotate-6 mix-blend-overlay">
-              {getDayNumber(event.date)}
+           {/* 透かし: 日本表記の日付 (例: 1月25日) */}
+           <div className="absolute -bottom-4 -right-2 text-[70px] sm:text-[90px] font-black text-slate-100 select-none leading-none z-0 tracking-tighter mix-blend-multiply opacity-60">
+              {getJaDate(event.date)}
            </div>
 
-           {/* コンテンツ (文字は白で見やすく) */}
-           <div className="relative z-10 text-left">
-             {/* 小さな日付ラベル */}
-             <div className="inline-flex items-center gap-1.5 bg-white/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-cyan-700 mb-4 shadow-sm">
-                <Calendar className="w-3.5 h-3.5" />
-                {event.date}
+           {/* コンテンツ */}
+           <div className="relative z-10 space-y-4">
+             {/* 上部ラベル */}
+             <div className="flex items-center gap-2">
+               <span className="inline-flex items-center justify-center bg-cyan-50 text-[#00c2e8] text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
+                 EVENT
+               </span>
+               <span className="text-xs font-bold text-slate-400 tracking-wider">
+                 {event.date.replace(/-/g, '/')}
+               </span>
              </div>
 
              {/* タイトル */}
-             <h1 className="text-3xl sm:text-4xl font-black text-slate-900 leading-tight mb-6 tracking-tight drop-shadow-sm pr-8">
+             <h1 className="text-2xl sm:text-3xl font-black text-slate-800 leading-tight tracking-tight pr-4">
                {event.title}
              </h1>
              
-             {/* 場所 */}
-             <div className="flex items-center text-sm font-bold text-slate-700 bg-white/50 backdrop-blur-md py-2 px-4 rounded-2xl w-fit border border-white/40">
-                <MapPin className="w-4 h-4 mr-2 text-cyan-600"/>
-                {event.venue_name ?? "場所未定"}
+             {/* 場所情報 */}
+             <div className="inline-flex items-center text-xs font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg max-w-full">
+                <MapPin className="w-3.5 h-3.5 mr-1.5 text-slate-400 shrink-0"/>
+                <span className="truncate">{event.venue_name ?? "場所未定"}</span>
              </div>
            </div>
         </section>
