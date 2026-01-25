@@ -3,32 +3,30 @@
 @tailwind utilities;
 
 :root {
-  --background: #f7f9fb; /* 限りなく白に近いグレー */
+  --background: #f7f9fb;
   --foreground: #202125;
-  --wolt-blue: #00c2e8; /* Woltのあの明るい水色 */
+  --wolt-blue: #00c2e8; /* 明るい水色 */
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
   min-height: 100vh;
-  /* iPhoneでのスクロールを滑らかに */
-  -webkit-overflow-scrolling: touch; 
+  /* 数字を読みやすく（等幅にしない） */
+  font-feature-settings: "tnum" on, "lnum" on;
+  -webkit-overflow-scrolling: touch;
 }
 
 @layer utilities {
-  /* プリッとした影 */
   .shadow-wolt {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   }
   
-  /* ボタンを押した時の動き */
   .active-bounce:active {
-    transform: scale(0.95);
+    transform: scale(0.96);
     transition: transform 0.1s;
   }
 
-  /* スクロールバー隠し */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }

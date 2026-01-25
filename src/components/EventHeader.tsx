@@ -47,11 +47,11 @@ export default function EventHeader({ title, slug }: Props) {
         `}
       >
         <h1 
-          className={`text-base font-black truncate pr-4 transition-colors duration-300
-            ${scrolled ? "text-slate-800" : "text-white drop-shadow-md"}
+          className={`text-sm font-black truncate pr-4 transition-colors duration-300
+            ${scrolled ? "text-slate-800" : "text-white drop-shadow-md opacity-90"}
           `}
         >
-          {title}
+          {scrolled ? title : ""}
         </h1>
         
         <button
