@@ -241,7 +241,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
         </div>
       )}
 
-      {/* ★変更点: コンテナ幅拡大 & 2カラムレイアウト化 */}
       <div className="pt-20 px-4 w-full max-w-lg md:max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
           
@@ -304,7 +303,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                        {duration && <div>⏳ {duration}</div>}
                     </div>
                   </div>
-                  {/* PCでも押しやすいようホバー表示 */}
                   <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[1px] rounded-[1.5rem] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end p-4 gap-2">
                      <button onClick={() => openSheet(it)} className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-blue-500 hover:bg-blue-50 active:scale-95 transition-all" title="編集"><Edit3 className="w-5 h-5"/></button>
                      <button onClick={() => removeItem(it.id)} className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-red-500 hover:bg-red-50 active:scale-95 transition-all" title="削除"><Trash2 className="w-5 h-5"/></button>
@@ -396,10 +394,24 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                         <MapPin className="w-4 h-4 text-slate-400 shrink-0"/>
                         <input type="text" value={formData.location} onChange={(e)=>setFormData({...formData, location:e.target.value})} placeholder="場所を追加" className="flex-1 bg-transparent text-sm font-bold outline-none"/>
                      </div>
-                     <div className="flex items-start gap-3 bg-slate-50 rounded-xl px-4 py-3 min-h-[5rem]">
+
+                     {/* ▼▼▼ ここが今回の修正箇所です ▼▼▼ */}
+                     <div className="flex items-start gap-3 bg-slate-50 rounded-xl px-4 py-3">
                         <AlignLeft className="w-4 h-4 text-slate-400 shrink-0 mt-1"/>
-                        <textarea value={formData.note} onChange={(e)=>setFormData({...formData, note:e.target.value})} placeholder="メモを追加" className="flex-1 bg-transparent text-sm font-medium outline-none resize-none h-full"></textarea>
+                        <textarea 
+                           value={formData.note} 
+                           onChange={(e) => {
+                              setFormData({ ...formData, note: e.target.value });
+                              // 入力に合わせて高さを自動で調整するロジック
+                              e.target.style.height = "auto";
+                              e.target.style.height = `${e.target.scrollHeight}px`;
+                           }} 
+                           placeholder="メモを追加" 
+                           className="flex-1 bg-transparent text-sm font-medium outline-none resize-none min-h-[5rem] overflow-hidden"
+                        ></textarea>
                      </div>
+                     {/* ▲▲▲ ここが今回の修正箇所です ▲▲▲ */}
+
                   </div>
                </div>
 
