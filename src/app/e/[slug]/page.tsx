@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { supabase } from "@/lib/supabaseClient";
 import EventHeader from "@/components/EventHeader";
 import RealtimeListener from "@/components/RealtimeListener"; // ★追加
+import ScheduleItemCard from "@/components/ScheduleItemCard"; // ★追加（新規作成した部品）
 import Link from "next/link";
 import { RefreshCw, MapPin, Calendar, Clock, Filter } from "lucide-react";
 
@@ -90,8 +91,8 @@ function relativeJa(d: Date) {
 /* === URL生成ロジック (複数選択対応) === */
 function toggleTag(currentTags: string[], tag: string): string {
   const newTags = currentTags.includes(tag)
-    ? currentTags.filter((t) => t !== tag) // 既にあったら消す
-    : [...currentTags, tag]; // なかったら追加する
+    ? currentTags.filter((t) => t !== tag) 
+    : [...currentTags, tag]; 
   
   if (newTags.length === 0) return "";
   return newTags.join(",");
@@ -102,7 +103,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { slug } = await params;
   const sp = await searchParams;
   
-  // URLから選択されたタグを取得 (カンマ区切りを配列に)
   const rawT = sp?.t ? decodeURIComponent(sp.t) : "";
   const selectedTags = rawT ? rawT.split(",") : [];
 
@@ -112,7 +112,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { data: items } = await supabase.from("schedule_items").select("*").eq("event_id", event.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
   const allItems = items ?? [];
 
-  // ★変更点1: タグ収集時に「全員」もタブとして含める
   const tagsSet = new Set<string>();
   allItems.forEach(item => {
     if (!item.target || item.target === "all" || item.target === "全員") {
@@ -126,16 +125,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     }
   });
   
-  // 「全員」タブを必ず先頭にし、他をアルファベット順に
   const otherTabs = Array.from(tagsSet).filter(t => t !== "全員").sort();
   const dynamicTabs = tagsSet.has("全員") ? ["全員", ...otherTabs] : otherTabs;
 
-  // ★変更点2: フィルタリングの挙動を最適化
   const filtered = allItems.filter(it => {
-    // 1. 何も選択されていない場合は「すべて表示」なので全件表示
     if (selectedTags.length === 0) return true;
 
-    // アイテムのタグを配列化 (未設定や "all" は「全員」に統一)
     const itTargets = (!it.target || it.target === "all" || it.target === "全員") 
       ? ["全員"] 
       : it.target.split(",").map((t: string) => {
@@ -143,17 +138,13 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           return (trimmed === "all") ? "全員" : trimmed;
         });
 
-    // 2. 予定が「全員」対象なら、常に表示 
-    // (例：「木管」を選んだ人にも、全員リハや昼休憩は見えないと困るため)
     if (itTargets.includes("全員")) return true;
 
-    // 3. 予定が特定パート対象なら、ユーザーがそのパートを選択している場合のみ表示
     return itTargets.some((tag: string) => selectedTags.includes(tag));
   });
 
   const groups = groupByStartTime(filtered);
 
-  // 最終更新日時
   const candidates: Date[] = [];
   const evUpd = toDate((event as any).updated_at);
   if (evUpd) candidates.push(evUpd);
@@ -167,13 +158,10 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white pb-20">
       <EventHeader title={event.title} slug={slug} />
 
-      {/* コンテナ全体: 最大幅を広く取る */}
       <div className="pt-24 px-4 w-full max-w-lg md:max-w-7xl mx-auto space-y-10">
         
-        {/* === 上部エリア: 情報 & フィルター === */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           
-          {/* カード1: イベント基本情報 */}
           <section className="relative rounded-[2rem] p-8 overflow-hidden group shadow-wolt transition-transform hover:scale-[1.01] h-full min-h-[200px]">
              <div className="absolute inset-0 bg-[conic-gradient(at_top_left,_var(--tw-gradient-stops))] from-cyan-200 via-blue-100 to-[#00c2e8] opacity-80"></div>
              <div className="absolute inset-0 bg-[radial-gradient(at_bottom_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent mix-blend-soft-light"></div>
@@ -198,7 +186,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
              </div>
           </section>
 
-          {/* カード2: フィルター */}
           <section className="bg-white rounded-[1.5rem] p-6 shadow-wolt h-full flex flex-col">
              <div className="flex items-center justify-between mb-4 px-1 shrink-0">
                 <div className="flex items-center gap-2">
@@ -213,10 +200,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 </div>
              </div>
              
-             {/* フィルタータグ一覧 */}
              <div className="flex flex-wrap gap-2 content-start flex-1">
-              
-              {/* ★変更点3: 先頭に固定で「すべて表示」タブを追加 */}
               <Link
                 href={`/e/${slug}`}
                 scroll={false}
@@ -232,7 +216,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 すべて表示
               </Link>
 
-              {/* 動的タブ（「全員」を含む） */}
               {dynamicTabs.map((tag) => {
                 const isActive = selectedTags.includes(tag);
                 const nextUrl = toggleTag(selectedTags, tag);
@@ -270,7 +253,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         </div>
 
 
-        {/* === 下部エリア: タイムライン (横幅いっぱい) === */}
         <div className="space-y-10 w-full">
           <div className="pl-2 flex items-center gap-2 border-b border-slate-100 pb-4">
              <Clock className="w-6 h-6 text-[#00c2e8]" />
@@ -279,7 +261,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
           {groups.map((group) => (
             <div key={group.time}>
-              {/* 時間ヘッダー */}
               <div className="flex items-center mb-6 pl-2">
                 <span className="text-3xl font-black text-slate-800 tracking-tight font-sans">
                   {group.time}
@@ -290,82 +271,27 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 {group.items.map((it: any) => {
+                  /* ここで計算ロジックは今まで通り実行 */
                   const now = isNow(it.start_time, it.end_time);
                   const emoji = it.emoji || detectEmoji(it.title);
                   const duration = getDuration(it.start_time, it.end_time);
-                  
                   const primaryTag = it.target ? it.target.split(",")[0] : "全員";
                   const badgeColor = getTargetColor(primaryTag);
+                  const startHhmm = hhmm(it.start_time);
+                  const endHhmm = it.end_time ? hhmm(it.end_time) : null;
 
+                  /* ★ 修正ポイント：新しく作ったコンポーネントを呼び出すだけ */
                   return (
-                    <div
+                    <ScheduleItemCard
                       key={it.id}
-                      className={`
-                        relative bg-white rounded-[1.5rem] p-6 flex gap-4 items-start overflow-hidden transition-all hover:shadow-xl h-full flex-col
-                        ${now 
-                          ? "shadow-2xl ring-4 ring-[#00c2e8]/20 border-2 border-[#00c2e8] scale-[1.02] z-10" 
-                          : "shadow-wolt border border-transparent"}
-                      `}
-                    >
-                      {now && (
-                        <div className="absolute -top-3 -left-2 bg-[#00c2e8] text-white px-3 py-1 rounded-full text-[10px] font-black shadow-md border-2 border-white z-20">
-                          NOW
-                        </div>
-                      )}
-
-                      <div className="absolute -bottom-4 -right-2 text-[5rem] font-black text-slate-50/80 select-none watermark-text leading-none z-0 pointer-events-none">
-                        {hhmm(it.start_time)}
-                      </div>
-
-                      <div className="relative z-10 flex items-start gap-4 w-full">
-                         <div className="shrink-0 text-[3rem] leading-none drop-shadow-sm filter grayscale-[0.1]">
-                            {emoji}
-                         </div>
-
-                         <div className="flex-1 min-w-0 flex flex-col h-full">
-                            <div className="mb-2">
-                               <div className="flex flex-wrap items-start gap-2 mb-1">
-                                  <h3 className={`text-xl font-black leading-tight tracking-tight ${now ? "text-[#00c2e8]" : "text-slate-900"}`}>
-                                    {it.title}
-                                  </h3>
-                               </div>
-                               <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-black ${badgeColor}`}>
-                                  {it.target && it.target !== "all" ? it.target.replace(/,/g, "・") : "全員"}
-                               </span>
-                            </div>
-
-                            {it.end_time && (
-                               <div className="flex items-center text-sm font-bold text-[#00c2e8] mb-3">
-                                 <Clock className="w-4 h-4 mr-1.5" />
-                                 <span>~{hhmm(it.end_time)} まで</span>
-                               </div>
-                            )}
-
-                            {it.note && (
-                              <div className="text-sm text-slate-600 leading-relaxed font-medium mb-4 line-clamp-3">
-                                {it.note}
-                              </div>
-                            )}
-
-                            <div className="flex items-center gap-3 pt-3 border-t border-slate-50 mt-auto">
-                               {it.location ? (
-                                  <div className="flex items-center text-xs font-bold text-slate-500 truncate max-w-[70%]">
-                                     <MapPin className="w-3.5 h-3.5 mr-1 text-slate-300 shrink-0" />
-                                     <span className="truncate">{it.location}</span>
-                                  </div>
-                               ) : <div className="flex-1"></div>}
-                               
-                               {it.location && <div className="w-px h-3 bg-slate-200 shrink-0"></div>}
-
-                               {duration && (
-                                 <div className="text-xs font-bold text-slate-400 shrink-0">
-                                   ⏳ {duration}
-                                 </div>
-                               )}
-                            </div>
-                         </div>
-                      </div>
-                    </div>
+                      it={it}
+                      now={now}
+                      emoji={emoji}
+                      duration={duration}
+                      badgeColor={badgeColor}
+                      startHhmm={startHhmm}
+                      endHhmm={endHhmm}
+                    />
                   );
                 })}
               </div>
