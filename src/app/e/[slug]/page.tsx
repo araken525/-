@@ -2,10 +2,10 @@ export const dynamic = "force-dynamic";
 
 import { supabase } from "@/lib/supabaseClient";
 import EventHeader from "@/components/EventHeader";
-import RealtimeListener from "@/components/RealtimeListener"; // ★追加
-import ScheduleItemCard from "@/components/ScheduleItemCard"; // ★追加（新規作成した部品）
+import ScheduleItemCard from "@/components/ScheduleItemCard";
+import RefreshBadge from "@/components/RefreshBadge"; // ★追加
 import Link from "next/link";
-import { RefreshCw, MapPin, Calendar, Clock, Filter } from "lucide-react";
+import { MapPin, Calendar, Clock, Filter, X } from "lucide-react";
 
 /* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
@@ -158,102 +158,89 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white pb-20">
       <EventHeader title={event.title} slug={slug} />
 
-      <div className="pt-24 px-4 w-full max-w-lg md:max-w-7xl mx-auto space-y-10">
+      <div className="pt-24 px-4 w-full max-w-lg md:max-w-4xl mx-auto space-y-6">
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-          
-          <section className="relative rounded-[2rem] p-8 overflow-hidden group shadow-wolt transition-transform hover:scale-[1.01] h-full min-h-[200px]">
-             <div className="absolute inset-0 bg-[conic-gradient(at_top_left,_var(--tw-gradient-stops))] from-cyan-200 via-blue-100 to-[#00c2e8] opacity-80"></div>
-             <div className="absolute inset-0 bg-[radial-gradient(at_bottom_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent mix-blend-soft-light"></div>
-             <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/40 rounded-full blur-3xl mix-blend-overlay animate-pulse-slow"></div>
+        {/* === イベント情報カード (横幅を合わせてスッキリ配置) === */}
+        <section className="relative bg-white rounded-[2rem] p-8 overflow-hidden shadow-sm h-full min-h-[160px]">
+           <div className="absolute inset-0 bg-[conic-gradient(at_top_left,_var(--tw-gradient-stops))] from-cyan-200 via-blue-100 to-[#00c2e8] opacity-80"></div>
+           <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/40 rounded-full blur-3xl mix-blend-overlay"></div>
 
-             <div className="absolute -bottom-12 -right-4 text-[160px] font-black text-white/40 select-none leading-none z-0 tracking-tighter -rotate-6 mix-blend-overlay">
-                {getDayNumber(event.date)}
+           <div className="absolute -bottom-10 -right-4 text-[120px] font-black text-white/40 select-none leading-none z-0 tracking-tighter -rotate-6 mix-blend-overlay">
+              {getDayNumber(event.date)}
+           </div>
+
+           <div className="relative z-10 text-left">
+             <div className="inline-flex items-center gap-1.5 bg-white/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-cyan-700 mb-3 shadow-sm">
+                <Calendar className="w-3.5 h-3.5" />
+                {getJaDate(event.date)}
              </div>
-
-             <div className="relative z-10 text-left">
-               <div className="inline-flex items-center gap-1.5 bg-white/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-cyan-700 mb-4 shadow-sm">
-                  <Calendar className="w-3.5 h-3.5" />
-                  {getJaDate(event.date)}
-               </div>
-               <h1 className="text-3xl sm:text-4xl font-black text-slate-900 leading-tight mb-6 tracking-tight drop-shadow-sm pr-8">
-                 {event.title}
-               </h1>
-               <div className="flex items-center text-sm font-bold text-slate-700 bg-white/50 backdrop-blur-md py-2 px-4 rounded-2xl w-fit border border-white/40">
-                  <MapPin className="w-4 h-4 mr-2 text-cyan-600"/>
-                  {event.venue_name ?? "場所未定"}
-               </div>
+             <h1 className="text-3xl font-black text-slate-900 leading-tight mb-4 tracking-tight drop-shadow-sm pr-8">
+               {event.title}
+             </h1>
+             <div className="flex items-center text-sm font-bold text-slate-700 bg-white/50 backdrop-blur-md py-2 px-4 rounded-2xl w-fit border border-white/40">
+                <MapPin className="w-4 h-4 mr-2 text-cyan-600"/>
+                {event.venue_name ?? "場所未定"}
              </div>
-          </section>
+           </div>
+        </section>
 
-          <section className="bg-white rounded-[1.5rem] p-6 shadow-wolt h-full flex flex-col">
-             <div className="flex items-center justify-between mb-4 px-1 shrink-0">
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-[#00c2e8]" />
-                  <h2 className="text-xs font-black text-slate-400 uppercase tracking-wider">担当パートで絞り込み</h2>
-                </div>
-                
-                <div className={`transition-all duration-200 ${selectedTags.length > 0 ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}>
-                  <Link href={`/e/${slug}`} scroll={false} className="text-[10px] font-bold text-slate-400 hover:text-red-500 bg-slate-100 px-3 py-1.5 rounded-lg">
-                     条件をクリア
-                  </Link>
-                </div>
-             </div>
-             
-             <div className="flex flex-wrap gap-2 content-start flex-1">
-              <Link
-                href={`/e/${slug}`}
-                scroll={false}
-                className={`
-                  relative inline-flex items-center justify-center 
-                  px-4 py-3 rounded-2xl text-xs font-black transition-all duration-200 select-none active:scale-95
-                  border 
-                  ${selectedTags.length === 0 
-                    ? "bg-[#00c2e8] border-[#00c2e8] text-white" 
-                    : "bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100"}
-                `}
-              >
-                すべて表示
-              </Link>
-
-              {dynamicTabs.map((tag) => {
-                const isActive = selectedTags.includes(tag);
-                const nextUrl = toggleTag(selectedTags, tag);
-                const href = nextUrl ? `/e/${slug}?t=${encodeURIComponent(nextUrl)}` : `/e/${slug}`;
-
-                return (
-                  <Link
-                    key={tag}
-                    href={href}
-                    scroll={false}
-                    className={`
-                      relative inline-flex items-center justify-center 
-                      px-4 py-3 rounded-2xl text-xs font-black transition-all duration-200 select-none active:scale-95
-                      border 
-                      ${isActive 
-                        ? "bg-[#00c2e8] border-[#00c2e8] text-white" 
-                        : "bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100"}
-                    `}
-                  >
-                    {tag}
-                  </Link>
-                );
-              })}
-
-              {dynamicTabs.length === 0 && (
-                 <div className="w-full text-center py-4 text-xs font-bold text-slate-300 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                   タグの設定がありません
-                 </div>
-              )}
+        {/* === フィルターバー (横スクロール) === */}
+        <section className="bg-white rounded-[1.5rem] p-3 shadow-sm sticky top-16 z-20 transition-all">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <div className="pl-1 pr-2 flex items-center shrink-0">
+              <Filter className="w-4 h-4 text-slate-300 mr-1" />
+              <span className="text-xs font-black text-slate-300">表示切替</span>
             </div>
-            <div className="mt-3 flex justify-end shrink-0">
-               <span className="text-[10px] font-bold text-slate-300">※ 複数選択できます</span>
-            </div>
-          </section>
-        </div>
+
+            <Link
+              href={`/e/${slug}`}
+              scroll={false}
+              className={`
+                shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-colors select-none
+                ${selectedTags.length === 0 
+                  ? "bg-[#00c2e8] text-white" 
+                  : "bg-slate-50 text-slate-500"}
+              `}
+            >
+              すべて
+            </Link>
+
+            {dynamicTabs.map((tag) => {
+              const isActive = selectedTags.includes(tag);
+              const nextUrl = toggleTag(selectedTags, tag);
+              const href = nextUrl ? `/e/${slug}?t=${encodeURIComponent(nextUrl)}` : `/e/${slug}`;
+
+              return (
+                <Link
+                  key={tag}
+                  href={href}
+                  scroll={false}
+                  className={`
+                    shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-colors select-none
+                    ${isActive 
+                      ? "bg-[#00c2e8] text-white" 
+                      : "bg-slate-50 text-slate-500"}
+                  `}
+                >
+                  {tag}
+                </Link>
+              );
+            })}
+
+            {/* クリアボタン（タグが選択されている時だけ右端に表示） */}
+            {selectedTags.length > 0 && (
+              <div className="pl-2 border-l border-slate-100 shrink-0">
+                <Link href={`/e/${slug}`} scroll={false} className="flex items-center text-xs font-bold text-slate-400 bg-slate-50 px-3 py-2 rounded-xl">
+                   <X className="w-3.5 h-3.5 mr-1" /> クリア
+                </Link>
+              </div>
+            )}
+          </div>
+        </section>
 
 
-        <div className="space-y-10 w-full">
+        {/* === タイムライン === */}
+        <div className="space-y-10 w-full pt-4">
           <div className="pl-2 flex items-center gap-2 border-b border-slate-100 pb-4">
              <Clock className="w-6 h-6 text-[#00c2e8]" />
              <h2 className="text-2xl font-black text-slate-800 tracking-tight">タイムスケジュール</h2>
@@ -271,7 +258,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 {group.items.map((it: any) => {
-                  /* ここで計算ロジックは今まで通り実行 */
                   const now = isNow(it.start_time, it.end_time);
                   const emoji = it.emoji || detectEmoji(it.title);
                   const duration = getDuration(it.start_time, it.end_time);
@@ -280,7 +266,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                   const startHhmm = hhmm(it.start_time);
                   const endHhmm = it.end_time ? hhmm(it.end_time) : null;
 
-                  /* ★ 修正ポイント：新しく作ったコンポーネントを呼び出すだけ */
                   return (
                     <ScheduleItemCard
                       key={it.id}
@@ -308,14 +293,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         </div>
       </div>
 
-      {lastUpdated && (
-        <div className="fixed bottom-6 right-6 z-30 pointer-events-none">
-          <div className="bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg border border-slate-100 text-xs font-black text-slate-500 flex items-center">
-             <RefreshCw className="w-3.5 h-3.5 mr-2" />
-             {relativeJa(lastUpdated)} 更新
-          </div>
-        </div>
-      )}
+      {/* ★ 修正ポイント：新しく作ったリロードボタンコンポーネントを配置 */}
+      {lastUpdated && <RefreshBadge dateText={relativeJa(lastUpdated)} />}
+      
     </main>
   );
 }
