@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Share2, X, Copy, Check, MessageCircle, Twitter, Link as LinkIcon } from "lucide-react";
+import { Share2, X, Copy, Check, MessageCircle, Twitter } from "lucide-react";
 
 type Props = {
   title: string;
@@ -10,7 +10,7 @@ type Props = {
 
 export default function EventHeader({ title, slug }: Props) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isStaffUrl, setIsStaffUrl] = useState(false); // スタッフ用URL切り替え
+  const [isStaffUrl, setIsStaffUrl] = useState(false);
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState("");
 
@@ -18,7 +18,6 @@ export default function EventHeader({ title, slug }: Props) {
     setOrigin(window.location.origin);
   }, []);
 
-  // シェアするURLを生成
   const shareUrl = `${origin}/e/${slug}${isStaffUrl ? "?t=staff" : ""}`;
   const shareText = `${title}のタイムスケジュール ${shareUrl}`;
 
@@ -38,91 +37,71 @@ export default function EventHeader({ title, slug }: Props) {
 
   return (
     <>
-      {/* 1. 極薄・シンプルヘッダー (常時固定) */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-5 bg-white/70 backdrop-blur-md border-b border-white/40 shadow-sm transition-all">
-        <h1 className="text-sm font-bold text-slate-800 truncate pr-4 opacity-90">
+      {/* note風ヘッダー：シンプル・白背景・下線あり */}
+      <header className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 bg-white border-b border-gray-200 transition-all">
+        <h1 className="text-sm font-bold text-gray-800 truncate pr-4">
           {title}
         </h1>
+        {/* 共有ボタン：シンプルに */}
         <button
           onClick={() => setIsOpen(true)}
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-white/80 text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition-colors shadow-sm ring-1 ring-slate-900/5"
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
         >
-          <Share2 className="w-4 h-4" />
+          <Share2 className="w-5 h-5" />
         </button>
       </header>
 
-      {/* 2. 共有ポップアップ (モーダル) */}
+      {/* 共有モーダル */}
       {isOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          {/* 背景 (暗くする) */}
           <div 
-            className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setIsOpen(false)}
           />
-          
-          {/* モーダル本体 */}
-          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 space-y-6 animate-in zoom-in-95 duration-200">
-            
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-black text-slate-800">共有する</h3>
-              <button 
-                onClick={() => setIsOpen(false)}
-                className="p-2 -mr-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
-              >
-                <X className="w-5 h-5" />
+          <div className="relative w-full max-w-sm bg-white rounded-xl shadow-xl p-6 space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center border-b border-gray-100 pb-4">
+              <h3 className="text-lg font-bold text-gray-800">共有する</h3>
+              <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            {/* URL切り替えタブ */}
-            <div className="bg-slate-100 p-1 rounded-xl flex font-bold text-xs">
+            <div className="flex gap-2 text-sm font-bold">
               <button
                 onClick={() => setIsStaffUrl(false)}
-                className={`flex-1 py-2.5 rounded-lg transition-all ${!isStaffUrl ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                className={`flex-1 py-2 rounded-lg border ${!isStaffUrl ? "border-[#2cb696] text-[#2cb696] bg-[#2cb696]/10" : "border-gray-200 text-gray-500"}`}
               >
                 全員用URL
               </button>
               <button
                 onClick={() => setIsStaffUrl(true)}
-                className={`flex-1 py-2.5 rounded-lg transition-all ${isStaffUrl ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                className={`flex-1 py-2 rounded-lg border ${isStaffUrl ? "border-[#2cb696] text-[#2cb696] bg-[#2cb696]/10" : "border-gray-200 text-gray-500"}`}
               >
                 スタッフ用URL
               </button>
             </div>
 
-            {/* URL表示 & コピー */}
             <div 
               onClick={copyToClipboard}
-              className="flex items-center gap-3 p-3 rounded-2xl border-2 border-slate-100 bg-slate-50 cursor-pointer active:scale-[0.98] transition-transform group"
+              className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
             >
-              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${copied ? "bg-[#2cb696] text-white" : "bg-gray-200 text-gray-500"}`}>
                 {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-bold text-slate-400 mb-0.5">タップしてリンクをコピー</div>
-                <div className="text-xs font-bold text-slate-700 truncate font-mono">
-                  {shareUrl}
-                </div>
+                <div className="text-xs text-gray-500 mb-0.5">リンクをコピー</div>
+                <div className="text-sm font-bold text-gray-800 truncate font-mono">{shareUrl}</div>
               </div>
             </div>
 
-            {/* SNSボタン */}
             <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={shareLine}
-                className="flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#06C755] text-white font-bold text-sm shadow-lg shadow-green-100 hover:opacity-90 active:scale-[0.98] transition-all"
-              >
-                <MessageCircle className="w-5 h-5 fill-current" />
-                LINEで送る
+              <button onClick={shareLine} className="flex items-center justify-center gap-2 py-3 rounded-lg bg-[#06C755] text-white font-bold text-sm hover:opacity-90">
+                <MessageCircle className="w-5 h-5 fill-current" /> LINE
               </button>
-              <button
-                onClick={shareX}
-                className="flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-black text-white font-bold text-sm shadow-lg shadow-slate-200 hover:opacity-90 active:scale-[0.98] transition-all"
-              >
-                <Twitter className="w-4 h-4 fill-current" />
-                ポストする
+              <button onClick={shareX} className="flex items-center justify-center gap-2 py-3 rounded-lg bg-black text-white font-bold text-sm hover:opacity-90">
+                <Twitter className="w-4 h-4 fill-current" /> X (Twitter)
               </button>
             </div>
-
           </div>
         </div>
       )}
