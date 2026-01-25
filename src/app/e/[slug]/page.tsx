@@ -1,13 +1,11 @@
 export const dynamic = "force-dynamic";
 
-import { Metadata } from "next";
 import { supabase } from "@/lib/supabaseClient";
 import EventHeader from "@/components/EventHeader";
 import Link from "next/link";
-/* Printerを追加 */
-import { RefreshCw, MapPin, Calendar, Clock, Filter, Printer } from "lucide-react";
+import { RefreshCw, MapPin, Calendar, Clock, Filter } from "lucide-react";
 
-/* ... (メタデータ生成やヘルパー関数はそのまま) ... */
+/* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
 
 function getDayNumber(dateStr: string) {
@@ -88,11 +86,24 @@ function relativeJa(d: Date) {
   return d.toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
+/* === URL生成ロジック (複数選択対応) === */
+function toggleTag(currentTags: string[], tag: string): string {
+  const newTags = currentTags.includes(tag)
+    ? currentTags.filter((t) => t !== tag) // 既にあったら消す
+    : [...currentTags, tag]; // なかったら追加する
+  
+  if (newTags.length === 0) return "";
+  return newTags.join(",");
+}
+
 /* === メインコンポーネント === */
 export default async function Page({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ t?: string }> }) {
   const { slug } = await params;
   const sp = await searchParams;
-  const target = (sp?.t ? decodeURIComponent(sp.t) : "全員") === "all" ? "全員" : (sp?.t ? decodeURIComponent(sp.t) : "全員");
+  
+  // URLから選択されたタグを取得 (カンマ区切りを配列に)
+  const rawT = sp?.t ? decodeURIComponent(sp.t) : "";
+  const selectedTags = rawT ? rawT.split(",") : [];
 
   const { data: event } = await supabase.from("events").select("*").eq("slug", slug).maybeSingle();
   if (!event) return <main className="min-h-screen flex items-center justify-center"><div className="text-slate-400 font-bold">イベントが見つかりません</div></main>;
@@ -100,14 +111,33 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { data: items } = await supabase.from("schedule_items").select("*").eq("event_id", event.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
   const allItems = items ?? [];
 
+  // 全てのタグを収集 (重複排除)
   const tagsSet = new Set<string>();
-  allItems.forEach(item => { if (item.target && item.target !== "all" && item.target !== "全員") tagsSet.add(item.target); });
-  const dynamicTabs = ["全員", ...Array.from(tagsSet).sort()];
-  const tabs = dynamicTabs.map(t => ({ key: t, label: t }));
+  allItems.forEach(item => {
+    // 将来的に item.target が "A,B" のようにカンマ区切りで保存されても対応できるように split する
+    if (item.target && item.target !== "all" && item.target !== "全員") {
+      item.target.split(",").forEach((t: string) => tagsSet.add(t.trim()));
+    }
+  });
+  const dynamicTabs = Array.from(tagsSet).sort();
 
-  const filtered = target === "全員" ? allItems : allItems.filter(it => it.target === target || it.target === "全員");
+  // ★フィルタリングロジック (ここを変更)
+  const filtered = allItems.filter(it => {
+    // 1. "全員"タグは常に表示
+    if (!it.target || it.target === "all" || it.target === "全員") return true;
+    
+    // 2. 何も選択されていない場合は全員表示 (初期状態)
+    if (selectedTags.length === 0) return true;
+
+    // 3. 選択されたタグのいずれかが含まれていれば表示 (部分一致・複数対応)
+    // 将来的に "woodwinds,brass" のようなデータがきてもヒットするようにチェック
+    const itemTags = it.target.split(",").map((t: string) => t.trim());
+    return itemTags.some((tag: string) => selectedTags.includes(tag));
+  });
+
   const groups = groupByStartTime(filtered);
 
+  // 最終更新日時
   const candidates: Date[] = [];
   const evUpd = toDate((event as any).updated_at);
   if (evUpd) candidates.push(evUpd);
@@ -125,32 +155,22 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         
         {/* === カード1: イベント基本情報 (メッシュグラデーション・日本表記・落ち着いた影) === */}
         <section className="relative rounded-[2rem] p-8 overflow-hidden group shadow-wolt">
-           {/* 背景: メッシュグラデーション */}
            <div className="absolute inset-0 bg-[conic-gradient(at_top_left,_var(--tw-gradient-stops))] from-cyan-200 via-blue-100 to-[#00c2e8] opacity-80"></div>
            <div className="absolute inset-0 bg-[radial-gradient(at_bottom_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent mix-blend-soft-light"></div>
-           
-           {/* 背景装飾: 光の反射 */}
            <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/40 rounded-full blur-3xl mix-blend-overlay animate-pulse-slow"></div>
 
-           {/* 透かし: 巨大な日付数字 (さっきのまま) */}
            <div className="absolute -bottom-12 -right-4 text-[160px] font-black text-white/40 select-none leading-none z-0 tracking-tighter -rotate-6 mix-blend-overlay">
               {getDayNumber(event.date)}
            </div>
 
-           {/* コンテンツ */}
            <div className="relative z-10 text-left">
-             {/* 日付ラベル (ここを日本表記に変更) */}
              <div className="inline-flex items-center gap-1.5 bg-white/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-cyan-700 mb-4 shadow-sm">
                 <Calendar className="w-3.5 h-3.5" />
                 {getJaDate(event.date)}
              </div>
-
-             {/* タイトル */}
              <h1 className="text-3xl sm:text-4xl font-black text-slate-900 leading-tight mb-6 tracking-tight drop-shadow-sm pr-8">
                {event.title}
              </h1>
-             
-             {/* 場所 */}
              <div className="flex items-center text-sm font-bold text-slate-700 bg-white/50 backdrop-blur-md py-2 px-4 rounded-2xl w-fit border border-white/40">
                 <MapPin className="w-4 h-4 mr-2 text-cyan-600"/>
                 {event.venue_name ?? "場所未定"}
@@ -158,44 +178,58 @@ export default async function Page({ params, searchParams }: { params: Promise<{
            </div>
         </section>
 
-        {/* ... (以下、フィルター、タイムラインなどの既存コードはそのまま) ... */}
-        
-        {/* === カード2: フィルター (フラット) === */}
+        {/* === カード2: フィルター (複数選択対応・デザイン維持) === */}
         <section className="bg-white rounded-[1.5rem] p-4 shadow-wolt">
-           <div className="flex items-center gap-2 mb-3 px-2">
-              <Filter className="w-4 h-4 text-[#00c2e8]" />
-              <h2 className="text-xs font-black text-slate-400 uppercase tracking-wider">役割を選択</h2>
+           <div className="flex items-center justify-between mb-3 px-2">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-[#00c2e8]" />
+                <h2 className="text-xs font-black text-slate-400 uppercase tracking-wider">役割を選択 (複数可)</h2>
+              </div>
+              {selectedTags.length > 0 && (
+                <Link href={`/e/${slug}`} scroll={false} className="text-[10px] font-bold text-slate-400 hover:text-red-400 transition-colors">
+                  リセット
+                </Link>
+              )}
            </div>
+           
            <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
-            {tabs.map((t) => {
-              const isActive = target === t.key;
+            {/* 「全員」は常に表示されることを示すダミーボタン（押せない or 全解除） */}
+            <div className="flex-shrink-0 px-5 py-2.5 rounded-full text-xs font-black bg-slate-100 text-slate-400 border border-transparent opacity-60 cursor-default select-none">
+              全員
+            </div>
+
+            {dynamicTabs.map((tag) => {
+              const isActive = selectedTags.includes(tag);
+              const nextUrl = toggleTag(selectedTags, tag);
+              const href = nextUrl ? `/e/${slug}?t=${encodeURIComponent(nextUrl)}` : `/e/${slug}`;
+
               return (
                 <Link
-                  key={t.key}
-                  href={`/e/${slug}?t=${encodeURIComponent(t.key)}`}
+                  key={tag}
+                  href={href}
                   scroll={false}
                   className={`
-                    flex-shrink-0 px-5 py-2.5 rounded-full text-xs font-black transition-all
+                    flex-shrink-0 px-5 py-2.5 rounded-full text-xs font-black transition-all border
                     ${isActive 
-                      ? "bg-[#00c2e8] text-white" 
-                      : "bg-transparent text-slate-400 border border-slate-100 hover:bg-slate-50 hover:text-slate-500"}
+                      ? "bg-[#00c2e8] text-white border-[#00c2e8] shadow-md shadow-cyan-100" // ONのデザイン
+                      : "bg-transparent text-slate-400 border-slate-100 hover:bg-slate-50 hover:text-slate-500"} // OFFのデザイン
                   `}
                 >
-                  {t.label}
+                  {tag}
                 </Link>
               );
             })}
           </div>
         </section>
 
-        {/* === タイムライン見出し === */}
-        <div className="pt-4 pb-1 pl-2 flex items-center gap-2">
-           <Clock className="w-5 h-5 text-slate-300" />
-           <h2 className="text-lg font-black text-slate-800 tracking-tight">タイムスケジュール</h2>
-        </div>
-
         {/* === タイムライン === */}
         <section className="space-y-8">
+          {/* タイトル */}
+          <div className="pl-2 flex items-center gap-2">
+             <Clock className="w-5 h-5 text-slate-300" />
+             <h2 className="text-lg font-black text-slate-800 tracking-tight">タイムスケジュール</h2>
+          </div>
+
           {groups.map((group) => (
             <div key={group.time}>
               <div className="flex items-center mb-4 pl-2">
@@ -208,9 +242,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               <div className="space-y-4">
                 {group.items.map((it: any) => {
                   const now = isNow(it.start_time, it.end_time);
-                  const badgeColor = getTargetColor(it.target);
                   const emoji = it.emoji || detectEmoji(it.title);
                   const duration = getDuration(it.start_time, it.end_time);
+                  
+                  // バッジの色（複数タグ対応: 最初のタグに基づいて色付け or 共通色）
+                  const primaryTag = it.target ? it.target.split(",")[0] : "全員";
+                  const badgeColor = getTargetColor(primaryTag);
 
                   return (
                     <div
@@ -244,8 +281,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                              <h3 className={`text-xl font-black leading-tight tracking-tight ${now ? "text-[#00c2e8]" : "text-slate-900"}`}>
                                {it.title}
                              </h3>
+                             {/* タグ表示 */}
                              <span className={`ml-3 shrink-0 px-2 py-0.5 rounded-md text-[10px] font-black ${badgeColor}`}>
-                               {it.target || "全員"}
+                               {it.target && it.target !== "all" ? it.target.replace(/,/g, "・") : "全員"}
                              </span>
                           </div>
 
