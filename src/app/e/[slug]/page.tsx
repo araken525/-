@@ -123,15 +123,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               {getDayNumber(event.date)}
            </div>
 
-           {/* ★追加: 印刷ボタン（右上に配置） */}
-           <Link 
-             href={`/e/${slug}/print`} 
-             target="_blank"
-             className="absolute top-6 right-6 z-20 w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:text-[#00c2e8] hover:bg-cyan-50 transition-all shadow-sm"
-             title="印刷プレビューを開く"
-           >
-             <Printer className="w-5 h-5" />
-           </Link>
+           
            
            <div className="relative z-10 text-center pr-8 pl-8"> {/* ボタンと被らないようにpadding調整 */}
              <h1 className="text-2xl font-black text-slate-800 leading-tight mb-4 tracking-tight">
