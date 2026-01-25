@@ -75,22 +75,20 @@ export default function CreateEventPage() {
   return (
     <main className="min-h-screen bg-[#f7f9fb] flex items-center justify-center p-6 font-sans text-slate-800 selection:bg-[#00c2e8] selection:text-white">
       
-      {/* === 入力画面 (リニューアル) === */}
+      {/* === 入力画面 === */}
       {step === "form" && (
         <div className="w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* ヘッダー */}
-          <div className="bg-[#00c2e8] p-8 pb-10 text-center relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-full bg-white/10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/20 to-transparent scale-150 animate-pulse"></div>
-            <div className="relative z-10">
-               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm shadow-sm rotate-3">
-                 <Sparkles className="w-8 h-8 text-white" />
-               </div>
-               <h1 className="text-3xl font-black text-white tracking-tight">イベントを作成</h1>
-               <p className="text-cyan-50 text-sm font-bold mt-2">ログイン不要。必要なのはこのフォームだけ。</p>
-            </div>
+          
+          {/* シンプルヘッダー (白背景) */}
+          <div className="pt-10 pb-2 text-center px-8">
+             <div className="w-16 h-16 bg-[#00c2e8]/10 text-[#00c2e8] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+               <Sparkles className="w-8 h-8" />
+             </div>
+             <h1 className="text-3xl font-black text-slate-800 tracking-tight">イベントを作成</h1>
+             <p className="text-slate-400 text-sm font-bold mt-2">ログイン不要。必要なのはこのフォームだけ。</p>
           </div>
 
-          <div className="p-8 space-y-8 -mt-4 bg-white rounded-t-[2.5rem] relative z-20">
+          <div className="p-8 space-y-6">
             
             {/* 1. タイトル (最重要) */}
             <div className="space-y-2">
@@ -104,31 +102,31 @@ export default function CreateEventPage() {
                 />
             </div>
 
-            {/* 2. 日付と場所 (横並び) */}
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 ml-1 flex items-center gap-1"><Calendar className="w-4 h-4"/> 開催日 <span className="text-red-400">*</span></label>
-                  <input 
-                    type="date" 
-                    value={date} 
-                    onChange={(e) => setDate(e.target.value)} 
-                    className="w-full h-16 px-4 bg-slate-50 rounded-2xl font-black text-lg outline-none border-2 border-transparent focus:border-[#00c2e8] focus:bg-white transition-all text-center shadow-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                   <label className="text-xs font-black text-slate-400 ml-1 flex items-center gap-1"><MapPin className="w-4 h-4"/> 場所 (任意)</label>
-                   <input 
-                    type="text" 
-                    value={venue} 
-                    onChange={(e) => setVenue(e.target.value)} 
-                    placeholder="ホール名など"
-                    className="w-full h-16 px-4 bg-slate-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#00c2e8] focus:bg-white transition-all shadow-sm"
-                  />
-                </div>
+            {/* 2. 日付 (1行フル) */}
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-400 ml-1 flex items-center gap-1"><Calendar className="w-4 h-4"/> 開催日 <span className="text-red-400">*</span></label>
+              <input 
+                type="date" 
+                value={date} 
+                onChange={(e) => setDate(e.target.value)} 
+                className="w-full h-16 px-4 bg-slate-50 rounded-2xl font-black text-lg outline-none border-2 border-transparent focus:border-[#00c2e8] focus:bg-white transition-all shadow-sm"
+              />
             </div>
 
-            {/* 3. URL ID */}
-            <div className="space-y-2 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            {/* 3. 場所 (1行フル) */}
+            <div className="space-y-2">
+               <label className="text-xs font-black text-slate-400 ml-1 flex items-center gap-1"><MapPin className="w-4 h-4"/> 場所 (任意)</label>
+               <input 
+                type="text" 
+                value={venue} 
+                onChange={(e) => setVenue(e.target.value)} 
+                placeholder="ホール名など"
+                className="w-full h-16 px-6 bg-slate-50 rounded-2xl font-bold text-lg outline-none border-2 border-transparent focus:border-[#00c2e8] focus:bg-white transition-all shadow-sm"
+              />
+            </div>
+
+            {/* 4. URL ID */}
+            <div className="space-y-2 bg-slate-50 p-4 rounded-2xl border border-slate-100 mt-2">
                <label className="text-xs font-black text-slate-500 flex items-center gap-1 mb-1"><LinkIcon className="w-4 h-4"/> URL ID (任意)</label>
                <div className="flex items-center">
                   <span className="text-slate-400 font-black text-lg shrink-0 mr-1">takt.com/e/</span>
@@ -140,10 +138,10 @@ export default function CreateEventPage() {
                     className="flex-1 bg-transparent font-black text-xl outline-none text-slate-800 placeholder:text-slate-300"
                   />
                </div>
-               <p className="text-[10px] text-slate-400 font-bold">※ 半角英数字とハイフンのみ。空欄でランダム生成。</p>
+               <p className="text-[10px] text-slate-400 font-bold">※ 半角英数字のみ。空欄でランダム生成。</p>
             </div>
 
-            {/* 4. パスワード (重要) */}
+            {/* 5. パスワード (重要) */}
             <div className="space-y-2 bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
                 <label className="text-xs font-black text-orange-500 flex items-center gap-1 mb-1"><Lock className="w-4 h-4"/> 編集パスワード <span className="text-red-400">*</span></label>
                 <input 
@@ -170,7 +168,7 @@ export default function CreateEventPage() {
         </div>
       )}
 
-      {/* === 完了画面 (そのまま維持) === */}
+      {/* === 完了画面 (維持) === */}
       {step === "done" && (
         <div className="w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl p-8 space-y-8 animate-in zoom-in duration-300 text-center">
           <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-500 shadow-sm rotate-12">
