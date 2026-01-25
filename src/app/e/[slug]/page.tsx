@@ -178,26 +178,25 @@ export default async function Page({ params, searchParams }: { params: Promise<{
            </div>
         </section>
 
-        {/* === カード2: フィルター (複数選択対応・デザイン維持) === */}
-        <section className="bg-white rounded-[1.5rem] p-4 shadow-wolt">
-           <div className="flex items-center justify-between mb-3 px-2">
+        {/* === カード2: フィルター (スマホ最適化: タイル配置 & 完全フラット) === */}
+        <section className="bg-white rounded-[1.5rem] p-6 shadow-wolt">
+           <div className="flex items-center justify-between mb-4 px-1">
               <div className="flex items-center gap-2">
                 <Filter className="w-4 h-4 text-[#00c2e8]" />
-                <h2 className="text-xs font-black text-slate-400 uppercase tracking-wider">役割を選択 (複数可)</h2>
+                <h2 className="text-xs font-black text-slate-400 uppercase tracking-wider">担当パートで絞り込み</h2>
               </div>
-              {selectedTags.length > 0 && (
-                <Link href={`/e/${slug}`} scroll={false} className="text-[10px] font-bold text-slate-400 hover:text-red-400 transition-colors">
-                  リセット
+              
+              {/* リセットボタン: 選択中のみ表示 */}
+              <div className={`transition-all duration-200 ${selectedTags.length > 0 ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}>
+                <Link href={`/e/${slug}`} scroll={false} className="text-[10px] font-bold text-slate-400 hover:text-red-500 bg-slate-100 px-3 py-1.5 rounded-lg">
+                   条件をクリア
                 </Link>
-              )}
+              </div>
            </div>
            
-           <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
-            {/* 「全員」は常に表示されることを示すダミーボタン（押せない or 全解除） */}
-            <div className="flex-shrink-0 px-5 py-2.5 rounded-full text-xs font-black bg-slate-100 text-slate-400 border border-transparent opacity-60 cursor-default select-none">
-              全員
-            </div>
-
+           {/* ★ここがポイント: 横スクロールをやめて「タイル一覧」に。
+               指でタップしやすいよう、パディングを広めにし、完全にフラットなデザインにしました。 */}
+           <div className="flex flex-wrap gap-2">
             {dynamicTabs.map((tag) => {
               const isActive = selectedTags.includes(tag);
               const nextUrl = toggleTag(selectedTags, tag);
@@ -209,16 +208,29 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                   href={href}
                   scroll={false}
                   className={`
-                    flex-shrink-0 px-5 py-2.5 rounded-full text-xs font-black transition-all border
+                    /* スマホでは押しやすく少し大きく、PCでは適度なサイズ */
+                    relative inline-flex items-center justify-center 
+                    px-4 py-3 rounded-2xl text-xs font-black transition-all duration-200 select-none active:scale-95
+                    border 
                     ${isActive 
-                      ? "bg-[#00c2e8] text-white border-[#00c2e8] shadow-md shadow-cyan-100" // ONのデザイン
-                      : "bg-transparent text-slate-400 border-slate-100 hover:bg-slate-50 hover:text-slate-500"} // OFFのデザイン
+                      ? "bg-[#00c2e8] border-[#00c2e8] text-white" // ON: フラットな青・影なし
+                      : "bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100"} // OFF: フラットなグレー・影なし
                   `}
                 >
                   {tag}
                 </Link>
               );
             })}
+
+            {dynamicTabs.length === 0 && (
+               <div className="w-full text-center py-4 text-xs font-bold text-slate-300 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                 タグの設定がありません
+               </div>
+            )}
+          </div>
+          
+          <div className="mt-3 flex justify-end">
+             <span className="text-[10px] font-bold text-slate-300">※ 複数選択できます</span>
           </div>
         </section>
 
