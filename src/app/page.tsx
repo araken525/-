@@ -45,13 +45,15 @@ export default function Home() {
       </header>
 
       {/* === ヒーローセクション === */}
-      <section className="pt-24 px-6 max-w-xl mx-auto relative z-10 text-center">
+      {/* ★iPad対応: max-w-xl -> md:max-w-5xl に拡張し、全体を広く使う */}
+      <section className="pt-24 md:pt-36 px-6 w-full max-w-xl md:max-w-5xl mx-auto relative z-10 text-center">
         
         {/* ★背景として浮遊するUIモックアップ */}
+        {/* iPad対応: カードを中央の文字から遠ざけるように配置 */}
         <div className="absolute inset-0 pointer-events-none z-[-1] overflow-visible">
            
-           {/* ① 上のカード */}
-           <div className="absolute top-0 -left-8 w-[260px] bg-white/60 backdrop-blur-sm rounded-[1.5rem] p-4 flex gap-3 items-center shadow-lg border border-white/50 animate-float rotate-[-6deg] opacity-70 scale-90 sm:scale-100">
+           {/* ① 上のカード: iPadでは左端へ (md:left-0) */}
+           <div className="absolute top-0 -left-8 md:left-0 md:-top-10 w-[260px] bg-white/60 backdrop-blur-sm rounded-[1.5rem] p-4 flex gap-3 items-center shadow-lg border border-white/50 animate-float rotate-[-6deg] opacity-70 scale-90 sm:scale-100">
               <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-2xl">🎻</div>
               <div className="flex-1 min-w-0 text-left">
                  <h3 className="text-sm font-black text-slate-800 truncate">ゲネプロ (全体)</h3>
@@ -59,8 +61,8 @@ export default function Home() {
               </div>
            </div>
 
-           {/* ② 下のカード */}
-           <div className="absolute -bottom-24 -right-6 w-[240px] bg-white/60 backdrop-blur-sm rounded-[1.5rem] p-4 flex gap-3 items-center shadow-lg border border-white/50 animate-float-delayed rotate-[6deg] opacity-70 scale-90 sm:scale-100">
+           {/* ② 下のカード: iPadでは右端へ (md:right-0) */}
+           <div className="absolute -bottom-24 -right-6 md:right-0 md:-bottom-10 w-[240px] bg-white/60 backdrop-blur-sm rounded-[1.5rem] p-4 flex gap-3 items-center shadow-lg border border-white/50 animate-float-delayed rotate-[6deg] opacity-70 scale-90 sm:scale-100">
               <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-2xl">🍱</div>
               <div className="flex-1 min-w-0 text-left">
                  <h3 className="text-sm font-black text-slate-800 truncate">お昼休憩</h3>
@@ -69,13 +71,9 @@ export default function Home() {
            </div>
         </div>
 
-        {/* コンテンツエリア */}
-        <div className="relative z-10">
+        {/* コンテンツエリア (中央寄せを維持するためのラッパー) */}
+        <div className="relative z-10 max-w-xl mx-auto">
           
-          {/* ★修正ポイント: 
-            1. text-4xl (スマホ用) 〜 sm:text-6xl (PC用) にサイズ調整
-            2. inline-block と whitespace-nowrap で「文節ごとの改行禁止」を強制
-          */}
           <h1 className="text-4xl sm:text-6xl font-black leading-[1.15] tracking-tight text-slate-900 mb-6 drop-shadow-sm">
             <span className="inline-block whitespace-nowrap">当日のタイスケ、</span><br />
             <span className="inline-block whitespace-nowrap text-transparent bg-clip-text bg-gradient-to-r from-[#00c2e8] to-purple-600">みんなのスマホへ。</span>
@@ -107,31 +105,31 @@ export default function Home() {
         </div>
       </section>
 
-      {/* === 3つの特徴 (固定) === */}
-      <section className="mt-40 px-6 grid grid-cols-1 gap-5 relative z-10">
+      {/* === 3つの特徴 === */}
+      {/* ★iPad対応: grid-cols-1 -> md:grid-cols-3 (横並び) */}
+      <section className="mt-40 px-6 grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8 max-w-5xl mx-auto relative z-10">
         {[
           { icon: Zap, color: "from-amber-400 to-orange-500", title: "アプリ・ログイン不要", desc: "URLをクリックするだけ。面倒な会員登録やインストールは一切必要ありません。" },
           { icon: Smartphone, color: "from-purple-500 to-indigo-600", title: "スマホで一番見やすい", desc: "PDFを拡大するストレスから解放。自分の出番や進行状況が一目でわかるデザイン。" },
           { icon: Calendar, color: "from-[#00c2e8] to-cyan-500", title: "急な変更も1秒で共有", desc: "当日の急なスケジュール変更も、手元のスマホから即座に全員へ反映。" },
         ].map((item, i) => (
-          <div key={i} className="bg-white/80 backdrop-blur-xl p-6 rounded-[2rem] shadow-sm border border-white/60">
-            <div className="flex items-start gap-5">
+          <div key={i} className="bg-white/80 backdrop-blur-xl p-6 rounded-[2rem] shadow-sm border border-white/60 h-full">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-5 mb-2">
                <div className={`w-12 h-12 bg-gradient-to-br ${item.color} text-white rounded-[1rem] flex items-center justify-center shrink-0 shadow-md`}>
                  <item.icon className="w-6 h-6" />
                </div>
-               <div>
-                  <h3 className="text-lg font-black text-slate-800 mb-2">{item.title}</h3>
-                  <p className="text-sm font-bold text-slate-500 leading-relaxed">{item.desc}</p>
-               </div>
+               <h3 className="text-lg font-black text-slate-800">{item.title}</h3>
             </div>
+            <p className="text-sm font-bold text-slate-500 leading-relaxed mt-2">{item.desc}</p>
           </div>
         ))}
       </section>
 
       {/* === 利用シーン === */}
-      <section className="mt-24 px-6 relative z-10 pb-20">
+      {/* ★iPad対応: 縦積み -> md:grid-cols-2 (2列グリッド) */}
+      <section className="mt-32 px-6 relative z-10 pb-20 max-w-4xl mx-auto">
         <p className="text-xs font-black text-slate-400 mb-8 text-center tracking-widest uppercase">こんなイベントで使われています</p>
-        <div className="space-y-3 max-w-md mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             { icon: Music, label: "定期演奏会・発表会", desc: "進行管理が複雑な舞台裏に。", color: "bg-pink-50 text-pink-500" },
             { icon: Music, label: "ライブ・フェス", desc: "多数の出演者の出番を管理。", color: "bg-orange-50 text-orange-500" },
@@ -139,7 +137,7 @@ export default function Home() {
             { icon: Clapperboard, label: "映像・スチール撮影", desc: "香盤表をスマホで共有。", color: "bg-blue-50 text-blue-500" },
             { icon: Briefcase, label: "社内イベント・研修", desc: "スムーズな進行のために。", color: "bg-slate-100 text-slate-600" },
           ].map((item, i) => (
-            <div key={i} className="flex items-center gap-4 p-4 bg-white/80 backdrop-blur-sm border border-white/60 rounded-[1.5rem] shadow-sm hover:bg-white transition-colors">
+            <div key={i} className="flex items-center gap-4 p-4 bg-white/80 backdrop-blur-sm border border-white/60 rounded-[1.5rem] shadow-sm hover:bg-white transition-colors h-full">
                <div className={`w-12 h-12 ${item.color} rounded-2xl flex items-center justify-center shrink-0`}>
                   <item.icon className="w-6 h-6"/>
                </div>
