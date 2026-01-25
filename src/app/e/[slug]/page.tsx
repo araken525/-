@@ -4,7 +4,7 @@ import { Metadata } from "next";
 import { supabase } from "@/lib/supabaseClient";
 import EventHeader from "@/components/EventHeader";
 import Link from "next/link";
-import { Clock, MapPin, RefreshCw, Info, Calendar, Music } from "lucide-react";
+import { RefreshCw } from "lucide-react"; // UIアイコンは最低限に
 
 /* ==========================================
    メタデータ
@@ -27,15 +27,30 @@ export async function generateMetadata({
 }
 
 /* ==========================================
-   便利関数
+   便利関数 & 絵文字判定ロジック
    ========================================== */
 function hhmm(time: string) { return String(time).slice(0, 5); }
 
-// Wolt風バッジ色: パステル背景 + 濃い文字
+// ★ここが「推測」ロジックです！
+function detectEmoji(title: string) {
+  const t = title.toLowerCase();
+  if (t.includes("休憩") || t.includes("昼") || t.includes("ご飯") || t.includes("ランチ")) return "🍱";
+  if (t.includes("リハ") || t.includes("練習") || t.includes("合わせ") || t.includes("GP")) return "🎻";
+  if (t.includes("開場") || t.includes("受付")) return "🎫";
+  if (t.includes("開演") || t.includes("本番") || t.includes("ステージ")) return "✨";
+  if (t.includes("終演") || t.includes("片付け") || t.includes("撤収")) return "🧹";
+  if (t.includes("集合")) return "🚩";
+  if (t.includes("解散")) return "👋";
+  if (t.includes("ミーティング") || t.includes("朝礼") || t.includes("会議")) return "🗣️";
+  if (t.includes("移動")) return "🚶";
+  if (t.includes("待機")) return "🪑";
+  return "🎵"; // デフォルト
+}
+
+// Wolt風バッジ色
 function getTargetColor(t: string) {
-  if (!t || t === "all" || t === "全員") return "bg-slate-100 text-slate-600";
-  // デフォルトは水色系で統一、またはランダム
-  return "bg-cyan-50 text-cyan-700";
+  if (!t || t === "all" || t === "全員") return "bg-slate-100 text-slate-500";
+  return "bg-cyan-50 text-[#00c2e8]";
 }
 
 function groupByStartTime(items: any[]) {
@@ -80,7 +95,7 @@ function relativeJa(d: Date) {
 }
 
 /* ==========================================
-   ページ本体 (Wolt Style)
+   ページ本体 (Wolt Style + Emoji + Route)
    ========================================== */
 export default async function Page({
   params,
@@ -101,8 +116,8 @@ export default async function Page({
     return (
       <main className="flex min-h-screen items-center justify-center p-6 bg-slate-50">
         <div className="text-center">
-          <h1 className="text-lg font-black text-slate-400 mb-4">イベントが見つかりません</h1>
-          <Link href="/" className="px-6 py-3 rounded-full bg-[#009de0] text-white font-black shadow-lg shadow-cyan-200 active-bounce">トップへ戻る</Link>
+          <h1 className="text-lg font-black text-slate-400 mb-4">イベントが見つかりません 😢</h1>
+          <Link href="/" className="px-6 py-3 rounded-full bg-[#00c2e8] text-white font-black shadow-lg active-bounce">トップへ戻る</Link>
         </div>
       </main>
     );
@@ -131,45 +146,42 @@ export default async function Page({
   const lastUpdated = candidates.length > 0 ? new Date(Math.max(...candidates.map((d) => d.getTime()))) : null;
 
   return (
-    <main className="min-h-screen pb-24 font-sans bg-[#f3f4f6]">
+    <main className="min-h-screen pb-24 font-sans bg-[#f7f9fb]">
       
       <EventHeader title={event.title} slug={slug} />
 
-      {/* === Hero Background (Wolt Blue) === */}
-      <div className="absolute top-0 left-0 right-0 h-64 bg-[#009de0] rounded-b-[2.5rem]">
-        {/* 装飾用の薄いパターン */}
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
+      {/* === Hero Background (Bright Wolt Blue) === */}
+      <div className="absolute top-0 left-0 right-0 h-64 bg-[#00c2e8] rounded-b-[2.5rem] shadow-sm overflow-hidden">
+        {/* 装飾パターン */}
+        <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white opacity-10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-[-10%] left-[-10%] w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
       </div>
 
       <div className="relative pt-24 px-4 max-w-lg mx-auto space-y-8">
         
-        {/* === コントロールパネル (浮いている白いカード) === */}
-        <section className="bg-white rounded-[2rem] p-6 shadow-wolt text-center">
+        {/* === コントロールパネル === */}
+        <section className="bg-white rounded-[2rem] p-6 shadow-wolt text-center relative z-10">
           
           {/* アイコン装飾 */}
-          <div className="w-16 h-16 mx-auto -mt-14 mb-4 bg-white rounded-full p-1 shadow-md flex items-center justify-center">
-            <div className="w-full h-full bg-slate-100 rounded-full flex items-center justify-center text-[#009de0]">
-               <Music className="w-7 h-7 fill-current" />
+          <div className="w-20 h-20 mx-auto -mt-16 mb-4 bg-white rounded-full p-1.5 shadow-md flex items-center justify-center">
+            <div className="w-full h-full bg-slate-50 rounded-full flex items-center justify-center text-4xl">
+               🥁
             </div>
           </div>
 
-          <h1 className="text-2xl font-black text-slate-900 leading-tight mb-4">
+          <h1 className="text-2xl font-black text-slate-800 leading-tight mb-4">
             {event.title}
           </h1>
 
-          <div className="flex justify-center items-center gap-4 mb-6">
-            <div className="flex flex-col items-center">
-              <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 mb-1">
-                <Calendar className="w-5 h-5" />
-              </div>
-              <span className="text-[10px] font-bold text-slate-500">{event.date}</span>
+          <div className="flex justify-center items-center gap-4 mb-6 text-sm font-bold text-slate-500">
+            <div className="flex items-center gap-1.5">
+              <span>📅</span>
+              <span>{event.date}</span>
             </div>
-            <div className="w-px h-8 bg-slate-100"></div>
-            <div className="flex flex-col items-center">
-              <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 mb-1">
-                <MapPin className="w-5 h-5" />
-              </div>
-              <span className="text-[10px] font-bold text-slate-500 truncate max-w-[100px]">{event.venue_name ?? "未設定"}</span>
+            <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
+            <div className="flex items-center gap-1.5">
+              <span>📍</span>
+              <span className="truncate max-w-[120px]">{event.venue_name ?? "未設定"}</span>
             </div>
           </div>
 
@@ -185,7 +197,7 @@ export default async function Page({
                   className={`
                     flex-shrink-0 px-5 py-2.5 rounded-full text-xs font-black transition-all active-bounce
                     ${isActive 
-                      ? "bg-[#009de0] text-white shadow-md shadow-cyan-100" 
+                      ? "bg-[#00c2e8] text-white shadow-md shadow-cyan-100" 
                       : "bg-slate-100 text-slate-500 hover:bg-slate-200"}
                   `}
                 >
@@ -196,87 +208,98 @@ export default async function Page({
           </div>
         </section>
 
-        {/* === タイムライン === */}
-        <section className="space-y-6">
-          {groups.map((group) => (
-            <div key={group.time} className="relative">
-              {/* 時間ヘッダー */}
-              <div className="flex items-center mb-3 pl-2">
-                <span className="text-xl font-black text-slate-800 tracking-tight font-mono w-16">
-                  {group.time}
-                </span>
-                <div className="h-1 w-1 bg-slate-300 rounded-full mr-1"></div>
-                <div className="h-1 w-1 bg-slate-300 rounded-full mr-1"></div>
-                <div className="h-1 w-1 bg-slate-300 rounded-full"></div>
-              </div>
+        {/* === タイムライン (Route Style) === */}
+        <section className="relative pl-4">
+          
+          {/* 左側の点線ルート (上から下まで貫通) */}
+          <div className="absolute top-4 bottom-0 left-[27px] w-0.5 border-l-2 border-dashed border-slate-200"></div>
 
-              <div className="space-y-3">
-                {group.items.map((it: any) => {
-                  const now = isNow(it.start_time, it.end_time);
-                  const badgeColor = getTargetColor(it.target);
+          <div className="space-y-8">
+            {groups.map((group) => (
+              <div key={group.time} className="relative">
+                
+                {/* 時間ヘッダー (ルート上のポイント) */}
+                <div className="flex items-center mb-3 relative z-10">
+                  <div className="w-2.5 h-2.5 bg-[#00c2e8] rounded-full ring-4 ring-[#f7f9fb] ml-[18px] mr-4"></div>
+                  <span className="text-lg font-black text-slate-800 tracking-tight font-mono">
+                    {group.time}
+                  </span>
+                </div>
 
-                  return (
-                    <div
-                      key={it.id}
-                      className={`
-                        relative bg-white rounded-2xl p-5 transition-all
-                        ${now 
-                          ? "shadow-xl ring-4 ring-[#009de0]/10 scale-[1.02] z-10" 
-                          : "shadow-sm border border-slate-100"}
-                      `}
-                    >
-                      {/* NOW バッジ */}
-                      {now && (
-                        <div className="absolute -top-3 -right-2 bg-[#009de0] text-white px-3 py-1 rounded-full text-[10px] font-black shadow-md border-2 border-white">
-                          NOW PLAYING
+                <div className="space-y-4 pl-8">
+                  {group.items.map((it: any) => {
+                    const now = isNow(it.start_time, it.end_time);
+                    const badgeColor = getTargetColor(it.target);
+                    // ★自動判定した絵文字
+                    const emoji = detectEmoji(it.title);
+
+                    return (
+                      <div
+                        key={it.id}
+                        className={`
+                          relative bg-white rounded-[1.2rem] p-4 transition-all flex gap-4 items-start
+                          ${now 
+                            ? "shadow-xl ring-2 ring-[#00c2e8] scale-[1.02] z-10" 
+                            : "shadow-wolt border border-transparent"}
+                        `}
+                      >
+                        {/* NOW バッジ (ルート上に表示) */}
+                        {now && (
+                           <div className="absolute top-1/2 -translate-y-1/2 -left-[42px] w-8 h-8 bg-[#00c2e8] rounded-full flex items-center justify-center text-white shadow-lg animate-pulse z-20">
+                             📍
+                           </div>
+                        )}
+
+                        {/* 左：巨大絵文字 (メニューサムネイル風) */}
+                        <div className="w-14 h-14 shrink-0 bg-slate-50 rounded-2xl flex items-center justify-center text-3xl">
+                          {emoji}
                         </div>
-                      )}
 
-                      <div className="mb-2">
-                        <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-black ${badgeColor}`}>
-                          {it.target || "全員"}
-                        </span>
+                        {/* 右：詳細情報 */}
+                        <div className="flex-1 min-w-0 py-0.5">
+                          <div className="flex justify-between items-start mb-1">
+                             <h3 className={`text-base font-black leading-snug ${now ? "text-[#00c2e8]" : "text-slate-800"}`}>
+                               {it.title}
+                             </h3>
+                             <span className={`shrink-0 px-2 py-0.5 rounded-lg text-[10px] font-black ml-2 ${badgeColor}`}>
+                               {it.target || "全員"}
+                             </span>
+                          </div>
+
+                          {(it.end_time || it.location || it.note) && (
+                            <div className="space-y-1 text-xs font-bold text-slate-500">
+                              {it.end_time && (
+                                <div className="flex items-center">
+                                  <span>⏰</span>
+                                  <span className="ml-1.5">{hhmm(it.end_time)} まで</span>
+                                </div>
+                              )}
+                              {it.location && (
+                                <div className="flex items-center">
+                                  <span>📍</span>
+                                  <span className="ml-1.5">{it.location}</span>
+                                </div>
+                              )}
+                              {it.note && (
+                                <div className="flex items-start mt-2 bg-slate-50 p-2 rounded-lg text-slate-600 font-medium leading-relaxed">
+                                  <span className="mr-1.5">📝</span>
+                                  <span className="whitespace-pre-wrap">{it.note}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                       
-                      <h3 className={`text-lg font-black leading-snug mb-3 ${now ? "text-[#009de0]" : "text-slate-800"}`}>
-                        {it.title}
-                      </h3>
-
-                      {(it.end_time || it.location || it.note) && (
-                        <div className="pt-3 border-t border-slate-50 space-y-2 text-sm text-slate-600">
-                          {it.end_time && (
-                            <div className="flex items-center">
-                              <Clock className="w-4 h-4 mr-2 text-slate-300" />
-                              <span className="font-bold text-slate-600">{hhmm(it.end_time)}</span>
-                              <span className="text-xs ml-1 opacity-60">まで</span>
-                            </div>
-                          )}
-                          {it.location && (
-                            <div className="flex items-center font-bold">
-                              <MapPin className="w-4 h-4 mr-2 text-slate-300" />
-                              {it.location}
-                            </div>
-                          )}
-                          {it.note && (
-                            <div className="flex items-start mt-2 bg-slate-50 p-3 rounded-xl text-slate-600 leading-relaxed font-medium">
-                              <Info className="w-4 h-4 mr-2 mt-0.5 shrink-0 text-slate-300" />
-                              <span className="whitespace-pre-wrap">{it.note}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
 
           {groups.length === 0 && (
-             <div className="text-center py-12">
-               <div className="w-16 h-16 bg-slate-200 rounded-full mx-auto mb-3 flex items-center justify-center text-slate-400">
-                 <Calendar className="w-8 h-8 opacity-50" />
-               </div>
+             <div className="text-center py-12 pl-0">
+               <div className="text-4xl mb-2 opacity-50">😴</div>
                <div className="text-slate-400 font-bold text-sm">予定はありません</div>
              </div>
           )}

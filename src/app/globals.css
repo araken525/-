@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --background: #f3f4f6; /* 少し青みがかった薄いグレー */
+  --background: #f7f9fb; /* 限りなく白に近いグレー */
   --foreground: #202125;
-  --wolt-blue: #009de0; /* あの鮮やかな水色 */
+  --wolt-blue: #00c2e8; /* Woltのあの明るい水色 */
 }
 
 body {
@@ -17,12 +17,12 @@ body {
 }
 
 @layer utilities {
-  /* Wolt風の柔らかい影 */
+  /* プリッとした影 */
   .shadow-wolt {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   }
   
-  /* 押した時にペコっと凹む動き */
+  /* ボタンを押した時の動き */
   .active-bounce:active {
     transform: scale(0.95);
     transition: transform 0.1s;
