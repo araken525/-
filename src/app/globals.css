@@ -7,28 +7,40 @@
   --foreground: #171717;
 }
 
-/* Anka風の背景：全体に淡い青のグラデーション */
+/* Anka風: 全体に淡いブルーグラデーション */
 body {
   background: linear-gradient(to bottom, #E0F2FE 0%, #F0F9FF 30%, #FFFFFF 100%);
-  background-attachment: fixed; /* スクロールしても背景を固定 */
+  background-attachment: fixed;
+  color: var(--foreground);
   min-height: 100vh;
 }
 
-/* オーロラのような光の効果（ユーティリティとして定義） */
 @layer utilities {
+  /* オーロラのような背景装飾 */
   .aurora-bg {
-    background: 
+    background-image: 
       radial-gradient(circle at 0% 0%, rgba(186, 230, 253, 0.4) 0%, transparent 50%),
       radial-gradient(circle at 100% 0%, rgba(167, 139, 250, 0.15) 0%, transparent 50%);
   }
   
+  /* すりガラス風カード（枠線なし、白影） */
   .glass-card {
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.6);
   }
 
+  /* Anka風グラデーション（ボタンやアクセント用） */
   .anka-gradient {
     background: linear-gradient(90deg, #3B82F6 0%, #06B6D4 100%);
+  }
+
+  /* スクロールバー隠し */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
