@@ -17,10 +17,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 /* === ロジック系 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
 
-// 日付から「日」だけを取り出す（透かし用）
 function getDayNumber(dateStr: string) {
   if (!dateStr) return "";
-  // "2026-01-25" or "2026/01/25" -> "25"
   const parts = dateStr.split(/[-/]/);
   return parts.length === 3 ? parts[2] : "";
 }
@@ -125,10 +123,10 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
       <div className="pt-20 px-4 max-w-lg mx-auto space-y-6">
         
-        {/* === カード1: イベント基本情報 (日付透かし) === */}
+        {/* === カード1: イベント基本情報 === */}
         <section className="relative bg-white rounded-[2rem] p-6 shadow-wolt overflow-hidden">
-           {/* 透かし背景: 日付 (例: 25) */}
-           <div className="absolute -bottom-8 -right-4 text-[120px] font-black text-slate-50 select-none watermark-text leading-none pointer-events-none">
+           {/* 透かし: 濃く(slate-100), サイズ調整(text-8xl) */}
+           <div className="absolute -bottom-6 -right-2 text-8xl font-black text-slate-100 select-none watermark-text leading-none pointer-events-none">
               {getDayNumber(event.date)}
            </div>
            
@@ -149,7 +147,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
            </div>
         </section>
 
-        {/* === カード2: フィルター (フラットデザイン) === */}
+        {/* === カード2: フィルター === */}
         <section className="bg-white rounded-[1.5rem] p-4 shadow-wolt">
            <div className="flex items-center gap-2 mb-3 px-2">
               <Filter className="w-4 h-4 text-[#00c2e8]" />
@@ -187,7 +185,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         <section className="space-y-8">
           {groups.map((group) => (
             <div key={group.time}>
-              {/* 左側の時間見出し (共通) */}
               <div className="flex items-center mb-4 pl-2">
                 <span className="text-2xl font-black text-slate-800 tracking-tight font-sans">
                   {group.time}
@@ -212,31 +209,25 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                           : "shadow-wolt border border-transparent"}
                       `}
                     >
-                      {/* NOW バッジ */}
                       {now && (
                         <div className="absolute -top-3 -left-2 bg-[#00c2e8] text-white px-3 py-1 rounded-full text-[10px] font-black shadow-md border-2 border-white z-20">
                           NOW
                         </div>
                       )}
 
-                      {/* ★透かし背景: 開始時間 (例: 10:00) */}
-                      <div className="absolute -bottom-6 -right-2 text-[6rem] font-black text-slate-50/80 select-none watermark-text leading-none pointer-events-none z-0">
+                      {/* 透かし: 濃く(slate-100), サイズ調整(text-7xl) */}
+                      <div className="absolute -bottom-4 -right-2 text-7xl font-black text-slate-100 select-none watermark-text leading-none pointer-events-none z-0">
                         {hhmm(it.start_time)}
                       </div>
 
-                      {/* 左：巨大絵文字 */}
                       <div className="relative z-10 w-14 shrink-0 flex items-start pt-1 justify-center">
                         <div className="text-[2.5rem] leading-none drop-shadow-sm filter grayscale-[0.2]">
                           {emoji}
                         </div>
                       </div>
 
-                      {/* 右：メインコンテンツ (縦積み) */}
                       <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-between">
-                        
-                        {/* 上部ブロック */}
                         <div>
-                          {/* 1. タイトル + タグ */}
                           <div className="flex justify-between items-start mb-1">
                              <h3 className={`text-xl font-black leading-tight tracking-tight ${now ? "text-[#00c2e8]" : "text-slate-900"}`}>
                                {it.title}
@@ -246,7 +237,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                              </span>
                           </div>
 
-                          {/* 2. 終了時間 (強調) */}
                           {it.end_time && (
                              <div className="flex items-center text-sm font-bold text-[#00c2e8] mb-2">
                                <Clock className="w-3.5 h-3.5 mr-1" />
@@ -254,7 +244,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                              </div>
                           )}
 
-                          {/* 3. メモ */}
                           {it.note && (
                             <div className="text-sm text-slate-600 leading-relaxed font-medium mb-3">
                               {it.note}
@@ -262,7 +251,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                           )}
                         </div>
 
-                        {/* 下部ブロック (場所 & 時間) */}
                         <div className="flex items-center gap-3 pt-3 border-t border-slate-50 mt-1">
                            {it.location ? (
                               <div className="flex items-center text-xs font-bold text-slate-500">
@@ -271,7 +259,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                               </div>
                            ) : <div className="flex-1"></div>}
                            
-                           {/* スペーサー */}
                            {it.location && <div className="w-px h-3 bg-slate-200"></div>}
 
                            {duration && (
@@ -280,7 +267,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                              </div>
                            )}
                         </div>
-
                       </div>
                     </div>
                   );
@@ -298,7 +284,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         </section>
       </div>
 
-      {/* 最終更新 */}
       {lastUpdated && (
         <div className="fixed bottom-6 right-6 z-30 pointer-events-none">
           <div className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-full shadow-lg border border-slate-100 text-[10px] font-black text-slate-400 flex items-center">
