@@ -1,18 +1,63 @@
 export const dynamic = "force-dynamic";
 
+import { Metadata } from "next";
 import { supabase } from "@/lib/supabaseClient";
 import ShareButtons from "@/components/ShareButtons";
 import Link from "next/link";
-import { Clock, MapPin, AlignLeft, RefreshCw, Info, Tag } from "lucide-react";
+import { Clock, MapPin, RefreshCw, Info } from "lucide-react";
 
 /* ==========================================
-   便利関数 (ハッシュで色分け)
+   1. メタデータ生成 (OGP設定)
+   LINEやXでシェアした時にタイトル画像が出るようにします
+   ========================================== */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  
+  // イベント情報を取得
+  const { data: event } = await supabase
+    .from("events")
+    .select("title, date, venue_name")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (!event) {
+    return {
+      title: "イベントが見つかりません | Takt",
+    };
+  }
+
+  const desc = `${event.date} @${event.venue_name ?? "未設定"} | リアルタイム進行共有`;
+
+  return {
+    title: `${event.title} | Takt`,
+    description: desc,
+    openGraph: {
+      title: event.title,
+      description: desc,
+      siteName: "Takt",
+      locale: "ja_JP",
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: event.title,
+      description: desc,
+    },
+  };
+}
+
+/* ==========================================
+   2. 便利関数群
    ========================================== */
 function hhmm(time: string) {
   return String(time).slice(0, 5);
 }
 
-// ターゲット名から色を自動生成（編集画面と同じロジック）
+// ターゲット名から色を自動生成（ハッシュ化）
 function getTargetColor(t: string) {
   const colors = [
     "bg-red-100 text-red-700",
@@ -77,15 +122,6 @@ function toDate(v: any) {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function fmtJst(d: Date) {
-  return d.toLocaleString("ja-JP", {
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function relativeJa(d: Date) {
   const diffMs = Date.now() - d.getTime();
   const min = Math.floor(diffMs / 1000 / 60);
@@ -93,11 +129,11 @@ function relativeJa(d: Date) {
   if (min < 60) return `${min}分前`;
   const hr = Math.floor(min / 60);
   if (hr < 24) return `${hr}時間前`;
-  return fmtJst(d);
+  return d.toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 /* ==========================================
-   ページ本体（タグ自動生成対応版）
+   3. ページコンポーネント本体
    ========================================== */
 export default async function Page({
   params,
@@ -110,12 +146,10 @@ export default async function Page({
   const sp = await searchParams;
   
   // URLパラメータ（t=全員 など）を取得。デフォルトは "全員"
-  // ※古いURL(woodwindsなど)が来ても壊れないようデコード
   const rawTarget = sp?.t ? decodeURIComponent(sp.t) : "全員";
-  // "all" という文字列が来たら "全員" とみなす
   const target = rawTarget === "all" ? "全員" : rawTarget;
 
-  /* 1. イベント情報 */
+  /* イベント情報取得 */
   const { data: event } = await supabase
     .from("events")
     .select("*")
@@ -133,7 +167,7 @@ export default async function Page({
     );
   }
 
-  /* 2. スケジュール取得 */
+  /* スケジュール取得 */
   const { data: items } = await supabase
     .from("schedule_items")
     .select("*")
@@ -143,22 +177,20 @@ export default async function Page({
 
   const allItems = items ?? [];
 
-  /* ★ここが重要：登録されているタグを集計してタブを作る */
+  /* タグの自動生成（DBにあるものだけタブにする） */
   const tagsSet = new Set<string>();
   allItems.forEach(item => {
-    // 空文字やnullは除外、"all"も除外
     if (item.target && item.target !== "all" && item.target !== "全員") {
       tagsSet.add(item.target);
     }
   });
 
-  // タブのリスト作成： [全員, ...見つかったタグ]
-  // Array.from(tagsSet).sort() であいうえお順などに整列
+  // タブリスト作成： [全員, ...見つかったタグ]
   const dynamicTabs = ["全員", ...Array.from(tagsSet).sort()];
 
   const tabs = dynamicTabs.map(t => ({
-    key: t, // URLパラメータ用
-    label: t // 表示用
+    key: t,
+    label: t 
   }));
 
   /* フィルタリング */
@@ -168,7 +200,7 @@ export default async function Page({
 
   const groups = groupByStartTime(filtered);
 
-  /* 更新日時 */
+  /* 最終更新日時 */
   const candidates: Date[] = [];
   const evUpd = toDate((event as any).updated_at);
   if (evUpd) candidates.push(evUpd);
@@ -181,8 +213,9 @@ export default async function Page({
   return (
     <main className="min-h-screen bg-slate-50 font-sans pb-20">
       
-      {/* 1. 情報エリア */}
+      {/* --- 情報エリア (スクロールで消える) --- */}
       <div className="bg-white px-5 pt-8 pb-6 border-b border-slate-100">
+        {/* タイトル & シェアボタン */}
         <div className="flex justify-between items-start mb-4">
           <h1 className="text-2xl font-black text-slate-900 leading-tight tracking-tight pr-4">
             {event.title}
@@ -192,6 +225,7 @@ export default async function Page({
           </div>
         </div>
 
+        {/* 日時・場所 */}
         <div className="space-y-2 text-sm text-slate-600 mb-4">
           <div className="flex items-center">
             <Clock className="w-4 h-4 mr-2 text-slate-400" />
@@ -203,6 +237,7 @@ export default async function Page({
           </div>
         </div>
         
+        {/* 最終更新 */}
         {lastUpdated && (
           <div className="flex items-center text-[10px] text-slate-400 font-medium">
             <RefreshCw className="w-3 h-3 mr-1.5" />
@@ -211,7 +246,7 @@ export default async function Page({
         )}
       </div>
 
-      {/* 2. 操作エリア (自動生成タブ) */}
+      {/* --- 操作エリア (画面上部に張り付くタブ) --- */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
         <div className="flex space-x-2 overflow-x-auto no-scrollbar px-4 py-3">
           {tabs.map((t) => {
@@ -219,7 +254,6 @@ export default async function Page({
             return (
               <Link
                 key={t.key}
-                // 日本語URLでも大丈夫なようにNext.jsが処理してくれますが、念のため
                 href={`/e/${slug}?t=${encodeURIComponent(t.key)}`}
                 scroll={false}
                 className={`
@@ -234,13 +268,15 @@ export default async function Page({
             );
           })}
         </div>
+        {/* 右端のフェード効果 */}
         <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/90 to-transparent pointer-events-none"></div>
       </div>
 
-      {/* 3. タイムライン */}
+      {/* --- タイムラインエリア (横幅いっぱい) --- */}
       <div className="px-4 py-6 space-y-8">
         {groups.map((group) => (
           <div key={group.time} className="relative">
+            {/* 時間ヘッダー */}
             <div className="flex items-center mb-3 pl-1">
               <span className="text-xl font-black text-slate-900 font-mono tracking-tight mr-3">
                 {group.time}
@@ -248,10 +284,10 @@ export default async function Page({
               <div className="h-px bg-slate-200 flex-1"></div>
             </div>
 
+            {/* カードリスト */}
             <div className="space-y-3">
               {group.items.map((it: any) => {
                 const now = isNow(it.start_time, it.end_time);
-                // ★自動色分け関数を使用
                 const badgeColor = getTargetColor(it.target);
 
                 return (
@@ -264,6 +300,7 @@ export default async function Page({
                         : "bg-white border border-slate-100 shadow-sm"}
                     `}
                   >
+                    {/* NOWインジケーター */}
                     {now && (
                       <div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-black px-2 py-1 rounded-bl-xl shadow-sm">
                         NOW
@@ -271,6 +308,7 @@ export default async function Page({
                     )}
 
                     <div className="p-4">
+                      {/* ラベル & タイトル */}
                       <div className="mb-3">
                         <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mb-1.5 ${badgeColor}`}>
                           {it.target || "全員"}
@@ -280,6 +318,7 @@ export default async function Page({
                         </h3>
                       </div>
 
+                      {/* 詳細情報 */}
                       {(it.end_time || it.location || it.note) && (
                         <div className="pt-3 border-t border-slate-50 space-y-2">
                           {it.end_time && (
@@ -311,11 +350,18 @@ export default async function Page({
             </div>
           </div>
         ))}
+        
         {groups.length === 0 && (
           <div className="text-center py-10 text-slate-400 text-sm">
              予定が見つかりません
           </div>
         )}
+
+        <div className="h-10 text-center flex items-center justify-center">
+          <span className="w-1 h-1 bg-slate-300 rounded-full mx-1"></span>
+          <span className="w-1 h-1 bg-slate-300 rounded-full mx-1"></span>
+          <span className="w-1 h-1 bg-slate-300 rounded-full mx-1"></span>
+        </div>
       </div>
     </main>
   );
