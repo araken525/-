@@ -116,28 +116,37 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
       <div className="pt-20 px-4 max-w-lg mx-auto space-y-6">
         
-        {/* === カード1: イベント基本情報 === */}
-        <section className="relative bg-white rounded-[2rem] p-6 shadow-wolt overflow-hidden group">
-           {/* 日付の透かし */}
-           <div className="absolute -bottom-7 -right-4 text-[105px] font-black text-slate-100/50 select-none watermark-text leading-none z-0">
+        {/* === カード1: イベント基本情報 (メッシュグラデーションver.) === */}
+        <section className="relative rounded-[2.5rem] p-8 overflow-hidden group shadow-xl shadow-cyan-500/20 transition-all hover:scale-[1.01]">
+           {/* 背景: メッシュグラデーション */}
+           <div className="absolute inset-0 bg-[conic-gradient(at_top_left,_var(--tw-gradient-stops))] from-cyan-200 via-blue-100 to-[#00c2e8] opacity-80"></div>
+           <div className="absolute inset-0 bg-[radial-gradient(at_bottom_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent mix-blend-soft-light"></div>
+           
+           {/* 背景装飾: 光の反射 */}
+           <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/40 rounded-full blur-3xl mix-blend-overlay animate-pulse-slow"></div>
+
+           {/* 透かし: 巨大な日付 (白く、大胆に配置) */}
+           <div className="absolute -bottom-12 -right-4 text-[160px] font-black text-white/40 select-none leading-none z-0 tracking-tighter -rotate-6 mix-blend-overlay">
               {getDayNumber(event.date)}
            </div>
 
-           
-           
-           <div className="relative z-10 text-center pr-8 pl-8"> {/* ボタンと被らないようにpadding調整 */}
-             <h1 className="text-2xl font-black text-slate-800 leading-tight mb-4 tracking-tight">
+           {/* コンテンツ (文字は白で見やすく) */}
+           <div className="relative z-10 text-left">
+             {/* 小さな日付ラベル */}
+             <div className="inline-flex items-center gap-1.5 bg-white/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-cyan-700 mb-4 shadow-sm">
+                <Calendar className="w-3.5 h-3.5" />
+                {event.date}
+             </div>
+
+             {/* タイトル */}
+             <h1 className="text-3xl sm:text-4xl font-black text-slate-900 leading-tight mb-6 tracking-tight drop-shadow-sm pr-8">
                {event.title}
              </h1>
-             <div className="flex justify-center flex-wrap gap-2 text-sm font-bold text-slate-500">
-                <div className="flex items-center bg-slate-50/80 px-3 py-1.5 rounded-full backdrop-blur-sm">
-                  <Calendar className="w-4 h-4 mr-1.5 text-slate-400"/>
-                  {event.date}
-                </div>
-                <div className="flex items-center bg-slate-50/80 px-3 py-1.5 rounded-full backdrop-blur-sm">
-                  <MapPin className="w-4 h-4 mr-1.5 text-slate-400"/>
-                  {event.venue_name ?? "場所未定"}
-                </div>
+             
+             {/* 場所 */}
+             <div className="flex items-center text-sm font-bold text-slate-700 bg-white/50 backdrop-blur-md py-2 px-4 rounded-2xl w-fit border border-white/40">
+                <MapPin className="w-4 h-4 mr-2 text-cyan-600"/>
+                {event.venue_name ?? "場所未定"}
              </div>
            </div>
         </section>
