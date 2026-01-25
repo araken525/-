@@ -125,8 +125,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         
         {/* === カード1: イベント基本情報 === */}
         <section className="relative bg-white rounded-[2rem] p-6 shadow-wolt overflow-hidden">
-           {/* 透かし: text-slate-100 + opacity-50 = 絶妙な濃さ */}
-           <div className="absolute -bottom-6 -right-2 text-[120px] font-black text-slate-100/50 select-none watermark-text leading-none z-0">
+           {/* 透かしサイズ変更: text-[120px] -> text-8xl */}
+           <div className="absolute -bottom-6 -right-2 text-8xl font-black text-slate-100/50 select-none watermark-text leading-none z-0">
               {getDayNumber(event.date)}
            </div>
            
@@ -185,7 +185,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         <section className="space-y-8">
           {groups.map((group) => (
             <div key={group.time}>
-              {/* 左側見出し */}
               <div className="flex items-center mb-4 pl-2">
                 <span className="text-2xl font-black text-slate-800 tracking-tight font-sans">
                   {group.time}
@@ -216,8 +215,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                         </div>
                       )}
 
-                      {/* 透かし: text-slate-100 + opacity-50 = 絶妙 */}
-                      <div className="absolute -bottom-4 -right-2 text-[7rem] font-black text-slate-100/50 select-none watermark-text leading-none z-0">
+                      {/* 透かしサイズ変更: text-[7rem] -> text-6xl */}
+                      <div className="absolute -bottom-4 -right-2 text-6xl font-black text-slate-100/50 select-none watermark-text leading-none z-0">
                         {hhmm(it.start_time)}
                       </div>
 
@@ -229,7 +228,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
                       <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-between">
                         <div>
-                          {/* 1. タイトル + タグ */}
                           <div className="flex justify-between items-start mb-1">
                              <h3 className={`text-xl font-black leading-tight tracking-tight ${now ? "text-[#00c2e8]" : "text-slate-900"}`}>
                                {it.title}
@@ -239,7 +237,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                              </span>
                           </div>
 
-                          {/* 2. 終了時間 (強調配置) */}
                           {it.end_time && (
                              <div className="flex items-center text-sm font-bold text-[#00c2e8] mb-2">
                                <Clock className="w-3.5 h-3.5 mr-1" />
@@ -247,7 +244,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                              </div>
                           )}
 
-                          {/* 3. メモ */}
                           {it.note && (
                             <div className="text-sm text-slate-600 leading-relaxed font-medium mb-3">
                               {it.note}
@@ -255,7 +251,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                           )}
                         </div>
 
-                        {/* 4. 場所 & 所要時間 (下段) */}
                         <div className="flex items-center gap-3 pt-3 border-t border-slate-50 mt-1">
                            {it.location ? (
                               <div className="flex items-center text-xs font-bold text-slate-500">
