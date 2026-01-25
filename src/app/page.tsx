@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Calendar, Smartphone, Zap, Plus, Search, ChevronDown, Music, Clapperboard, Briefcase, Heart, Clock, ArrowRight } from "lucide-react";
+import { Calendar, Smartphone, Zap, Plus, Search, ChevronDown, Music, Clapperboard, Briefcase, Heart, MapPin, Clock } from "lucide-react";
 
 export default function Home() {
   const [showSearch, setShowSearch] = useState(false);
@@ -15,7 +15,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 selection:bg-[#00c2e8] selection:text-white pb-20 pt-16 relative overflow-hidden">
       
-      {/* === カスタムアニメーションCSS === */}
+      {/* === カスタムアニメーションCSS (維持) === */}
       <style jsx global>{`
         @keyframes float {
           0% { transform: translateY(0px) rotate(0deg); }
@@ -31,14 +31,13 @@ export default function Home() {
         .animate-float-delayed { animation: float-delayed 7s ease-in-out infinite; }
       `}</style>
 
-      {/* === 背景の動く光（オーブ） === */}
+      {/* === 背景の動く光 (維持) === */}
       <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#00c2e8] rounded-full blur-[120px] opacity-20 animate-pulse pointer-events-none z-0"></div>
       <div className="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-purple-500 rounded-full blur-[100px] opacity-10 animate-pulse pointer-events-none z-0" style={{ animationDelay: "2s" }}></div>
 
-      {/* === ヘッダー (グラスモーフィズム) === */}
+      {/* === ヘッダー (音符削除) === */}
       <header className="fixed top-0 inset-x-0 h-16 bg-white/60 backdrop-blur-xl border-b border-white/50 flex items-center justify-between px-6 z-50">
-        <div className="flex items-center gap-2 font-black text-2xl text-slate-800 tracking-tighter">
-          <div className="w-8 h-8 bg-gradient-to-br from-[#00c2e8] to-cyan-500 rounded-xl flex items-center justify-center text-white text-base shadow-lg shadow-cyan-200/50">🎵</div>
+        <div className="font-black text-2xl text-slate-800 tracking-tighter">
           TaiSuke
         </div>
         <Link 
@@ -50,10 +49,10 @@ export default function Home() {
       </header>
 
       {/* === ヒーローセクション === */}
-      <section className="pt-20 px-6 max-w-6xl mx-auto relative z-10 flex flex-col md:flex-row items-center gap-12">
+      <section className="pt-20 px-6 max-w-6xl mx-auto relative z-10 flex flex-col md:flex-row items-center gap-16">
         
         {/* 左側: コピー & アクション */}
-        <div className="flex-1 text-center md:text-left pt-12">
+        <div className="flex-1 text-center md:text-left pt-8 md:pt-12">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/80 backdrop-blur-md rounded-full shadow-sm border border-white mb-6">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
             <span className="text-xs font-black text-slate-600">無料・ログイン不要</span>
@@ -89,38 +88,45 @@ export default function Home() {
           )}
         </div>
 
-        {/* 右側: 浮遊するUIモックアップ */}
-        <div className="flex-1 relative w-full max-w-md aspect-square md:aspect-auto h-[400px] hidden sm:block">
-          {/* カード1 (手前・メイン) */}
-          <div className="absolute top-10 right-10 w-80 bg-white/90 backdrop-blur-xl p-5 rounded-[2rem] shadow-2xl border border-white/50 animate-float z-20 rotate-[-2deg]">
-             <div className="flex gap-4 items-center">
-                <div className="w-14 h-14 bg-cyan-50 text-[#00c2e8] rounded-[1.2rem] flex items-center justify-center text-3xl shadow-inner">🎻</div>
-                <div>
-                   <h3 className="text-lg font-black text-slate-800 leading-tight">ゲネプロ (全体)</h3>
-                   <span className="text-xs font-bold text-[#00c2e8] flex items-center gap-1 mt-1"><Clock className="w-3 h-3"/> 15:00 ~ 16:30</span>
-                </div>
-             </div>
-             <div className="mt-4 px-3 py-2 bg-slate-50 rounded-xl text-xs font-bold text-slate-500 flex justify-between items-center">
-                <span>📍 メインホール</span>
-                <span className="bg-cyan-100 text-[#00c2e8] px-2 py-0.5 rounded-md">全員</span>
-             </div>
+        {/* 右側: 浮遊するリアルなUIモックアップ */}
+        <div className="flex-1 relative w-full max-w-md aspect-square md:aspect-auto h-[450px] hidden sm:block pointer-events-none">
+          
+          {/* カード1 (手前・メイン) - 実際のアプリのデザインを再現 */}
+          <div className="absolute top-12 right-6 w-full max-w-[340px] bg-white rounded-[1.5rem] p-5 flex gap-5 items-stretch shadow-[0_20px_50px_-12px_rgb(0_194_232_/_0.3)] border border-slate-100 animate-float z-20 rotate-[-2deg]">
+            <div className="flex flex-col items-center shrink-0 space-y-2">
+               <div className="text-lg font-black text-slate-800 leading-none">15:00</div>
+               <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-3xl">🎻</div>
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col justify-center py-1">
+              <div className="flex justify-between items-start mb-1">
+                 <h3 className="text-lg font-black leading-tight text-slate-900 truncate">ゲネプロ (全体)</h3>
+                 <span className="ml-2 shrink-0 px-2 py-0.5 rounded-md text-[10px] font-black bg-cyan-50 text-[#00c2e8]">全員</span>
+              </div>
+              <div className="flex items-center text-sm font-bold text-[#00c2e8] mb-1"><Clock className="w-3.5 h-3.5 mr-1"/>~16:30 まで</div>
+              <div className="flex items-center gap-3 text-xs font-bold text-slate-400">
+                 <div className="flex items-center"><MapPin className="w-3 h-3 mr-1 text-slate-300"/>メインホール</div>
+              </div>
+            </div>
           </div>
 
-          {/* カード2 (奥・サブ) */}
-          <div className="absolute top-40 left-0 w-72 bg-white/80 backdrop-blur-lg p-5 rounded-[2rem] shadow-xl border border-white/30 animate-float-delayed z-10 rotate-[3deg] scale-90">
-             <div className="flex gap-4 items-center">
-                <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-[1.2rem] flex items-center justify-center text-2xl">🍱</div>
-                <div>
-                   <h3 className="text-base font-black text-slate-800 leading-tight">お昼休憩</h3>
-                   <span className="text-[10px] font-bold text-purple-500 mt-1">12:30 ~ 13:30</span>
-                </div>
-             </div>
+          {/* カード2 (奥・サブ) - 少し小さく、傾けて配置 */}
+          <div className="absolute top-48 left-0 w-full max-w-[300px] bg-white/90 backdrop-blur-sm rounded-[1.5rem] p-4 flex gap-4 items-stretch shadow-xl border border-slate-50 animate-float-delayed z-10 rotate-[4deg] scale-95 opacity-90">
+            <div className="flex flex-col items-center shrink-0 space-y-2">
+               <div className="text-base font-black text-slate-800 leading-none">12:30</div>
+               <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-2xl">🍱</div>
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5">
+              <div className="flex justify-between items-start mb-1">
+                 <h3 className="text-base font-black leading-tight text-slate-900 truncate">お昼休憩</h3>
+              </div>
+              <div className="flex items-center text-xs font-bold text-slate-400 mb-1"><Clock className="w-3 h-3 mr-1"/>~13:30 まで</div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* === 3つの特徴 (グラスモーフィズムカード) === */}
-      <section className="mt-24 px-6 max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-6 relative z-10">
+      <section className="mt-32 px-6 max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-6 relative z-10 pb-20">
         {[
           { icon: Zap, color: "from-amber-400 to-orange-500", title: "アプリ・ログイン不要", desc: "URLをクリックするだけ。面倒な会員登録やインストールは一切必要ありません。" },
           { icon: Smartphone, color: "from-purple-500 to-indigo-600", title: "スマホで一番見やすい", desc: "PDFを拡大するストレスから解放。自分の出番や進行状況が一目でわかるデザイン。" },
@@ -137,7 +143,7 @@ export default function Home() {
       </section>
 
       {/* === 利用シーン === */}
-      <section className="mt-24 px-6 text-center relative z-10">
+      <section className="mt-20 px-6 text-center relative z-10 pb-32">
         <p className="text-xs font-black text-slate-400 mb-8 tracking-widest uppercase">こんなイベントで使われています</p>
         <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
           {[
@@ -151,23 +157,6 @@ export default function Home() {
               <tag.icon className={`w-4 h-4 ${tag.color}`}/> {tag.label}
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* === ボトムCTA === */}
-      <section className="mt-28 px-6 text-center max-w-lg mx-auto relative z-10">
-        <div className="bg-gradient-to-br from-[#00c2e8] to-cyan-500 p-10 rounded-[2.5rem] shadow-2xl shadow-cyan-200/50 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mt-10 -mr-10 text-white/10"><Calendar className="w-40 h-40"/></div>
-          <div className="relative z-10">
-            <h2 className="text-3xl font-black mb-3 leading-tight">さあ、準備を<br/>始めましょう。</h2>
-            <p className="text-sm font-bold opacity-90 mb-8">URLを発行するのにかかる時間は、わずか10秒です。</p>
-            <Link 
-              href="/create"
-              className="w-full h-16 bg-white text-[#00c2e8] rounded-[1.5rem] font-black text-lg shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-            >
-              <Plus className="w-6 h-6" /> タイスケを作成する
-            </Link>
-          </div>
         </div>
       </section>
 
