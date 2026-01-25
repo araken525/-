@@ -12,7 +12,7 @@ export default function EventHeader({ title, slug }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [isStaffUrl, setIsStaffUrl] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [fullUrl, setFullUrl] = useState(""); // 完全に生成されたURL
+  const [fullUrl, setFullUrl] = useState(""); 
   const [scrolled, setScrolled] = useState(false);
 
   // クライアント側でのみURLを生成（バグ防止）
@@ -79,7 +79,7 @@ export default function EventHeader({ title, slug }: Props) {
           
           <div className="relative w-full max-w-sm bg-white rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
             
-            {/* ヘッダー部分 */}
+            {/* ヘッダー */}
             <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
               <h3 className="text-lg font-black text-slate-800">共有する</h3>
               <button onClick={() => setIsOpen(false)} className="p-2 -mr-2 text-slate-400 hover:text-slate-600">
@@ -88,7 +88,6 @@ export default function EventHeader({ title, slug }: Props) {
             </div>
 
             <div className="p-6 space-y-6">
-              
               {/* 切り替えスイッチ */}
               <div className="bg-slate-100 p-1 rounded-xl flex font-bold text-xs">
                 <button 
@@ -105,7 +104,7 @@ export default function EventHeader({ title, slug }: Props) {
                 </button>
               </div>
 
-              {/* URLコピーエリア */}
+              {/* URLコピー */}
               <div className="space-y-2">
                 <div className="text-xs font-bold text-slate-400 ml-1">共有リンク</div>
                 <div 
@@ -133,7 +132,6 @@ export default function EventHeader({ title, slug }: Props) {
                   <Twitter className="w-4 h-4 fill-current" /> Xにポスト
                 </button>
               </div>
-
             </div>
           </div>
         </div>

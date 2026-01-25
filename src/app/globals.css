@@ -12,7 +12,7 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   min-height: 100vh;
-  /* 数字を美しく見せる設定 */
+  /* 数字を美しく見せる（等幅にしない） */
   font-feature-settings: "tnum" on, "lnum" on, "ss01" on;
   -webkit-overflow-scrolling: touch;
 }
@@ -35,9 +35,11 @@ body {
     scrollbar-width: none;
   }
 
-  /* 透かし文字用のスタイル */
+  /* 透かし文字用: フォント指定と選択不可設定 */
   .watermark-text {
     font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     letter-spacing: -0.05em;
+    user-select: none;
+    pointer-events: none;
   }
 }
