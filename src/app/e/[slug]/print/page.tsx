@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
 import { headers } from "next/headers";
 import { Printer, Calendar, MapPin, Clock } from "lucide-react";
-/* 👇 普通のインポートに戻す（これでOK） */
 import EventQRCode from "@/components/EventQRCode";
 
 export const dynamic = "force-dynamic";
@@ -9,11 +8,10 @@ export const dynamic = "force-dynamic";
 /* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
 
-function targetLabel(t: string) {
-  const map: Record<string, string> = {
-    all: "全員", woodwinds: "木管", brass: "金管", perc: "打楽器", staff: "スタッフ"
-  };
-  return map[t] || t || "全員";
+// ★修正: 独自のタグ名をそのまま使うように変更
+function getDisplayTarget(targetStr: string) {
+  if (!targetStr || targetStr === "all" || targetStr === "全員") return "全員";
+  return targetStr.replace(/,/g, "・");
 }
 
 function fmtDate(d: string) {
@@ -31,8 +29,11 @@ function fmtUpdate(d: Date) {
 export default async function PrintPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ t?: string }> }) {
   const { slug } = await params;
   const sp = await searchParams;
-  const targetKey = sp?.t ?? "all";
-  const targetName = targetLabel(targetKey);
+  
+  // ★修正: URLから選択されたタグを取得（メイン画面と同じロジック）
+  const rawT = sp?.t ? decodeURIComponent(sp.t) : "";
+  const selectedTags = rawT ? rawT.split(",") : [];
+  const targetName = selectedTags.length > 0 ? selectedTags.join("・") : "全員";
 
   // 1. データ取得
   const { data: event } = await supabase.from("events").select("*").eq("slug", slug).maybeSingle();
@@ -40,9 +41,26 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
 
   const { data: items } = await supabase.from("schedule_items").select("*").eq("event_id", event.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
 
-  // 2. フィルタリング
+  // 2. フィルタリング (★修正: 複数タグ対応)
   const allItems = items ?? [];
-  const filtered = targetKey === "all" ? allItems : allItems.filter(it => it.target === targetKey || it.target === "all" || it.target === "全員");
+  const filtered = allItems.filter(it => {
+    // タグ未選択ならすべて表示
+    if (selectedTags.length === 0) return true;
+
+    // アイテムのタグを配列化
+    const itTargets = (!it.target || it.target === "all" || it.target === "全員") 
+      ? ["全員"] 
+      : it.target.split(",").map((t: string) => {
+          const trimmed = t.trim();
+          return (trimmed === "all") ? "全員" : trimmed;
+        });
+
+    // 「全員」対象の予定は常に表示
+    if (itTargets.includes("全員")) return true;
+
+    // 選択されたタグと一致するものがあれば表示
+    return itTargets.some((tag: string) => selectedTags.includes(tag));
+  });
 
   // 3. 最終更新日時の計算
   const dates: Date[] = [];
@@ -60,7 +78,6 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
   const publicUrl = `${protocol}://${host}/e/${slug}`;
   
   return (
-    // ★変更: コンテナ幅を max-w-6xl に拡張 (iPad対応)
     <div className="min-h-screen bg-white text-slate-900 font-sans print:p-0 p-8 w-full max-w-lg md:max-w-6xl mx-auto selection:bg-slate-200">
       
       {/* 印刷用CSS設定 */}
@@ -117,11 +134,6 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
       </header>
 
       {/* === スケジュールリスト === */}
-      {/* ★変更: Gridレイアウト (2列表示)
-         スマホ: 1列
-         iPad/PC/印刷時: 2列 (grid-cols-2)
-         gap-x-12: 列の間隔を広めに取って読みやすく
-      */}
       <main className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0 items-start">
          
          {filtered.length === 0 && (
@@ -130,7 +142,6 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
 
          {filtered.map((item) => {
             return (
-              // page-break クラスで印刷時の途中切れを防止
               <div key={item.id} className="grid grid-cols-[auto_1fr] gap-4 py-4 border-b border-slate-200 items-start page-break">
                 
                 {/* 左: 時間 */}
@@ -156,12 +167,13 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
                      <div className="text-lg font-black text-slate-900 leading-tight">
                        {item.title}
                      </div>
+                     {/* ★修正: タグの表示も新しい関数を使用 */}
                      <div className={`shrink-0 text-[9px] px-1.5 py-0.5 rounded font-black border uppercase tracking-wide ${
                         !item.target || item.target === "全員" || item.target === "all"
                           ? "bg-transparent text-slate-400 border-transparent" 
                           : "bg-slate-900 text-white border-slate-900"
                      }`}>
-                        {targetLabel(item.target || "all")}
+                        {getDisplayTarget(item.target)}
                      </div>
                    </div>
 
