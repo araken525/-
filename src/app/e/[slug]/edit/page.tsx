@@ -2,7 +2,7 @@
 
 import { useState, use, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Lock, Unlock, ArrowUpRight, LogOut, Save, Plus, RefreshCw, MapPin, AlignLeft, ChevronDown, Edit3, Trash2, Tag, Smile, X, Clock, Calendar, ArrowUp, ArrowDown, Minus, Check } from "lucide-react";
+import { Lock, Unlock, ArrowUpRight, LogOut, Save, Plus, RefreshCw, MapPin, AlignLeft, Edit3, Trash2, Tag, X, Clock, Calendar, ArrowUp, ArrowDown, Minus, Check } from "lucide-react";
 
 /* ===== ヘルパー関数 & 定数 ===== */
 function hhmm(t: string) { return String(t).slice(0, 5); }
@@ -35,32 +35,27 @@ function getTargetColor(t: string) {
   return "bg-cyan-50 text-[#00c2e8]";
 }
 
-// アイコンパレット
 const EMOJI_PRESETS = ["🎵", "🎻", "🍱", "🎤", "🚌", "🚽", "🚬", "☕", "🍻", "🏨", "🎫", "✨", "🧹", "🚩"];
 
 /* ===== メインコンポーネント ===== */
 export default function EditPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
 
-  // 認証・イベント状態
   const [ok, setOk] = useState(false);
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
   const [event, setEvent] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
   
-  // 編集シート状態
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
 
-  // フォーム状態
   const [formData, setFormData] = useState({
     startTime: "10:00", endTime: "", title: "", location: "", note: "", target: "全員", emoji: "🎵", sortOrder: 0
   });
-  const [recentTags, setRecentTags] = useState<string[]>(["全員", "木管", "金管", "弦楽器", "打楽器", "スタッフ"]); // デフォルトを少し補完
+  const [recentTags, setRecentTags] = useState<string[]>(["全員", "木管", "金管", "弦楽器", "打楽器", "スタッフ"]);
 
-  // 初期データロード
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from("events").select("*").eq("slug", slug).maybeSingle();
@@ -73,22 +68,19 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     const { data } = await supabase.from("schedule_items").select("*").eq("event_id", event.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
     setItems(data ?? []);
     if (data) {
-      // 既存のタグを収集して履歴に追加（カンマ区切りも分解して登録）
-      const tags = new Set<string>(recentTags);
+      const tags = new Set<string>(["全員", "木管", "金管", "弦楽器", "打楽器", "スタッフ"]);
       data.forEach((it) => { 
-         if (it.target && it.target !== "all") {
-            it.target.split(",").forEach((t: string) => tags.add(t.trim()));
-         }
+        if (it.target && it.target !== "全員") {
+          it.target.split(",").forEach((t: string) => tags.add(t.trim()));
+        }
       });
-      // "全員" は先頭にしたいので調整
-      tags.delete("全員");
-      setRecentTags(["全員", ...Array.from(tags)]);
+      setRecentTags(Array.from(tags));
     }
   }
+
   useEffect(() => { if (event?.id) loadItems(); }, [event?.id]);
   useEffect(() => { if (sessionStorage.getItem(`edit-ok:${slug}`)) setOk(true); }, [slug]);
 
-  // 自動絵文字推測
   useEffect(() => {
     if (!editingId && formData.title) {
       const detected = detectEmoji(formData.title);
@@ -96,9 +88,8 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
          if (detected !== "🎵") setFormData(prev => ({ ...prev, emoji: detected }));
       }
     }
-  }, [formData.title]);
+  }, [formData.title, editingId, formData.emoji]);
 
-  // シート外クリックで閉じる
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (sheetRef.current && !sheetRef.current.contains(event.target as Node)) closeSheet();
@@ -107,8 +98,24 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isSheetOpen]);
 
+  /* --- 複数タグのトグルロジック --- */
+  function toggleTag(tag: string) {
+    if (tag === "全員") {
+      setFormData({ ...formData, target: "全員" });
+      return;
+    }
+    let currentTags = formData.target === "全員" ? [] : formData.target.split(",").map(t => t.trim()).filter(Boolean);
+    
+    if (currentTags.includes(tag)) {
+      currentTags = currentTags.filter(t => t !== tag);
+    } else {
+      currentTags.push(tag);
+    }
+    
+    const nextTarget = currentTags.length === 0 ? "全員" : currentTags.join(",");
+    setFormData({ ...formData, target: nextTarget });
+  }
 
-  // --- アクション ---
   async function checkPassword() {
     setStatus("確認中...");
     const { data } = await supabase.from("events").select("edit_password").eq("slug", slug).maybeSingle();
@@ -118,6 +125,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
       setOk(true); setStatus(""); loadItems();
     } else { setStatus("パスワードが違います"); }
   }
+
   function resetLock() {
     sessionStorage.removeItem(`edit-ok:${slug}`); setOk(false); setPassword(""); setStatus("ログアウトしました"); closeSheet();
   }
@@ -136,37 +144,8 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     }
     setIsSheetOpen(true);
   }
+
   function closeSheet() { setIsSheetOpen(false); setTimeout(() => setEditingId(null), 300); }
-
-  // ★変更点: タグの複数選択ロジック
-  function toggleTag(tag: string) {
-    if (tag === "全員") {
-      setFormData({ ...formData, target: "全員" });
-      return;
-    }
-
-    // 現在のタグを配列にする（空文字やスペースを除去）
-    let currentTags = formData.target 
-      ? formData.target.split(",").map(t => t.trim()).filter(Boolean) 
-      : [];
-
-    // もし今「全員」が選択されていたら、それを消して新しいタグだけにする
-    if (currentTags.includes("全員")) {
-      currentTags = [];
-    }
-
-    if (currentTags.includes(tag)) {
-      // 既に選ばれていたら外す
-      currentTags = currentTags.filter(t => t !== tag);
-    } else {
-      // 選ばれていなければ追加する
-      currentTags.push(tag);
-    }
-
-    // もし全部消えたら「全員」に戻す、そうでなければカンマ区切りで結合
-    const newTarget = currentTags.length === 0 ? "全員" : currentTags.join(",");
-    setFormData({ ...formData, target: newTarget });
-  }
 
   async function saveItem() {
     if (!event?.id) return setStatus("イベント不明");
@@ -192,7 +171,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     loadItems(); setStatus("削除しました"); setTimeout(() => setStatus(""), 2000);
   }
 
-  // --- 描画 ---
   if (!ok) {
     return (
       <main className="min-h-screen bg-[#f7f9fb] flex items-center justify-center p-6 font-sans">
@@ -210,7 +188,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
 
   return (
     <main className="min-h-screen bg-[#f7f9fb] pb-32 font-sans selection:bg-[#00c2e8] selection:text-white relative">
-      {/* ヘッダー */}
       <header className="fixed top-0 inset-x-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 h-14 flex items-center justify-between shadow-sm">
          <div className="flex items-center gap-2 font-black text-slate-800 truncate">
             <Edit3 className="w-4 h-4 text-[#00c2e8]" />
@@ -222,11 +199,9 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
          </div>
       </header>
 
-      {/*ステータス通知*/}
       {status && <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full shadow-lg bg-slate-800 text-white text-xs font-bold animate-bounce whitespace-nowrap">{status}</div>}
 
       <div className="pt-20 px-4 max-w-lg mx-auto space-y-6">
-        {/* イベント情報カード */}
         {event && (
           <section className="bg-white rounded-[1.5rem] p-4 shadow-sm flex items-center justify-between">
              <div>
@@ -239,14 +214,12 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
           </section>
         )}
 
-        {/* リスト */}
         <section className="space-y-4">
           {items.map((it) => {
              const badgeColor = getTargetColor(it.target);
              const emoji = it.emoji || detectEmoji(it.title);
              const duration = getDuration(it.start_time, it.end_time);
-             // タグが複数の場合は「・」で繋いで表示
-             const displayTarget = it.target && it.target !== "all" ? it.target.replace(/,/g, "・") : "全員";
+             const displayTarget = it.target ? it.target.replace(/,/g, "・") : "全員";
              
              return (
               <div key={it.id} className="group relative bg-white rounded-[1.5rem] p-5 flex gap-5 items-stretch shadow-sm border border-transparent transition-all hover:shadow-md">
@@ -273,34 +246,43 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
               </div>
              );
           })}
-          {items.length === 0 && <div className="text-center py-12 text-slate-400 font-bold text-sm">予定がありません。「＋」ボタンで追加しましょう！</div>}
         </section>
       </div>
 
-      {/* FAB */}
       <button onClick={() => openSheet()} className="fixed bottom-6 right-6 w-14 h-14 bg-[#00c2e8] rounded-full shadow-lg text-white flex items-center justify-center active:scale-90 transition-all z-30">
         <Plus className="w-8 h-8" />
       </button>
 
-      {/* === 入力フォーム === */}
+      {/* === 入力フォームシート === */}
       <div className={`fixed inset-0 z-50 flex items-end justify-center pointer-events-none ${isSheetOpen ? "visible" : "invisible"}`}>
          <div className={`absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${isSheetOpen ? "opacity-100 pointer-events-auto" : "opacity-0"}`} onClick={closeSheet}></div>
          
          <div ref={sheetRef} className={`relative w-full max-w-lg bg-white rounded-t-[2.5rem] shadow-2xl p-6 space-y-6 pointer-events-auto transition-transform duration-300 ease-out ${isSheetOpen ? "translate-y-0" : "translate-y-full"}`}>
-            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto -mt-2 mb-2"></div>
             
-            <div className="space-y-6 overflow-y-auto max-h-[80vh] no-scrollbar pb-2">
+            {/* 上部ハンドル（スワイプバー） */}
+            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto -mt-2 mb-2"></div>
+
+            {/* 閉じるボタン */}
+            <button onClick={closeSheet} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 bg-slate-50 rounded-full transition-colors">
+               <X className="w-5 h-5" />
+            </button>
+            
+            <div className="space-y-6 overflow-y-auto max-h-[75vh] no-scrollbar pb-2">
                
-               {/* 1. タイトル & アイコン */}
+               {/* 1. タイトル & アイコンパレット */}
                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                     <div className="w-16 h-16 shrink-0 bg-slate-50 rounded-2xl flex items-center justify-center relative shadow-inner">
-                        <input type="text" value={formData.emoji} onChange={(e)=>setFormData({...formData, emoji:e.target.value})} className="w-full h-full bg-transparent text-center text-4xl outline-none" placeholder="🎵"/>
-                     </div>
-                     <div className="flex-1">
-                        <input type="text" value={formData.title} onChange={(e)=>setFormData({...formData, title:e.target.value})} placeholder="何をする？" className="w-full h-16 bg-transparent text-2xl font-black placeholder:text-slate-300 outline-none border-b-2 border-slate-100 focus:border-[#00c2e8] transition-colors"/>
+                  <div className="space-y-1">
+                     <label className="text-[10px] font-bold text-slate-400 pl-1 uppercase tracking-wider">アイコンをえらぶ</label>
+                     <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 shrink-0 bg-slate-50 rounded-2xl flex items-center justify-center relative shadow-inner">
+                           <input type="text" value={formData.emoji} onChange={(e)=>setFormData({...formData, emoji:e.target.value})} className="w-full h-full bg-transparent text-center text-4xl outline-none" placeholder="🎵"/>
+                        </div>
+                        <div className="flex-1">
+                           <input type="text" value={formData.title} onChange={(e)=>setFormData({...formData, title:e.target.value})} placeholder="何をする？" className="w-full h-16 bg-transparent text-2xl font-black placeholder:text-slate-300 outline-none border-b-2 border-slate-100 focus:border-[#00c2e8] transition-colors"/>
+                        </div>
                      </div>
                   </div>
+                  
                   <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
                      {EMOJI_PRESETS.map((emoji) => (
                         <button key={emoji} onClick={() => setFormData({...formData, emoji})} className={`shrink-0 w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${formData.emoji === emoji ? "bg-slate-800 text-white shadow-lg scale-110" : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}>
@@ -312,41 +294,34 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
 
                {/* 2. 時間設定 */}
                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-50 rounded-2xl p-3">
+                  <div className="bg-slate-50 rounded-2xl p-3 border border-transparent focus-within:border-cyan-100 transition-all">
                      <label className="text-[10px] font-bold text-slate-400 block mb-1">開始</label>
                      <input type="time" value={formData.startTime} onChange={(e)=>setFormData({...formData, startTime:e.target.value})} className="w-full bg-transparent text-xl font-black text-center outline-none"/>
                   </div>
-                  <div className="bg-slate-50 rounded-2xl p-3">
+                  <div className="bg-slate-50 rounded-2xl p-3 border border-transparent focus-within:border-cyan-100 transition-all">
                      <label className="text-[10px] font-bold text-slate-400 block mb-1">終了 (任意)</label>
                      <input type="time" value={formData.endTime} onChange={(e)=>setFormData({...formData, endTime:e.target.value})} className="w-full bg-transparent text-xl font-black text-center outline-none text-slate-600 placeholder:text-slate-300"/>
                   </div>
                </div>
 
-               {/* 3. ★詳細設定: タグ複数選択 (ここを変更) */}
+               {/* 3. 詳細設定（複数タグ対応） */}
                <div className="space-y-4">
                   <div className="flex flex-wrap gap-2">
                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-400"><Tag className="w-4 h-4"/></div>
                      
-                     {/* 編集用インプット (直接カンマ区切りでいじりたい人向け) */}
-                     <input 
-                        type="text" 
-                        value={formData.target} 
-                        onChange={(e)=>setFormData({...formData, target:e.target.value})} 
-                        placeholder="対象" 
-                        className="h-8 bg-transparent font-bold text-sm outline-none border-b border-transparent focus:border-[#00c2e8] w-24 text-slate-600"
-                     />
-                     
-                     {/* タグチップ (クリックでON/OFF切り替え) */}
                      {recentTags.map((t) => {
-                        // 文字列の中にこのタグが含まれているか判定 (簡易的なincludesではなく、カンマ区切りとして厳密に)
-                        const currentList = formData.target ? formData.target.split(",").map(x => x.trim()) : [];
-                        const isActive = currentList.includes(t);
-
+                        const activeList = formData.target.split(",").map(x => x.trim());
+                        const isActive = activeList.includes(t);
                         return (
                            <button 
                               key={t} 
                               onClick={() => toggleTag(t)} 
-                              className={`h-8 px-3 rounded-full text-xs font-black transition-all flex items-center gap-1 ${isActive ? "bg-[#00c2e8] text-white shadow-md shadow-cyan-100" : "bg-slate-50 text-slate-500 border border-slate-100"}`}
+                              className={`h-8 px-3 rounded-full text-xs font-black transition-all flex items-center gap-1 border
+                                 ${isActive 
+                                    ? "bg-[#00c2e8] border-[#00c2e8] text-white shadow-md shadow-cyan-100" 
+                                    : "bg-white border-slate-100 text-slate-500 hover:bg-slate-50"
+                                 }
+                              `}
                            >
                               {isActive && <Check className="w-3 h-3"/>}
                               {t}
@@ -355,7 +330,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                      })}
                   </div>
 
-                  {/* 場所 & メモ */}
                   <div className="space-y-3 pt-2">
                      <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 h-12">
                         <MapPin className="w-4 h-4 text-slate-400 shrink-0"/>
@@ -382,7 +356,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                </div>
             </div>
 
-            {/* 保存ボタン */}
             <button onClick={saveItem} className={`w-full h-14 rounded-[1.2rem] font-black text-white shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 ${editingId ? "bg-blue-600 shadow-blue-200" : "bg-[#00c2e8] shadow-cyan-200"}`}>
                {editingId ? <><RefreshCw className="w-5 h-5"/> 更新する</> : <><Save className="w-5 h-5"/> リストに追加</>}
             </button>
