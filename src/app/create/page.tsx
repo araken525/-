@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Sparkles, ArrowRight, Copy, Check, Link as LinkIcon, Lock, Calendar, MapPin, Type } from "lucide-react";
+import { ArrowRight, Copy, Check, Link as LinkIcon, Lock, Calendar, MapPin, Type } from "lucide-react";
 
 export default function CreateEventPage() {
   const [step, setStep] = useState<"form" | "done">("form");
@@ -79,18 +79,14 @@ export default function CreateEventPage() {
       {step === "form" && (
         <div className="w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
           
-          {/* シンプルヘッダー (白背景) */}
-          <div className="pt-10 pb-2 text-center px-8">
-             <div className="w-16 h-16 bg-[#00c2e8]/10 text-[#00c2e8] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-               <Sparkles className="w-8 h-8" />
-             </div>
-             <h1 className="text-3xl font-black text-slate-800 tracking-tight">イベントを作成</h1>
-             <p className="text-slate-400 text-sm font-bold mt-2">ログイン不要。必要なのはこのフォームだけ。</p>
+          {/* ヘッダー (アイコン削除) */}
+          <div className="pt-10 pb-4 text-center px-8 border-b border-slate-50">
+             <h1 className="text-2xl font-black text-slate-800 tracking-tight">イベントを作成</h1>
           </div>
 
           <div className="p-8 space-y-6">
             
-            {/* 1. タイトル (最重要) */}
+            {/* 1. タイトル */}
             <div className="space-y-2">
                <label className="text-xs font-black text-slate-400 ml-1 flex items-center gap-1"><Type className="w-4 h-4"/> イベント名 <span className="text-red-400">*</span></label>
                <input 
@@ -98,22 +94,22 @@ export default function CreateEventPage() {
                   value={title} 
                   onChange={(e) => setTitle(e.target.value)} 
                   placeholder="例：第5回 定期演奏会" 
-                  className="w-full h-20 px-6 bg-slate-50 rounded-[1.5rem] text-2xl font-black placeholder:text-slate-300 outline-none border-2 border-transparent focus:border-[#00c2e8] focus:bg-white transition-all shadow-sm"
+                  className="w-full h-16 px-6 bg-slate-50 rounded-[1.5rem] text-xl font-black placeholder:text-slate-300 outline-none border-2 border-transparent focus:border-[#00c2e8] focus:bg-white transition-all shadow-sm"
                 />
             </div>
 
-            {/* 2. 日付 (1行フル) */}
-            <div className="space-y-2">
+            {/* 2. 日付 (はみ出し修正: w-full box-border) */}
+            <div className="space-y-2 w-full">
               <label className="text-xs font-black text-slate-400 ml-1 flex items-center gap-1"><Calendar className="w-4 h-4"/> 開催日 <span className="text-red-400">*</span></label>
               <input 
                 type="date" 
                 value={date} 
                 onChange={(e) => setDate(e.target.value)} 
-                className="w-full h-16 px-4 bg-slate-50 rounded-2xl font-black text-lg outline-none border-2 border-transparent focus:border-[#00c2e8] focus:bg-white transition-all shadow-sm"
+                className="w-full h-16 px-4 bg-slate-50 rounded-2xl font-black text-lg outline-none border-2 border-transparent focus:border-[#00c2e8] focus:bg-white transition-all shadow-sm appearance-none"
               />
             </div>
 
-            {/* 3. 場所 (1行フル) */}
+            {/* 3. 場所 */}
             <div className="space-y-2">
                <label className="text-xs font-black text-slate-400 ml-1 flex items-center gap-1"><MapPin className="w-4 h-4"/> 場所 (任意)</label>
                <input 
@@ -135,13 +131,13 @@ export default function CreateEventPage() {
                     value={slug} 
                     onChange={(e) => setSlug(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))} 
                     placeholder="concert-2026" 
-                    className="flex-1 bg-transparent font-black text-xl outline-none text-slate-800 placeholder:text-slate-300"
+                    className="flex-1 bg-transparent font-black text-xl outline-none text-slate-800 placeholder:text-slate-300 min-w-0"
                   />
                </div>
                <p className="text-[10px] text-slate-400 font-bold">※ 半角英数字のみ。空欄でランダム生成。</p>
             </div>
 
-            {/* 5. パスワード (重要) */}
+            {/* 5. パスワード */}
             <div className="space-y-2 bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
                 <label className="text-xs font-black text-orange-500 flex items-center gap-1 mb-1"><Lock className="w-4 h-4"/> 編集パスワード <span className="text-red-400">*</span></label>
                 <input 
@@ -156,13 +152,13 @@ export default function CreateEventPage() {
 
             {error && <p className="text-center text-xs font-bold text-red-500 animate-pulse bg-red-50 py-2 rounded-lg">{error}</p>}
 
-            {/* 送信ボタン */}
+            {/* 送信ボタン (Wolt Blueに変更) */}
             <button 
               onClick={createEvent} 
               disabled={loading}
-              className="w-full h-16 bg-slate-900 text-white rounded-2xl font-black text-lg shadow-xl shadow-slate-200 hover:bg-black hover:shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full h-16 bg-[#00c2e8] text-white rounded-2xl font-black text-lg shadow-xl shadow-cyan-100 hover:bg-cyan-500 hover:shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {loading ? "作成中..." : <>イベントを作成する <ArrowRight className="w-6 h-6" /></>}
+              {loading ? "作成中..." : <>イベントを作成 <ArrowRight className="w-6 h-6" /></>}
             </button>
           </div>
         </div>
