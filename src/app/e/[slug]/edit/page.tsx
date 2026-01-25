@@ -59,9 +59,9 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     startTime: "10:00", endTime: "", title: "", location: "", note: "", target: "全員", emoji: "🎵", sortOrder: 0
   });
   
-  // ★タグ関連ステート（初期は「全員」のみ。イベントごとに育てる）
+  // タグ関連ステート
   const [recentTags, setRecentTags] = useState<string[]>(["全員"]); 
-  const [newTagInput, setNewTagInput] = useState(""); // 新規タグ入力用
+  const [newTagInput, setNewTagInput] = useState("");
 
   // 初期データロード
   useEffect(() => {
@@ -76,7 +76,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     const { data } = await supabase.from("schedule_items").select("*").eq("event_id", event.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
     setItems(data ?? []);
     if (data) {
-      // 既存のタグを収集して履歴に追加
       const tags = new Set<string>(recentTags);
       data.forEach((it) => { 
          if (it.target && it.target !== "all") {
@@ -136,12 +135,12 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
       setEditingId(null);
       setFormData({ ...formData, title: "", location: "", note: "", emoji: "🎵", sortOrder: 0 }); 
     }
-    setNewTagInput(""); // 入力欄リセット
+    setNewTagInput("");
     setIsSheetOpen(true);
   }
   function closeSheet() { setIsSheetOpen(false); setTimeout(() => setEditingId(null), 300); }
 
-  // タグの複数選択ロジック（排他制御）
+  // タグの複数選択ロジック
   function toggleTag(tag: string) {
     if (tag === "全員") {
       setFormData({ ...formData, target: "全員" });
@@ -164,23 +163,21 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     setFormData({ ...formData, target: newTarget });
   }
 
-  // ★新規タグ追加ロジック
+  // 新規タグ追加ロジック
   function addNewTag() {
     const t = newTagInput.trim();
     if (!t) return;
     
-    // リストになければ追加
     if (!recentTags.includes(t)) {
       setRecentTags([...recentTags, t]);
     }
     
-    // 現在の選択にも追加する
     let currentTags = formData.target ? formData.target.split(",").map(x => x.trim()).filter(Boolean) : [];
     if (currentTags.includes("全員")) currentTags = [];
     if (!currentTags.includes(t)) currentTags.push(t);
     
     setFormData({ ...formData, target: currentTags.join(",") });
-    setNewTagInput(""); // 入力欄を空に
+    setNewTagInput("");
   }
 
   async function saveItem() {
@@ -296,24 +293,25 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
         <Plus className="w-8 h-8" />
       </button>
 
-      {/* === 入力フォーム === */}
+      {/* === 入力フォーム (構造を刷新して途切れを防止) === */}
       <div className={`fixed inset-0 z-50 flex items-end justify-center pointer-events-none ${isSheetOpen ? "visible" : "invisible"}`}>
          <div className={`absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${isSheetOpen ? "opacity-100 pointer-events-auto" : "opacity-0"}`} onClick={closeSheet}></div>
          
-         {/* ★変更: pt-12 で上部に十分なゆとりを確保 */}
-         <div ref={sheetRef} className={`relative w-full max-w-lg bg-white rounded-t-[2.5rem] shadow-2xl p-6 pt-12 space-y-6 pointer-events-auto transition-transform duration-300 ease-out ${isSheetOpen ? "translate-y-0" : "translate-y-full"}`}>
+         {/* シート本体: Flex Layoutに変更 */}
+         <div ref={sheetRef} className={`relative w-full max-w-lg bg-white rounded-t-[2.5rem] shadow-2xl pointer-events-auto transition-transform duration-300 ease-out flex flex-col max-h-[95vh] ${isSheetOpen ? "translate-y-0" : "translate-y-full"}`}>
             
-            {/* ★変更: ハンドルを少し下げ、閉じるボタンも押しやすい位置に */}
-            <div className="absolute top-4 inset-x-0 flex justify-center items-center">
-               <div className="w-12 h-1.5 bg-slate-200 rounded-full"></div>
+            {/* 1. ヘッダー (固定・スクロールしない) */}
+            <div className="shrink-0 relative h-14 flex items-center justify-center">
+               <div className="w-12 h-1.5 bg-slate-200 rounded-full absolute top-4"></div>
+               <button onClick={closeSheet} className="absolute right-6 top-4 p-2 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full transition-all z-10">
+                  <X className="w-5 h-5" />
+               </button>
             </div>
-            <button onClick={closeSheet} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full transition-all">
-               <X className="w-5 h-5" />
-            </button>
             
-            <div className="space-y-6 overflow-y-auto max-h-[80vh] no-scrollbar pb-2">
+            {/* 2. コンテンツ (スクロールする) */}
+            <div className="flex-1 overflow-y-auto p-6 pt-0 space-y-6 no-scrollbar">
                
-               {/* 1. タイトル & アイコン */}
+               {/* タイトル & アイコン */}
                <div className="space-y-4">
                   <div className="flex items-center gap-4">
                      <div className="w-16 h-16 shrink-0 bg-slate-50 rounded-2xl flex items-center justify-center relative shadow-inner">
@@ -327,7 +325,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                      <p className="text-xs font-bold text-slate-400 mb-2 pl-1">アイコンをえらぶ</p>
                      <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
                         {EMOJI_PRESETS.map((emoji) => (
-                           // ★変更: 選択時を「黒＋影」から「薄いシアン背景＋シアン文字＋拡大」のフラットなデザインに
                            <button key={emoji} onClick={() => setFormData({...formData, emoji})} className={`shrink-0 w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${formData.emoji === emoji ? "bg-cyan-50 text-[#00c2e8] scale-110" : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}>
                               {emoji}
                            </button>
@@ -336,7 +333,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                   </div>
                </div>
 
-               {/* 2. 時間設定 */}
+               {/* 時間設定 */}
                <div className="grid grid-cols-2 gap-4">
                   <div className="bg-slate-50 rounded-2xl p-3">
                      <label className="text-[10px] font-bold text-slate-400 block mb-1">開始</label>
@@ -348,59 +345,29 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                   </div>
                </div>
 
-               {/* 3. ★詳細設定: 対象タグ (大幅刷新・イベントごとに育つUI) */}
+               {/* 対象タグ */}
                <div className="space-y-4">
                   <label className="text-xs font-bold text-slate-400 block -mb-2 pl-1">対象パート</label>
-                  
-                  {/* 「全員」ボタン（最も重要なので独立させて大きく） */}
-                  <button 
-                     onClick={() => toggleTag("全員")}
-                     className={`w-full h-12 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all ${(formData.target === "全員" || !formData.target) ? "bg-[#00c2e8] text-white" : "bg-slate-50 text-slate-500 hover:bg-slate-100"}`}
-                  >
-                     {(formData.target === "全員" || !formData.target) && <Check className="w-4 h-4"/>}
-                     全員
+                  <button onClick={() => toggleTag("全員")} className={`w-full h-12 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all ${(formData.target === "全員" || !formData.target) ? "bg-[#00c2e8] text-white" : "bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
+                     {(formData.target === "全員" || !formData.target) && <Check className="w-4 h-4"/>}全員
                   </button>
-
-                  {/* イベント固有のタグ（あればグリッド表示） */}
                   {recentTags.filter(t => t !== "全員").length > 0 && (
                      <div className="grid grid-cols-3 gap-2">
                         {recentTags.filter(t => t !== "全員").map((t) => {
                            const currentList = formData.target ? formData.target.split(",").map(x => x.trim()) : [];
                            const isActive = currentList.includes(t);
                            return (
-                              <button 
-                                 key={t} 
-                                 onClick={() => toggleTag(t)} 
-                                 className={`h-10 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 ${isActive ? "bg-cyan-50 text-[#00c2e8] border border-cyan-100" : "bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent"}`}
-                              >
-                                 {isActive && <Check className="w-3 h-3"/>}
-                                 <span className="truncate">{t}</span>
+                              <button key={t} onClick={() => toggleTag(t)} className={`h-10 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 ${isActive ? "bg-cyan-50 text-[#00c2e8] border border-cyan-100" : "bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent"}`}>
+                                 {isActive && <Check className="w-3 h-3"/>}<span className="truncate">{t}</span>
                               </button>
                            );
                         })}
                      </div>
                   )}
-
-                  {/* 新しいタグの追加入力欄 */}
                   <div className="flex gap-2">
-                     <input 
-                        type="text" 
-                        value={newTagInput} 
-                        onChange={(e) => setNewTagInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewTag())}
-                        placeholder="新しいタグを追加..." 
-                        className="flex-1 h-10 bg-slate-50 rounded-xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
-                     />
-                     <button 
-                        onClick={addNewTag}
-                        disabled={!newTagInput.trim()}
-                        className="h-10 px-4 bg-slate-800 text-white rounded-xl font-bold text-sm disabled:opacity-30 transition-all"
-                     >
-                        追加
-                     </button>
+                     <input type="text" value={newTagInput} onChange={(e) => setNewTagInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewTag())} placeholder="新しいタグを追加..." className="flex-1 h-10 bg-slate-50 rounded-xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-cyan-100 transition-all"/>
+                     <button onClick={addNewTag} disabled={!newTagInput.trim()} className="h-10 px-4 bg-slate-800 text-white rounded-xl font-bold text-sm disabled:opacity-30 transition-all">追加</button>
                   </div>
-
-                  {/* 場所 & メモ */}
                   <div className="space-y-3 pt-2">
                      <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 h-12">
                         <MapPin className="w-4 h-4 text-slate-400 shrink-0"/>
@@ -413,24 +380,21 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                   </div>
                </div>
 
-               {/* 4. 並び順 */}
+               {/* 並び順 */}
                <div className="bg-slate-50 rounded-2xl p-1 flex">
-                  <button onClick={() => setFormData({...formData, sortOrder: -10})} className={`flex-1 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-all ${formData.sortOrder < 0 ? "bg-white text-blue-500 shadow-sm" : "text-slate-400"}`}>
-                     <ArrowUp className="w-3.5 h-3.5"/> 先頭
-                  </button>
-                  <button onClick={() => setFormData({...formData, sortOrder: 0})} className={`flex-1 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-all ${formData.sortOrder === 0 ? "bg-white text-slate-700 shadow-sm" : "text-slate-400"}`}>
-                     <Minus className="w-3.5 h-3.5"/> 標準
-                  </button>
-                  <button onClick={() => setFormData({...formData, sortOrder: 10})} className={`flex-1 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-all ${formData.sortOrder > 0 ? "bg-white text-orange-500 shadow-sm" : "text-slate-400"}`}>
-                     <ArrowDown className="w-3.5 h-3.5"/> 末尾
-                  </button>
+                  <button onClick={() => setFormData({...formData, sortOrder: -10})} className={`flex-1 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-all ${formData.sortOrder < 0 ? "bg-white text-blue-500 shadow-sm" : "text-slate-400"}`}><ArrowUp className="w-3.5 h-3.5"/> 先頭</button>
+                  <button onClick={() => setFormData({...formData, sortOrder: 0})} className={`flex-1 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-all ${formData.sortOrder === 0 ? "bg-white text-slate-700 shadow-sm" : "text-slate-400"}`}><Minus className="w-3.5 h-3.5"/> 標準</button>
+                  <button onClick={() => setFormData({...formData, sortOrder: 10})} className={`flex-1 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-all ${formData.sortOrder > 0 ? "bg-white text-orange-500 shadow-sm" : "text-slate-400"}`}><ArrowDown className="w-3.5 h-3.5"/> 末尾</button>
                </div>
             </div>
 
-            {/* 保存ボタン */}
-            <button onClick={saveItem} className={`w-full h-14 rounded-[1.2rem] font-black text-white shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 ${editingId ? "bg-blue-600 shadow-blue-200" : "bg-[#00c2e8] shadow-cyan-200"}`}>
-               {editingId ? <><RefreshCw className="w-5 h-5"/> 更新する</> : <><Save className="w-5 h-5"/> リストに追加</>}
-            </button>
+            {/* 3. フッター (保存ボタン・固定) */}
+            {/* ★変更: シアン統一 & シャドウ削除 */}
+            <div className="shrink-0 p-6 pt-0 bg-white">
+               <button onClick={saveItem} className="w-full h-14 bg-[#00c2e8] rounded-[1.2rem] font-black text-white active:scale-95 transition-all flex items-center justify-center gap-2">
+                  {editingId ? <><RefreshCw className="w-5 h-5"/> 更新する</> : <><Save className="w-5 h-5"/> リストに追加</>}
+               </button>
+            </div>
          </div>
       </div>
     </main>
