@@ -310,6 +310,7 @@ export default function CreateEventPage() {
       )}
       
       </div>
+
       {/* === フッター (開発者への連絡) === */}
       <footer className="mt-20 py-12 border-t border-slate-100 relative z-10 bg-white/50 backdrop-blur-sm">
         <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4 mb-8">
@@ -345,6 +346,7 @@ export default function CreateEventPage() {
            </div>
         </div>
       </footer>
+      
     </main>
   );
 }

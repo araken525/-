@@ -429,6 +429,43 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
             </div>
          </div>
       </div>
+      
+      {/* === フッター (開発者への連絡) === */}
+      <footer className="mt-20 py-12 border-t border-slate-100 relative z-10 bg-white/50 backdrop-blur-sm">
+        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4 mb-8">
+           
+           {/* コピーライト */}
+           <div className="text-center md:text-left">
+              <div className="font-black text-slate-800 text-lg mb-1 tracking-tight">TaiSuke</div>
+              <div className="text-xs font-bold text-slate-400">© 2026 Time Schedule Sharing App</div>
+           </div>
+
+           {/* 開発者リンク (X / Twitter) */}
+           <a
+             href="https://x.com/araken525_toho?s=21"
+             target="_blank"
+             rel="noopener noreferrer"
+             className="group flex items-center gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-slate-300 hover:shadow-md transition-all"
+           >
+              <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform">
+                 {/* X ロゴ SVG */}
+                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              </div>
+              <div className="text-left">
+                 <div className="text-[10px] font-bold text-slate-400 group-hover:text-[#00c2e8] transition-colors">開発者へ連絡・要望</div>
+                 <div className="text-xs font-black text-slate-700">@araken525_toho</div>
+              </div>
+           </a>
+        </div>
+        
+        {/* ▼▼▼ 追加: PRODUCED BY ENSEMBLE LABS ▼▼▼ */}
+        <div className="text-center border-t border-slate-100 pt-8 mt-8">
+           <div className="text-[10px] font-black text-slate-300 tracking-[0.2em]">
+              PRODUCED BY ENSEMBLE LABS
+           </div>
+        </div>
+      </footer>
+
     </main>
   );
 }
