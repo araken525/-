@@ -3,9 +3,9 @@ export const dynamic = "force-dynamic";
 import { supabase } from "@/lib/supabaseClient";
 import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
-import RefreshBadge from "@/components/RefreshBadge"; // ★追加
+import RefreshBadge from "@/components/RefreshBadge";
 import Link from "next/link";
-import { MapPin, Calendar, Clock, Filter, X } from "lucide-react";
+import { MapPin, Calendar, Clock, Filter, X, Printer } from "lucide-react";
 
 /* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
@@ -88,7 +88,6 @@ function relativeJa(d: Date) {
   return d.toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-/* === URL生成ロジック (複数選択対応) === */
 function toggleTag(currentTags: string[], tag: string): string {
   const newTags = currentTags.includes(tag)
     ? currentTags.filter((t) => t !== tag) 
@@ -154,13 +153,16 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   }
   const lastUpdated = candidates.length > 0 ? new Date(Math.max(...candidates.map((d) => d.getTime()))) : null;
 
+  // ★追加：印刷ページへ渡すためのURLパラメータを生成
+  const printUrl = `/print/${slug}${rawT ? `?t=${encodeURIComponent(rawT)}` : ""}`;
+
   return (
     <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white pb-20">
       <EventHeader title={event.title} slug={slug} />
 
       <div className="pt-24 px-4 w-full max-w-lg md:max-w-4xl mx-auto space-y-6">
         
-        {/* === イベント情報カード (横幅を合わせてスッキリ配置) === */}
+        {/* イベント情報カード */}
         <section className="relative bg-white rounded-[2rem] p-8 overflow-hidden shadow-sm h-full min-h-[160px]">
            <div className="absolute inset-0 bg-[conic-gradient(at_top_left,_var(--tw-gradient-stops))] from-cyan-200 via-blue-100 to-[#00c2e8] opacity-80"></div>
            <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/40 rounded-full blur-3xl mix-blend-overlay"></div>
@@ -184,9 +186,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
            </div>
         </section>
 
-        {/* === フィルターバー (横スクロール) === */}
-        <section className="bg-white rounded-[1.5rem] p-3 shadow-sm sticky top-16 z-20 transition-all">
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+        {/* フィルターバー */}
+        <section className="bg-white rounded-[1.5rem] p-3 shadow-sm sticky top-16 z-20 transition-all flex items-center justify-between">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1">
             <div className="pl-1 pr-2 flex items-center shrink-0">
               <Filter className="w-4 h-4 text-slate-300 mr-1" />
               <span className="text-xs font-black text-slate-300">表示切替</span>
@@ -227,7 +229,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               );
             })}
 
-            {/* クリアボタン（タグが選択されている時だけ右端に表示） */}
             {selectedTags.length > 0 && (
               <div className="pl-2 border-l border-slate-100 shrink-0">
                 <Link href={`/e/${slug}`} scroll={false} className="flex items-center text-xs font-bold text-slate-400 bg-slate-50 px-3 py-2 rounded-xl">
@@ -236,10 +237,20 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               </div>
             )}
           </div>
+
+          {/* ★追加：フィルターの状態を引き継ぐ「印刷ボタン」 */}
+          <div className="shrink-0 pl-3 border-l border-slate-100 hidden sm:block">
+            <Link 
+              href={printUrl} 
+              target="_blank"
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 text-white rounded-xl text-xs font-black hover:bg-slate-900 transition-colors shadow-sm"
+            >
+              <Printer className="w-4 h-4" /> 印刷
+            </Link>
+          </div>
         </section>
 
-
-        {/* === タイムライン === */}
+        {/* タイムライン */}
         <div className="space-y-10 w-full pt-4">
           <div className="pl-2 flex items-center gap-2 border-b border-slate-100 pb-4">
              <Clock className="w-6 h-6 text-[#00c2e8]" />
@@ -293,7 +304,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         </div>
       </div>
 
-      {/* ★ 修正ポイント：新しく作ったリロードボタンコンポーネントを配置 */}
       {lastUpdated && <RefreshBadge dateText={relativeJa(lastUpdated)} />}
       
     </main>
