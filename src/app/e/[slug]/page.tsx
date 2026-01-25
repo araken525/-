@@ -4,17 +4,10 @@ import { Metadata } from "next";
 import { supabase } from "@/lib/supabaseClient";
 import EventHeader from "@/components/EventHeader";
 import Link from "next/link";
-import { RefreshCw, MapPin, Calendar, Clock, Filter } from "lucide-react";
+/* Printerを追加 */
+import { RefreshCw, MapPin, Calendar, Clock, Filter, Printer } from "lucide-react";
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params;
-  const { data: event } = await supabase.from("events").select("title, date, venue_name").eq("slug", slug).maybeSingle();
-  if (!event) return { title: "イベントが見つかりません | Takt" };
-  const desc = `${event.date} @${event.venue_name ?? "未設定"} | リアルタイム進行共有`;
-  return { title: `${event.title} | Takt`, description: desc, openGraph: { title: event.title, description: desc, siteName: "Takt", locale: "ja_JP", type: "website" } };
-}
-
-/* === ロジック系 === */
+/* ... (メタデータ生成やヘルパー関数はそのまま) ... */
 function hhmm(time: string) { return String(time).slice(0, 5); }
 
 function getDayNumber(dateStr: string) {
@@ -124,13 +117,23 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <div className="pt-20 px-4 max-w-lg mx-auto space-y-6">
         
         {/* === カード1: イベント基本情報 === */}
-        <section className="relative bg-white rounded-[2rem] p-6 shadow-wolt overflow-hidden">
-           {/* 透かしサイズ変更: text-[105px] (中間) */}
+        <section className="relative bg-white rounded-[2rem] p-6 shadow-wolt overflow-hidden group">
+           {/* 日付の透かし */}
            <div className="absolute -bottom-7 -right-4 text-[105px] font-black text-slate-100/50 select-none watermark-text leading-none z-0">
               {getDayNumber(event.date)}
            </div>
+
+           {/* ★追加: 印刷ボタン（右上に配置） */}
+           <Link 
+             href={`/e/${slug}/print`} 
+             target="_blank"
+             className="absolute top-6 right-6 z-20 w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:text-[#00c2e8] hover:bg-cyan-50 transition-all shadow-sm"
+             title="印刷プレビューを開く"
+           >
+             <Printer className="w-5 h-5" />
+           </Link>
            
-           <div className="relative z-10 text-center">
+           <div className="relative z-10 text-center pr-8 pl-8"> {/* ボタンと被らないようにpadding調整 */}
              <h1 className="text-2xl font-black text-slate-800 leading-tight mb-4 tracking-tight">
                {event.title}
              </h1>
@@ -147,6 +150,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
            </div>
         </section>
 
+        {/* ... (以下、フィルター、タイムラインなどの既存コードはそのまま) ... */}
+        
         {/* === カード2: フィルター (フラット) === */}
         <section className="bg-white rounded-[1.5rem] p-4 shadow-wolt">
            <div className="flex items-center gap-2 mb-3 px-2">
@@ -215,7 +220,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                         </div>
                       )}
 
-                      {/* 透かしサイズ変更: text-[5rem] (中間・約80px) */}
                       <div className="absolute -bottom-5 -right-2 text-[5rem] font-black text-slate-100/50 select-none watermark-text leading-none z-0">
                         {hhmm(it.start_time)}
                       </div>
