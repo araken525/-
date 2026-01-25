@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { ArrowRight, Copy, Check, Link as LinkIcon, Lock, Calendar, MapPin, Type } from "lucide-react";
+import { ArrowRight, Copy, Check, Link as LinkIcon, Lock, Calendar, MapPin, Type, Mail, Share2 } from "lucide-react";
 
 export default function CreateEventPage() {
   const [step, setStep] = useState<"form" | "done">("form");
@@ -72,14 +72,26 @@ export default function CreateEventPage() {
     }
   };
 
+  // LINEシェア
+  const shareToLine = (text: string, url: string) => {
+    const message = `${text}\n${url}`;
+    window.open(`https://line.me/R/msg/text/?${encodeURIComponent(message)}`, '_blank');
+  };
+
+  // メールシェア
+  const shareToMail = (subject: string, body: string, url: string) => {
+    const message = `${body}\n${url}`;
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+  };
+
   return (
     <main className="min-h-screen bg-[#f7f9fb] flex items-center justify-center p-6 font-sans text-slate-800 selection:bg-[#00c2e8] selection:text-white">
       
-      {/* === 入力画面 === */}
+      {/* === 入力画面 (シンプル維持) === */}
       {step === "form" && (
         <div className="w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
           
-          {/* ヘッダー (アイコン削除) */}
+          {/* ヘッダー */}
           <div className="pt-10 pb-4 text-center px-8 border-b border-slate-50">
              <h1 className="text-2xl font-black text-slate-800 tracking-tight">イベントを作成</h1>
           </div>
@@ -98,7 +110,7 @@ export default function CreateEventPage() {
                 />
             </div>
 
-            {/* 2. 日付 (はみ出し修正: w-full box-border) */}
+            {/* 2. 日付 */}
             <div className="space-y-2 w-full">
               <label className="text-xs font-black text-slate-400 ml-1 flex items-center gap-1"><Calendar className="w-4 h-4"/> 開催日 <span className="text-red-400">*</span></label>
               <input 
@@ -152,7 +164,7 @@ export default function CreateEventPage() {
 
             {error && <p className="text-center text-xs font-bold text-red-500 animate-pulse bg-red-50 py-2 rounded-lg">{error}</p>}
 
-            {/* 送信ボタン (Wolt Blueに変更) */}
+            {/* 送信ボタン */}
             <button 
               onClick={createEvent} 
               disabled={loading}
@@ -164,7 +176,7 @@ export default function CreateEventPage() {
         </div>
       )}
 
-      {/* === 完了画面 (維持) === */}
+      {/* === 完了画面 (LINE/Mailボタン追加) === */}
       {step === "done" && (
         <div className="w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl p-8 space-y-8 animate-in zoom-in duration-300 text-center">
           <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-500 shadow-sm rotate-12">
@@ -176,13 +188,16 @@ export default function CreateEventPage() {
             <p className="text-sm font-bold text-slate-400 leading-relaxed">以下のリンクを必ず保存してください。<br/>この画面を閉じると二度と表示されません。</p>
           </div>
 
-          <div className="space-y-6 text-left bg-slate-50 p-6 rounded-3xl">
-            {/* 編集用URL */}
+          <div className="space-y-8 text-left bg-slate-50 p-6 rounded-3xl">
+            
+            {/* 1. 編集用URL */}
             <div className="space-y-3">
               <div className="flex items-center justify-between ml-1">
                 <span className="text-xs font-black text-orange-500 flex items-center gap-1"><Lock className="w-4 h-4"/> 管理者用 (編集・削除)</span>
                 <span className="text-[10px] font-bold text-slate-300 bg-white px-2 py-1 rounded-full">自分だけ</span>
               </div>
+              
+              {/* コピーボックス */}
               <div 
                 onClick={() => copyToClipboard(editUrl, true)}
                 className="group relative flex items-center gap-3 p-4 rounded-2xl bg-white border-2 border-orange-100 cursor-pointer hover:border-orange-400 transition-all shadow-sm"
@@ -195,16 +210,34 @@ export default function CreateEventPage() {
                   <div className="text-sm font-black text-slate-700 truncate">{editUrl}</div>
                 </div>
               </div>
+
+              {/* シェアボタン群 */}
+              <div className="flex gap-2">
+                 <button 
+                   onClick={() => shareToLine(`【管理者用】${title}の編集リンクです。\n※他人に共有しないでください`, editUrl)}
+                   className="flex-1 h-10 bg-[#06c755] text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-sm hover:opacity-90 transition-opacity"
+                 >
+                   LINEで保存
+                 </button>
+                 <button 
+                   onClick={() => shareToMail(`【自分用】${title} 管理URL`, `イベント: ${title}\n日付: ${date}\n\n▼管理者用URL (編集・削除)\n`, editUrl)}
+                   className="flex-1 h-10 bg-slate-200 text-slate-600 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-sm hover:bg-slate-300 transition-colors"
+                 >
+                   <Mail className="w-4 h-4"/> メールで保存
+                 </button>
+              </div>
             </div>
 
-            <div className="h-px bg-slate-200 my-4"></div>
+            <div className="h-px bg-slate-200 my-2"></div>
 
-            {/* 公開用URL */}
+            {/* 2. 公開用URL */}
             <div className="space-y-3">
               <div className="flex items-center justify-between ml-1">
                 <span className="text-xs font-black text-[#00c2e8] flex items-center gap-1"><LinkIcon className="w-4 h-4"/> 参加者用 (閲覧のみ)</span>
                 <span className="text-[10px] font-bold text-slate-300 bg-white px-2 py-1 rounded-full">みんなに共有</span>
               </div>
+              
+              {/* コピーボックス */}
               <div 
                 onClick={() => copyToClipboard(publicUrl, false)}
                 className="group relative flex items-center gap-3 p-4 rounded-2xl bg-white border-2 border-cyan-100 cursor-pointer hover:border-[#00c2e8] transition-all shadow-sm"
@@ -216,6 +249,22 @@ export default function CreateEventPage() {
                   <div className="text-[10px] font-bold text-cyan-400 mb-0.5">{copiedPublic ? "コピーしました！" : "タップしてコピー"}</div>
                   <div className="text-sm font-black text-slate-700 truncate">{publicUrl}</div>
                 </div>
+              </div>
+
+               {/* シェアボタン群 */}
+               <div className="flex gap-2">
+                 <button 
+                   onClick={() => shareToLine(`${title}のタイムスケジュールです！\n📅 ${date}\n\n▼確認はこちら`, publicUrl)}
+                   className="flex-1 h-10 bg-[#06c755] text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-sm hover:opacity-90 transition-opacity"
+                 >
+                   LINEで送る
+                 </button>
+                 <button 
+                   onClick={() => shareToMail(`${title} タイムスケジュール`, `イベント: ${title}\n日付: ${date}\n\n▼タイムスケジュールはこちら\n`, publicUrl)}
+                   className="flex-1 h-10 bg-slate-200 text-slate-600 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-sm hover:bg-slate-300 transition-colors"
+                 >
+                   <Mail className="w-4 h-4"/> メールで送る
+                 </button>
               </div>
             </div>
           </div>
