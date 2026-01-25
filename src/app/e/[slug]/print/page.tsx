@@ -1,16 +1,10 @@
 import { supabase } from "@/lib/supabaseClient";
 import { headers } from "next/headers";
 import { Printer, Calendar, MapPin } from "lucide-react";
+/* 👇 普通のインポートに戻す（これでOK） */
+import EventQRCode from "@/components/EventQRCode";
 
-/* 👇 修正箇所: 普通のimportをやめて、dynamic importにする */
-import dynamic from "next/dynamic";
-const EventQRCode = dynamic(() => import("@/components/EventQRCode"), {
-  ssr: false, // サーバー側での実行を完全に無効化
-  loading: () => <div className="w-24 h-24 bg-slate-100 rounded animate-pulse" />,
-});
-/* 👆 ここまで */
-
-export const dynamicParams = true; // export const dynamic = "force-dynamic"; の代わりにこちら推奨の場合もありますが一旦そのままで
+export const dynamic = "force-dynamic";
 
 /* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
@@ -112,7 +106,7 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
 
         {/* QRコードエリア */}
         <div className="flex flex-col items-center gap-1">
-           {/* dynamic importしたコンポーネントを使用 */}
+           {/* 普通に配置するだけでOK */}
            <EventQRCode url={publicUrl} />
            <span className="text-[10px] font-bold text-slate-500 text-center leading-tight">
              リアルタイム<br/>更新はこちら
@@ -120,7 +114,7 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
         </div>
       </header>
 
-      {/* === スケジュールリスト (ここは変更なし) === */}
+      {/* === スケジュールリスト === */}
       <main className="space-y-0">
          <div className="grid grid-cols-[auto_1fr_auto] gap-6 px-4 py-2 border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
             <div className="w-20">Time</div>
