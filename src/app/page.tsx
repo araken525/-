@@ -31,8 +31,6 @@ export default function Home() {
         .animate-float-delayed { animation: float-delayed 9s ease-in-out infinite; }
       `}</style>
 
-      {/* 背景のオーブ（光）は削除しました */}
-
       {/* === ヘッダー === */}
       <header className="fixed top-0 inset-x-0 h-16 bg-white/80 backdrop-blur-xl border-b border-white/40 flex items-center justify-between px-6 z-50">
         <div className="font-black text-2xl text-slate-800 tracking-tighter">
@@ -47,13 +45,12 @@ export default function Home() {
       </header>
 
       {/* === ヒーローセクション === */}
-      {/* バッジを消したので pt-32 -> pt-24 に詰めました */}
       <section className="pt-24 px-6 max-w-xl mx-auto relative z-10 text-center">
         
         {/* ★背景として浮遊するUIモックアップ */}
         <div className="absolute inset-0 pointer-events-none z-[-1] overflow-visible">
            
-           {/* ① 上のカード（ゲネプロ） */}
+           {/* ① 上のカード */}
            <div className="absolute top-0 -left-8 w-[260px] bg-white/60 backdrop-blur-sm rounded-[1.5rem] p-4 flex gap-3 items-center shadow-lg border border-white/50 animate-float rotate-[-6deg] opacity-70 scale-90 sm:scale-100">
               <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-2xl">🎻</div>
               <div className="flex-1 min-w-0 text-left">
@@ -62,7 +59,7 @@ export default function Home() {
               </div>
            </div>
 
-           {/* ② 下のカード（お昼休憩）：さらに下へ配置 (-bottom-24) */}
+           {/* ② 下のカード */}
            <div className="absolute -bottom-24 -right-6 w-[240px] bg-white/60 backdrop-blur-sm rounded-[1.5rem] p-4 flex gap-3 items-center shadow-lg border border-white/50 animate-float-delayed rotate-[6deg] opacity-70 scale-90 sm:scale-100">
               <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-2xl">🍱</div>
               <div className="flex-1 min-w-0 text-left">
@@ -70,20 +67,21 @@ export default function Home() {
                  <div className="text-xs font-bold text-purple-500 mt-1">12:30 ~ 13:30</div>
               </div>
            </div>
-
         </div>
 
         {/* コンテンツエリア */}
         <div className="relative z-10">
           
-          {/* バッジ削除により、ここからタイトル開始 */}
-          
-          <h1 className="text-5xl font-black leading-[1.15] tracking-tight text-slate-900 mb-6 drop-shadow-sm">
-            当日のタイスケ、<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00c2e8] to-purple-600">みんなのスマホへ。</span>
+          {/* ★修正ポイント: 
+            1. text-4xl (スマホ用) 〜 sm:text-6xl (PC用) にサイズ調整
+            2. inline-block と whitespace-nowrap で「文節ごとの改行禁止」を強制
+          */}
+          <h1 className="text-4xl sm:text-6xl font-black leading-[1.15] tracking-tight text-slate-900 mb-6 drop-shadow-sm">
+            <span className="inline-block whitespace-nowrap">当日のタイスケ、</span><br />
+            <span className="inline-block whitespace-nowrap text-transparent bg-clip-text bg-gradient-to-r from-[#00c2e8] to-purple-600">みんなのスマホへ。</span>
           </h1>
           
-          <p className="text-base font-bold text-slate-500 mb-10 leading-relaxed max-w-xs mx-auto">
+          <p className="text-sm sm:text-base font-bold text-slate-500 mb-10 leading-relaxed max-w-xs mx-auto">
             TaiSuke（タイスケ）は、PDFより見やすく、Excelより手軽な、新世代のイベント進行表ツールです。
           </p>
 
