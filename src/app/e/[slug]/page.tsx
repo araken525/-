@@ -4,10 +4,10 @@ import { Metadata } from "next";
 import { supabase } from "@/lib/supabaseClient";
 import EventHeader from "@/components/EventHeader";
 import Link from "next/link";
-import { Clock, MapPin, RefreshCw, Info, Calendar } from "lucide-react";
+import { Clock, MapPin, RefreshCw, Info, Calendar, Music } from "lucide-react";
 
 /* ==========================================
-   メタデータ (OGP)
+   メタデータ
    ========================================== */
 export async function generateMetadata({
   params,
@@ -31,11 +31,11 @@ export async function generateMetadata({
    ========================================== */
 function hhmm(time: string) { return String(time).slice(0, 5); }
 
-// note風: シンプルなグレー背景＋文字色、重要なものだけ色付け
+// Wolt風バッジ色: パステル背景 + 濃い文字
 function getTargetColor(t: string) {
-  if (!t || t === "all" || t === "全員") return "bg-gray-100 text-gray-600 border-gray-200";
-  // その他は淡いグリーン系で統一するか、シンプルに
-  return "bg-[#2cb696]/10 text-[#2cb696] border-[#2cb696]/20";
+  if (!t || t === "all" || t === "全員") return "bg-slate-100 text-slate-600";
+  // デフォルトは水色系で統一、またはランダム
+  return "bg-cyan-50 text-cyan-700";
 }
 
 function groupByStartTime(items: any[]) {
@@ -80,7 +80,7 @@ function relativeJa(d: Date) {
 }
 
 /* ==========================================
-   ページ本体 (note Style)
+   ページ本体 (Wolt Style)
    ========================================== */
 export default async function Page({
   params,
@@ -99,10 +99,10 @@ export default async function Page({
 
   if (!event) {
     return (
-      <main className="flex min-h-screen items-center justify-center p-6 bg-white">
+      <main className="flex min-h-screen items-center justify-center p-6 bg-slate-50">
         <div className="text-center">
-          <h1 className="text-lg font-bold text-gray-400 mb-4">イベントが見つかりません</h1>
-          <Link href="/" className="px-6 py-3 rounded-lg bg-[#2cb696] text-white font-bold">トップへ戻る</Link>
+          <h1 className="text-lg font-black text-slate-400 mb-4">イベントが見つかりません</h1>
+          <Link href="/" className="px-6 py-3 rounded-full bg-[#009de0] text-white font-black shadow-lg shadow-cyan-200 active-bounce">トップへ戻る</Link>
         </div>
       </main>
     );
@@ -131,33 +131,50 @@ export default async function Page({
   const lastUpdated = candidates.length > 0 ? new Date(Math.max(...candidates.map((d) => d.getTime()))) : null;
 
   return (
-    <main className="min-h-screen pb-24 font-sans bg-[#F9F9F9]"> {/* noteっぽい薄いグレー背景 */}
+    <main className="min-h-screen pb-24 font-sans bg-[#f3f4f6]">
       
       <EventHeader title={event.title} slug={slug} />
 
-      <div className="pt-20 px-4 max-w-2xl mx-auto space-y-6">
-        
-        {/* === コントロールパネル === */}
-        <section className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-          {/* タイトル：明朝体ではなくゴシックで読みやすく */}
-          <h1 className="text-2xl font-bold text-gray-900 leading-tight tracking-tight mb-4">
-            {event.title}
-          </h1>
+      {/* === Hero Background (Wolt Blue) === */}
+      <div className="absolute top-0 left-0 right-0 h-64 bg-[#009de0] rounded-b-[2.5rem]">
+        {/* 装飾用の薄いパターン */}
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
+      </div>
 
-          <div className="flex flex-wrap gap-2 mb-6">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Calendar className="w-4 h-4 text-gray-400" />
-              <span>{event.date}</span>
-            </div>
-            <div className="w-px h-4 bg-gray-300 self-center mx-1"></div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <MapPin className="w-4 h-4 text-gray-400" />
-              <span>{event.venue_name ?? "場所未定"}</span>
+      <div className="relative pt-24 px-4 max-w-lg mx-auto space-y-8">
+        
+        {/* === コントロールパネル (浮いている白いカード) === */}
+        <section className="bg-white rounded-[2rem] p-6 shadow-wolt text-center">
+          
+          {/* アイコン装飾 */}
+          <div className="w-16 h-16 mx-auto -mt-14 mb-4 bg-white rounded-full p-1 shadow-md flex items-center justify-center">
+            <div className="w-full h-full bg-slate-100 rounded-full flex items-center justify-center text-[#009de0]">
+               <Music className="w-7 h-7 fill-current" />
             </div>
           </div>
 
-          {/* フィルタタブ：noteのタグ風 */}
-          <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
+          <h1 className="text-2xl font-black text-slate-900 leading-tight mb-4">
+            {event.title}
+          </h1>
+
+          <div className="flex justify-center items-center gap-4 mb-6">
+            <div className="flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 mb-1">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-bold text-slate-500">{event.date}</span>
+            </div>
+            <div className="w-px h-8 bg-slate-100"></div>
+            <div className="flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 mb-1">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-bold text-slate-500 truncate max-w-[100px]">{event.venue_name ?? "未設定"}</span>
+            </div>
+          </div>
+
+          {/* フィルタタブ：丸いピル型ボタン */}
+          <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1 justify-start sm:justify-center">
             {tabs.map((t) => {
               const isActive = target === t.key;
               return (
@@ -166,10 +183,10 @@ export default async function Page({
                   href={`/e/${slug}?t=${encodeURIComponent(t.key)}`}
                   scroll={false}
                   className={`
-                    flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all border
+                    flex-shrink-0 px-5 py-2.5 rounded-full text-xs font-black transition-all active-bounce
                     ${isActive 
-                      ? "bg-[#2cb696] text-white border-[#2cb696]" 
-                      : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:border-gray-300"}
+                      ? "bg-[#009de0] text-white shadow-md shadow-cyan-100" 
+                      : "bg-slate-100 text-slate-500 hover:bg-slate-200"}
                   `}
                 >
                   {t.label}
@@ -184,14 +201,16 @@ export default async function Page({
           {groups.map((group) => (
             <div key={group.time} className="relative">
               {/* 時間ヘッダー */}
-              <div className="flex items-center mb-3 sticky top-14 z-10 bg-[#F9F9F9] py-2">
-                <span className="text-lg font-bold text-gray-900 w-14 font-mono">
+              <div className="flex items-center mb-3 pl-2">
+                <span className="text-xl font-black text-slate-800 tracking-tight font-mono w-16">
                   {group.time}
                 </span>
-                <div className="h-px bg-gray-200 flex-1"></div>
+                <div className="h-1 w-1 bg-slate-300 rounded-full mr-1"></div>
+                <div className="h-1 w-1 bg-slate-300 rounded-full mr-1"></div>
+                <div className="h-1 w-1 bg-slate-300 rounded-full"></div>
               </div>
 
-              <div className="space-y-3 pl-2">
+              <div className="space-y-3">
                 {group.items.map((it: any) => {
                   const now = isNow(it.start_time, it.end_time);
                   const badgeColor = getTargetColor(it.target);
@@ -200,47 +219,47 @@ export default async function Page({
                     <div
                       key={it.id}
                       className={`
-                        relative rounded-xl border p-5 transition-all
+                        relative bg-white rounded-2xl p-5 transition-all
                         ${now 
-                          ? "bg-white border-[#2cb696] shadow-md ring-1 ring-[#2cb696]/20" 
-                          : "bg-white border-gray-200 shadow-sm"}
+                          ? "shadow-xl ring-4 ring-[#009de0]/10 scale-[1.02] z-10" 
+                          : "shadow-sm border border-slate-100"}
                       `}
                     >
-                      {/* NOWバッジ */}
+                      {/* NOW バッジ */}
                       {now && (
-                        <div className="absolute top-0 right-0 px-3 py-1 bg-[#2cb696] text-white text-[10px] font-bold rounded-bl-xl rounded-tr-xl">
-                          NOW
+                        <div className="absolute -top-3 -right-2 bg-[#009de0] text-white px-3 py-1 rounded-full text-[10px] font-black shadow-md border-2 border-white">
+                          NOW PLAYING
                         </div>
                       )}
 
                       <div className="mb-2">
-                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${badgeColor}`}>
+                        <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-black ${badgeColor}`}>
                           {it.target || "全員"}
                         </span>
                       </div>
                        
-                      <h3 className={`text-lg font-bold leading-snug mb-3 ${now ? "text-gray-900" : "text-gray-800"}`}>
+                      <h3 className={`text-lg font-black leading-snug mb-3 ${now ? "text-[#009de0]" : "text-slate-800"}`}>
                         {it.title}
                       </h3>
 
                       {(it.end_time || it.location || it.note) && (
-                        <div className="pt-3 border-t border-gray-100 space-y-2 text-sm text-gray-600">
+                        <div className="pt-3 border-t border-slate-50 space-y-2 text-sm text-slate-600">
                           {it.end_time && (
                             <div className="flex items-center">
-                              <Clock className="w-4 h-4 mr-2 text-gray-400" />
-                              <span className="font-bold text-gray-500">{hhmm(it.end_time)}</span>
-                              <span className="text-xs ml-1">まで</span>
+                              <Clock className="w-4 h-4 mr-2 text-slate-300" />
+                              <span className="font-bold text-slate-600">{hhmm(it.end_time)}</span>
+                              <span className="text-xs ml-1 opacity-60">まで</span>
                             </div>
                           )}
                           {it.location && (
                             <div className="flex items-center font-bold">
-                              <MapPin className="w-4 h-4 mr-2 text-gray-400" />
+                              <MapPin className="w-4 h-4 mr-2 text-slate-300" />
                               {it.location}
                             </div>
                           )}
                           {it.note && (
-                            <div className="flex items-start mt-2 bg-gray-50 p-3 rounded-lg border border-gray-100 text-gray-700 leading-relaxed">
-                              <Info className="w-4 h-4 mr-2 mt-0.5 shrink-0 text-gray-400" />
+                            <div className="flex items-start mt-2 bg-slate-50 p-3 rounded-xl text-slate-600 leading-relaxed font-medium">
+                              <Info className="w-4 h-4 mr-2 mt-0.5 shrink-0 text-slate-300" />
                               <span className="whitespace-pre-wrap">{it.note}</span>
                             </div>
                           )}
@@ -254,15 +273,20 @@ export default async function Page({
           ))}
 
           {groups.length === 0 && (
-             <div className="text-center py-10 text-gray-400 text-sm">予定が見つかりません</div>
+             <div className="text-center py-12">
+               <div className="w-16 h-16 bg-slate-200 rounded-full mx-auto mb-3 flex items-center justify-center text-slate-400">
+                 <Calendar className="w-8 h-8 opacity-50" />
+               </div>
+               <div className="text-slate-400 font-bold text-sm">予定はありません</div>
+             </div>
           )}
         </section>
       </div>
 
-      {/* 最終更新 */}
+      {/* 最終更新 (右下にフロート) */}
       {lastUpdated && (
         <div className="fixed bottom-6 right-6 z-30 pointer-events-none">
-          <div className="bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-lg text-[10px] font-bold text-gray-500 flex items-center">
+          <div className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-full shadow-lg border border-slate-100 text-[10px] font-black text-slate-400 flex items-center">
              <RefreshCw className="w-3 h-3 mr-1.5" />
              {relativeJa(lastUpdated)} 更新
           </div>
