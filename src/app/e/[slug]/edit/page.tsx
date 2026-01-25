@@ -138,7 +138,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
   }
   function closeSheet() { setIsSheetOpen(false); setTimeout(() => setEditingId(null), 300); }
 
-  // ★変更点: タグの複数選択ロジック
+  // タグの複数選択ロジック（排他制御）
   function toggleTag(tag: string) {
     if (tag === "全員") {
       setFormData({ ...formData, target: "全員" });
@@ -286,8 +286,14 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
       <div className={`fixed inset-0 z-50 flex items-end justify-center pointer-events-none ${isSheetOpen ? "visible" : "invisible"}`}>
          <div className={`absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${isSheetOpen ? "opacity-100 pointer-events-auto" : "opacity-0"}`} onClick={closeSheet}></div>
          
-         <div ref={sheetRef} className={`relative w-full max-w-lg bg-white rounded-t-[2.5rem] shadow-2xl p-6 space-y-6 pointer-events-auto transition-transform duration-300 ease-out ${isSheetOpen ? "translate-y-0" : "translate-y-full"}`}>
-            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto -mt-2 mb-2"></div>
+         <div ref={sheetRef} className={`relative w-full max-w-lg bg-white rounded-t-[2.5rem] shadow-2xl p-6 pt-8 space-y-6 pointer-events-auto transition-transform duration-300 ease-out ${isSheetOpen ? "translate-y-0" : "translate-y-full"}`}>
+            {/* 上部ハンドルと閉じるボタン */}
+            <div className="absolute top-0 inset-x-0 h-8 flex justify-center items-center">
+               <div className="w-12 h-1.5 bg-slate-200 rounded-full"></div>
+            </div>
+            <button onClick={closeSheet} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full transition-all">
+               <X className="w-5 h-5" />
+            </button>
             
             <div className="space-y-6 overflow-y-auto max-h-[80vh] no-scrollbar pb-2">
                
@@ -301,12 +307,15 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                         <input type="text" value={formData.title} onChange={(e)=>setFormData({...formData, title:e.target.value})} placeholder="何をする？" className="w-full h-16 bg-transparent text-2xl font-black placeholder:text-slate-300 outline-none border-b-2 border-slate-100 focus:border-[#00c2e8] transition-colors"/>
                      </div>
                   </div>
-                  <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-                     {EMOJI_PRESETS.map((emoji) => (
-                        <button key={emoji} onClick={() => setFormData({...formData, emoji})} className={`shrink-0 w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${formData.emoji === emoji ? "bg-slate-800 text-white shadow-lg scale-110" : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}>
-                           {emoji}
-                        </button>
-                     ))}
+                  <div>
+                     <p className="text-xs font-bold text-slate-400 mb-2 pl-1">アイコンをえらぶ</p>
+                     <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                        {EMOJI_PRESETS.map((emoji) => (
+                           <button key={emoji} onClick={() => setFormData({...formData, emoji})} className={`shrink-0 w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${formData.emoji === emoji ? "bg-slate-800 text-white shadow-lg scale-110" : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}>
+                              {emoji}
+                           </button>
+                        ))}
+                     </div>
                   </div>
                </div>
 
@@ -322,7 +331,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                   </div>
                </div>
 
-               {/* 3. ★詳細設定: タグ複数選択 (ここを変更) */}
+               {/* 3. ★詳細設定: タグ複数選択 */}
                <div className="space-y-4">
                   <div className="flex flex-wrap gap-2">
                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-400"><Tag className="w-4 h-4"/></div>
