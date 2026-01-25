@@ -56,7 +56,7 @@ export default function EventHeader({ title, slug }: Props) {
 
   return (
     <>
-      {/* --- ヘッダー本体 (変更なし) --- */}
+      {/* --- ヘッダー本体 --- */}
       <header 
         className={`fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4 transition-all duration-500 gap-4
           ${scrolled ? "bg-white/80 backdrop-blur-xl border-b border-slate-200/50" : "bg-transparent pointer-events-none"}
@@ -70,11 +70,12 @@ export default function EventHeader({ title, slug }: Props) {
           {title}
         </h1>
         
+        {/* ▼▼▼ ここを修正しました（余計な /e/ を消去） ▼▼▼ */}
         <div className="flex items-center gap-2 ml-auto pointer-events-auto pb-1 pt-1">
-          <Link href={`/e/${slug}/edit`} className={`${btnBase} ${btnStyle}`} title="編集">
+          <Link href={`/edit/${slug}`} className={`${btnBase} ${btnStyle}`} title="編集">
             <Wrench className="w-4 h-4" />
           </Link>
-          <Link href={`/e/${slug}/print`} target="_blank" className={`${btnBase} ${btnStyle}`} title="印刷プレビュー">
+          <Link href={`/print/${slug}`} target="_blank" className={`${btnBase} ${btnStyle}`} title="印刷プレビュー">
             <Printer className="w-4 h-4" />
           </Link>
           <button onClick={() => setShowQR(true)} className={`${btnBase} ${btnStyle}`} title="QRコード">
@@ -84,6 +85,8 @@ export default function EventHeader({ title, slug }: Props) {
             {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
           </button>
         </div>
+        {/* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */}
+
       </header>
 
       {/* --- 新しいQRコードモーダル --- */}
@@ -111,8 +114,6 @@ export default function EventHeader({ title, slug }: Props) {
                </div>
 
                {/* QRコードエリア (主役) */}
-               {/* QRコード自体のサイズは EventQRCode コンポーネント側の設定にも依存しますが、
-                   ここではコンテナを大きくし、余計な装飾を排除して際立たせています */}
                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-100 shadow-sm mx-auto w-fit">
                  {currentUrl && <EventQRCode url={currentUrl} />}
                </div>
