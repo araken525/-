@@ -70,14 +70,18 @@ export default function EventHeader({ title, slug }: Props) {
           {title}
         </h1>
         
-        {/* ▼▼▼ ここを修正しました（余計な /e/ を消去） ▼▼▼ */}
+        {/* ▼▼▼ ここを修正しました！画像のフォルダ構成に合わせて /e/ を復活させました ▼▼▼ */}
         <div className="flex items-center gap-2 ml-auto pointer-events-auto pb-1 pt-1">
-          <Link href={`/edit/${slug}`} className={`${btnBase} ${btnStyle}`} title="編集">
+          {/* 六角レンチ（編集）： /e/[slug]/edit に飛ばす */}
+          <Link href={`/e/${slug}/edit`} className={`${btnBase} ${btnStyle}`} title="編集">
             <Wrench className="w-4 h-4" />
           </Link>
-          <Link href={`/print/${slug}`} target="_blank" className={`${btnBase} ${btnStyle}`} title="印刷プレビュー">
+          
+          {/* プリンター（印刷）： /e/[slug]/print に飛ばす */}
+          <Link href={`/e/${slug}/print`} target="_blank" className={`${btnBase} ${btnStyle}`} title="印刷プレビュー">
             <Printer className="w-4 h-4" />
           </Link>
+
           <button onClick={() => setShowQR(true)} className={`${btnBase} ${btnStyle}`} title="QRコード">
             <QrCode className="w-4 h-4" />
           </button>
@@ -85,40 +89,29 @@ export default function EventHeader({ title, slug }: Props) {
             {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
           </button>
         </div>
-        {/* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */}
+        {/* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */}
 
       </header>
 
-      {/* --- 新しいQRコードモーダル --- */}
+      {/* --- 新しいQRコードモーダル (変更なし) --- */}
       {showQR && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
-          {/* 背景 */}
           <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-md transition-opacity" onClick={() => setShowQR(false)} />
-          
-          {/* モーダル本体 */}
           <div className="relative w-full max-w-sm bg-white rounded-[2.5rem] p-8 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] animate-in zoom-in-95 duration-300 flex flex-col items-center text-center border border-slate-100">
-            
-            {/* 閉じるボタン */}
             <button 
               onClick={() => setShowQR(false)}
               className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
-
             <div className="mt-4 space-y-6 w-full">
-               {/* タイトルと説明 */}
                <div>
                   <h3 className="text-xl font-black text-slate-800 tracking-tight">スケジュールを共有</h3>
                   <p className="text-sm font-bold text-slate-400 mt-1">スマホのカメラで読み取ってください</p>
                </div>
-
-               {/* QRコードエリア (主役) */}
                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-100 shadow-sm mx-auto w-fit">
                  {currentUrl && <EventQRCode url={currentUrl} />}
                </div>
-               
-               {/* イベント名 */}
                <div className="pt-2">
                  <p className="text-xs font-black text-slate-500 bg-slate-50 inline-block px-4 py-1 rounded-full truncate max-w-full">
                     {title}
