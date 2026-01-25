@@ -154,7 +154,7 @@ export default function Home() {
 
       {/* === フッター (開発者への連絡) === */}
       <footer className="mt-20 py-12 border-t border-slate-100 relative z-10 bg-white/50 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4">
+        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4 mb-8">
            
            {/* コピーライト */}
            <div className="text-center md:text-left">
@@ -178,6 +178,13 @@ export default function Home() {
                  <div className="text-xs font-black text-slate-700">@araken525_toho</div>
               </div>
            </a>
+        </div>
+        
+        {/* ▼▼▼ 追加: PRODUCED BY ENSEMBLE LABS ▼▼▼ */}
+        <div className="text-center border-t border-slate-100 pt-8 mt-8">
+           <div className="text-[10px] font-black text-slate-300 tracking-[0.2em]">
+              PRODUCED BY ENSEMBLE LABS
+           </div>
         </div>
       </footer>
 
