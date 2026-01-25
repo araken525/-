@@ -1,101 +1,137 @@
+"use client";
+
+import { useState } from "react";
 import { redirect } from "next/navigation";
-import Link from "next/link"; // ★追加
-import { ArrowRight, Calendar, Smartphone, Zap, Plus } from "lucide-react"; // ★Plusを追加
+import Link from "next/link";
+import { ArrowRight, Calendar, Smartphone, Zap, Plus, Search, ChevronDown, CheckCircle2, Music, Clapperboard, Briefcase, Heart } from "lucide-react";
 
 export default function Home() {
+  const [showSearch, setShowSearch] = useState(false);
+
+  // 既存のイベントにジャンプする処理
   async function jumpToEvent(formData: FormData) {
-    "use server";
-    const slug = formData.get("slug");
-    if (slug) redirect(`/e/${slug}`);
+    const slug = formData.get("slug") as string;
+    if (slug) window.location.href = `/e/${slug}`;
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-900 p-6 relative overflow-hidden">
-      {/* 背景の装飾 */}
-      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-blue-100 rounded-full blur-3xl opacity-50 pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-indigo-100 rounded-full blur-3xl opacity-50 pointer-events-none" />
+    <main className="min-h-screen bg-[#f7f9fb] font-sans text-slate-800 selection:bg-[#00c2e8] selection:text-white pb-20">
+      
+      {/* === ヘッダー === */}
+      <header className="absolute top-0 inset-x-0 h-20 flex items-center justify-center z-10">
+        <div className="flex items-center gap-2 font-black text-2xl text-slate-800 tracking-tighter">
+          <div className="w-8 h-8 bg-[#00c2e8] rounded-xl flex items-center justify-center text-white text-base shadow-sm">🎵</div>
+          Takt
+        </div>
+      </header>
 
-      <div className="w-full max-w-md relative z-10">
-        {/* ロゴエリア */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-900 rounded-2xl mb-4 shadow-xl rotate-3">
-            <span className="text-3xl">🎵</span>
+      {/* === ヒーローセクション (主役エリア) === */}
+      <section className="pt-32 px-6 flex flex-col items-center text-center max-w-2xl mx-auto">
+        <span className="px-3 py-1 bg-cyan-50 text-[#00c2e8] text-xs font-black rounded-full mb-6">無料・ログイン不要</span>
+        <h1 className="text-4xl sm:text-5xl font-black leading-tight tracking-tight text-slate-900 mb-6">
+          当日のタイムテーブル、<br />みんなのスマホへ。
+        </h1>
+        <p className="text-sm sm:text-base font-bold text-slate-500 mb-10 leading-relaxed max-w-md">
+          Takt（タクト）は、PDFより見やすく、Excelより手軽な、イベント進行表の共有ツールです。
+        </p>
+
+        {/* メインCTA（タイスケ作成） */}
+        <Link 
+          href="/create"
+          className="w-full sm:w-auto min-w-[300px] h-16 bg-[#00c2e8] text-white rounded-[1.5rem] font-black text-lg shadow-xl shadow-cyan-200/50 hover:bg-cyan-500 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 mb-6"
+        >
+          <Plus className="w-6 h-6" /> タイスケを作成する
+        </Link>
+
+        {/* サブアクション（ID検索） */}
+        <div className="w-full max-w-sm mx-auto">
+          {!showSearch ? (
+            <button 
+              onClick={() => setShowSearch(true)}
+              className="w-full py-4 text-sm font-bold text-slate-400 hover:text-slate-600 flex items-center justify-center gap-2 transition-colors"
+            >
+              <Search className="w-4 h-4" /> 招待されたタイスケを見る <ChevronDown className="w-3.5 h-3.5"/>
+            </button>
+          ) : (
+            <div className="bg-white p-2 rounded-[1.5rem] shadow-sm border border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+              <form action={jumpToEvent} className="flex gap-2">
+                <input
+                  name="slug"
+                  type="text"
+                  placeholder="URL IDを入力 (例: concert2026)"
+                  className="flex-1 h-12 px-4 bg-slate-50 rounded-xl font-bold text-slate-800 placeholder:text-slate-300 outline-none min-w-0 text-sm"
+                  required
+                />
+                <button type="submit" className="h-12 px-6 bg-slate-800 text-white font-black rounded-xl hover:bg-slate-700 active:scale-95 transition-all flex items-center justify-center text-sm">
+                  開く
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* === 3つの特徴 (Wolt風の角丸カード) === */}
+      <section className="mt-20 px-6 max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
+        
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm">
+          <div className="w-12 h-12 bg-cyan-50 text-[#00c2e8] rounded-2xl flex items-center justify-center mb-4">
+            <Zap className="w-6 h-6" />
           </div>
-          <h1 className="text-5xl font-black tracking-tighter text-slate-900 mb-2">
-            Takt
-          </h1>
-          <p className="text-slate-500 font-medium">
-            舞台・イベント タイムスケジュール共有
+          <h3 className="text-lg font-black text-slate-800 mb-2">アプリ・ログイン不要</h3>
+          <p className="text-xs font-bold text-slate-500 leading-relaxed">
+            参加者はURLをクリックするだけ。面倒な会員登録やアプリのインストールは一切必要ありません。
           </p>
         </div>
 
-        {/* 入力カード */}
-        <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
-          <form action={jumpToEvent} className="space-y-4">
-            <div>
-              <label 
-                htmlFor="slug" 
-                className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider"
-              >
-                Event ID
-              </label>
-              <input
-                id="slug"
-                name="slug"
-                type="text"
-                placeholder="shinyuri-sample"
-                className="w-full h-14 px-4 bg-slate-50 border-2 border-slate-100 rounded-xl text-lg font-bold text-slate-900 text-center focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300 placeholder:font-normal"
-                required
-                autoComplete="off"
-              />
-            </div>
-            <button
-              type="submit"
-              className="group w-full h-14 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-            >
-              スケジュールを見る
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </form>
-
-          {/* ★ここに追加：新規作成リンク */}
-          <div className="mt-6 pt-6 border-t border-slate-100 text-center">
-            <Link 
-              href="/create" 
-              className="inline-flex items-center text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline decoration-2 underline-offset-4"
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              新しいイベントを作成する
-            </Link>
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm">
+          <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center mb-4">
+            <Smartphone className="w-6 h-6" />
           </div>
+          <h3 className="text-lg font-black text-slate-800 mb-2">スマホで一番見やすい</h3>
+          <p className="text-xs font-bold text-slate-500 leading-relaxed">
+            PDFを拡大縮小するストレスから解放。自分の出番や今の進行状況が一目でわかるデザインです。
+          </p>
         </div>
 
-        {/* 特徴リスト */}
-        <div className="mt-12 grid grid-cols-3 gap-4 text-center">
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-slate-600">
-              <Zap className="w-5 h-5" />
-            </div>
-            <span className="text-xs font-bold text-slate-500">ログイン不要</span>
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm">
+          <div className="w-12 h-12 bg-green-50 text-green-500 rounded-2xl flex items-center justify-center mb-4">
+            <Calendar className="w-6 h-6" />
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-slate-600">
-              <Smartphone className="w-5 h-5" />
-            </div>
-            <span className="text-xs font-bold text-slate-500">スマホ最適化</span>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-slate-600">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <span className="text-xs font-bold text-slate-500">当日進行特化</span>
-          </div>
+          <h3 className="text-lg font-black text-slate-800 mb-2">急な変更も1秒で共有</h3>
+          <p className="text-xs font-bold text-slate-500 leading-relaxed">
+            「時間が押した」「曲順が変わった」。当日の急なスケジュール変更も手元のスマホから即座に全員へ反映。
+          </p>
         </div>
-      </div>
-      
-      <div className="absolute bottom-6 text-xs text-slate-300 font-medium">
-        © Takt - Time Schedule Sharing
-      </div>
+
+      </section>
+
+      {/* === 利用シーン (タグクラウド風) === */}
+      <section className="mt-20 px-6 text-center">
+        <p className="text-xs font-black text-slate-400 mb-6 tracking-widest">こんなイベントで使われています</p>
+        <div className="flex flex-wrap justify-center gap-3 max-w-2xl mx-auto">
+          <div className="flex items-center gap-1.5 px-4 py-2.5 bg-white rounded-full shadow-sm text-sm font-bold text-slate-700"><Music className="w-4 h-4 text-pink-500"/> 定期演奏会・発表会</div>
+          <div className="flex items-center gap-1.5 px-4 py-2.5 bg-white rounded-full shadow-sm text-sm font-bold text-slate-700"><Music className="w-4 h-4 text-orange-500"/> ライブ・フェス</div>
+          <div className="flex items-center gap-1.5 px-4 py-2.5 bg-white rounded-full shadow-sm text-sm font-bold text-slate-700"><Heart className="w-4 h-4 text-red-500"/> 結婚式・二次会</div>
+          <div className="flex items-center gap-1.5 px-4 py-2.5 bg-white rounded-full shadow-sm text-sm font-bold text-slate-700"><Clapperboard className="w-4 h-4 text-blue-500"/> 映像・スチール撮影</div>
+          <div className="flex items-center gap-1.5 px-4 py-2.5 bg-white rounded-full shadow-sm text-sm font-bold text-slate-700"><Briefcase className="w-4 h-4 text-slate-500"/> 社内イベント・研修</div>
+        </div>
+      </section>
+
+      {/* === ボトムCTA === */}
+      <section className="mt-24 px-6 text-center max-w-lg mx-auto">
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-50">
+          <h2 className="text-2xl font-black text-slate-800 mb-2">さあ、準備を始めましょう。</h2>
+          <p className="text-xs font-bold text-slate-400 mb-8">URLを発行するのにかかる時間は、わずか10秒です。</p>
+          <Link 
+            href="/create"
+            className="w-full h-16 bg-[#00c2e8] text-white rounded-[1.5rem] font-black text-lg shadow-xl shadow-cyan-200/50 hover:bg-cyan-500 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+          >
+            <Plus className="w-6 h-6" /> タイスケを作成する
+          </Link>
+        </div>
+      </section>
+
     </main>
   );
 }
