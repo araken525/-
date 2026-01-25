@@ -1,9 +1,16 @@
 import { supabase } from "@/lib/supabaseClient";
 import { headers } from "next/headers";
-import QRCode from "qrcode";
-import { Printer, Calendar, MapPin, Clock } from "lucide-react";
+import { Printer, Calendar, MapPin } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+/* 👇 修正箇所: 普通のimportをやめて、dynamic importにする */
+import dynamic from "next/dynamic";
+const EventQRCode = dynamic(() => import("@/components/EventQRCode"), {
+  ssr: false, // サーバー側での実行を完全に無効化
+  loading: () => <div className="w-24 h-24 bg-slate-100 rounded animate-pulse" />,
+});
+/* 👆 ここまで */
+
+export const dynamicParams = true; // export const dynamic = "force-dynamic"; の代わりにこちら推奨の場合もありますが一旦そのままで
 
 /* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
@@ -52,16 +59,12 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
   }
   const lastUpdated = dates.length > 0 ? new Date(Math.max(...dates.map(d => d.getTime()))) : new Date();
 
-  // 4. QRコード生成 (サーバーサイド)
-  // 現在のURLを取得するために headers() を使用（デプロイ環境によっては環境変数でドメイン指定が推奨ですが、簡易的にreferer等から推測）
+  // 4. URL構築
   const headersList = await headers();
   const host = headersList.get("host") || "takt.com";
   const protocol = host.includes("localhost") ? "http" : "https";
   const publicUrl = `${protocol}://${host}/e/${slug}`;
   
-  // QRコードをDataURL(base64)として生成
-  const qrCodeDataUrl = await QRCode.toDataURL(publicUrl, { margin: 2, width: 100, color: { dark: "#000000", light: "#00000000" } });
-
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans print:p-0 p-8 max-w-4xl mx-auto selection:bg-slate-200">
       
@@ -75,12 +78,9 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
         }
       `}</style>
 
-      {/* === 画面表示用ツールバー (印刷時は消える) === */}
+      {/* === 画面表示用ツールバー === */}
       <div className="no-print fixed bottom-8 right-8 z-50 animate-in slide-in-from-bottom-4 fade-in duration-700">
         <button 
-          onClick={() => typeof window !== 'undefined' && window.print()} 
-          // onClick属性はServer Componentでは機能しないため、実際にはクライアントコンポーネント化するか、scriptタグを使う必要があります。
-          // 簡易化のため、今回は下にscriptタグを埋め込みます。
           className="print-btn flex items-center gap-2 bg-slate-900 text-white px-6 py-4 rounded-full font-bold shadow-xl hover:bg-black hover:scale-105 transition-all"
         >
           <Printer className="w-5 h-5" />
@@ -88,7 +88,8 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
         </button>
       </div>
       <script dangerouslySetInnerHTML={{__html: `
-        document.querySelector('.print-btn').addEventListener('click', () => window.print());
+        const btn = document.querySelector('.print-btn');
+        if(btn) btn.addEventListener('click', () => window.print());
       `}} />
 
       {/* === ヘッダーエリア === */}
@@ -111,16 +112,16 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
 
         {/* QRコードエリア */}
         <div className="flex flex-col items-center gap-1">
-           <img src={qrCodeDataUrl} alt="QR Code" className="w-24 h-24 border border-slate-200 rounded p-1" />
+           {/* dynamic importしたコンポーネントを使用 */}
+           <EventQRCode url={publicUrl} />
            <span className="text-[10px] font-bold text-slate-500 text-center leading-tight">
              リアルタイム<br/>更新はこちら
            </span>
         </div>
       </header>
 
-      {/* === スケジュールリスト === */}
+      {/* === スケジュールリスト (ここは変更なし) === */}
       <main className="space-y-0">
-         {/* テーブルヘッダー */}
          <div className="grid grid-cols-[auto_1fr_auto] gap-6 px-4 py-2 border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
             <div className="w-20">Time</div>
             <div>Content</div>
@@ -135,8 +136,6 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
             const isLast = i === filtered.length - 1;
             return (
               <div key={item.id} className={`grid grid-cols-[auto_1fr_auto] gap-6 px-4 py-3 items-start page-break ${!isLast ? "border-b border-slate-100" : ""}`}>
-                
-                {/* 時間 */}
                 <div className="w-20 pt-0.5">
                    <div className="text-lg font-black leading-none font-mono tracking-tighter">
                      {hhmm(item.start_time)}
@@ -148,8 +147,6 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
                      </div>
                    )}
                 </div>
-
-                {/* 内容 */}
                 <div className="pt-0.5">
                    <div className="text-base font-bold text-slate-900 leading-snug">
                      {item.title}
@@ -161,10 +158,7 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
                      </div>
                    )}
                 </div>
-
-                {/* メモ & ターゲット */}
                 <div className="w-32 text-right space-y-1">
-                   {/* ターゲットバッジ (全員以外の場合のみ強調) */}
                    <div className={`inline-block text-[10px] px-2 py-0.5 rounded font-black border ${
                       !item.target || item.target === "全員" || item.target === "all"
                         ? "bg-white text-slate-400 border-slate-200" 
@@ -172,7 +166,6 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
                    }`}>
                       {targetLabel(item.target || "all")}
                    </div>
-                   
                    {item.note && (
                      <div className="text-[10px] font-medium text-slate-500 leading-tight whitespace-pre-wrap">
                        {item.note}
@@ -184,14 +177,9 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
          })}
       </main>
 
-      {/* フッター */}
       <footer className="mt-12 pt-6 border-t border-slate-200 flex justify-between items-center text-[10px] font-bold text-slate-400 page-break">
-         <div>
-           Created with Takt
-         </div>
-         <div>
-           {publicUrl}
-         </div>
+         <div>Created with Takt</div>
+         <div>{publicUrl}</div>
       </footer>
     </div>
   );
