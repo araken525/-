@@ -101,7 +101,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { slug } = await params;
   const sp = await searchParams;
   
-  // URLから選択されたタグを取得
+  // URLから選択されたタグを取得 (カンマ区切りを配列に)
   const rawT = sp?.t ? decodeURIComponent(sp.t) : "";
   const selectedTags = rawT ? rawT.split(",") : [];
 
@@ -111,23 +111,48 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { data: items } = await supabase.from("schedule_items").select("*").eq("event_id", event.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
   const allItems = items ?? [];
 
+  // ★変更点1: タグ収集時に「全員」もタブとして含める
   const tagsSet = new Set<string>();
   allItems.forEach(item => {
-    if (item.target && item.target !== "all" && item.target !== "全員") {
-      item.target.split(",").forEach((t: string) => tagsSet.add(t.trim()));
+    if (!item.target || item.target === "all" || item.target === "全員") {
+      tagsSet.add("全員");
+    } else {
+      item.target.split(",").forEach((t: string) => {
+        const tag = t.trim();
+        if (tag === "all" || tag === "全員") tagsSet.add("全員");
+        else if (tag !== "") tagsSet.add(tag);
+      });
     }
   });
-  const dynamicTabs = Array.from(tagsSet).sort();
+  
+  // 「全員」タブを必ず先頭にし、他をアルファベット順に
+  const otherTabs = Array.from(tagsSet).filter(t => t !== "全員").sort();
+  const dynamicTabs = tagsSet.has("全員") ? ["全員", ...otherTabs] : otherTabs;
 
+  // ★変更点2: フィルタリングの挙動を最適化
   const filtered = allItems.filter(it => {
-    if (!it.target || it.target === "all" || it.target === "全員") return true;
+    // 1. 何も選択されていない場合は「すべて表示」なので全件表示
     if (selectedTags.length === 0) return true;
-    const itemTags = it.target.split(",").map((t: string) => t.trim());
-    return itemTags.some((tag: string) => selectedTags.includes(tag));
+
+    // アイテムのタグを配列化 (未設定や "all" は「全員」に統一)
+    const itTargets = (!it.target || it.target === "all" || it.target === "全員") 
+      ? ["全員"] 
+      : it.target.split(",").map((t: string) => {
+          const trimmed = t.trim();
+          return (trimmed === "all") ? "全員" : trimmed;
+        });
+
+    // 2. 予定が「全員」対象なら、常に表示 
+    // (例：「木管」を選んだ人にも、全員リハや昼休憩は見えないと困るため)
+    if (itTargets.includes("全員")) return true;
+
+    // 3. 予定が特定パート対象なら、ユーザーがそのパートを選択している場合のみ表示
+    return itTargets.some((tag: string) => selectedTags.includes(tag));
   });
 
   const groups = groupByStartTime(filtered);
 
+  // 最終更新日時
   const candidates: Date[] = [];
   const evUpd = toDate((event as any).updated_at);
   if (evUpd) candidates.push(evUpd);
@@ -144,10 +169,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       {/* コンテナ全体: 最大幅を広く取る */}
       <div className="pt-24 px-4 w-full max-w-lg md:max-w-7xl mx-auto space-y-10">
         
-        {/* === 上部エリア: 情報 & フィルター === 
-            スマホ: 縦積み (grid-cols-1)
-            iPad/PC: 横並び (grid-cols-2) でバランスよく配置
-        */}
+        {/* === 上部エリア: 情報 & フィルター === */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           
           {/* カード1: イベント基本情報 */}
@@ -175,7 +197,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
              </div>
           </section>
 
-          {/* カード2: フィルター (高さを揃える) */}
+          {/* カード2: フィルター */}
           <section className="bg-white rounded-[1.5rem] p-6 shadow-wolt h-full flex flex-col">
              <div className="flex items-center justify-between mb-4 px-1 shrink-0">
                 <div className="flex items-center gap-2">
@@ -190,8 +212,26 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 </div>
              </div>
              
-             {/* フィルタータグ一覧: 伸縮してスペースを埋める */}
+             {/* フィルタータグ一覧 */}
              <div className="flex flex-wrap gap-2 content-start flex-1">
+              
+              {/* ★変更点3: 先頭に固定で「すべて表示」タブを追加 */}
+              <Link
+                href={`/e/${slug}`}
+                scroll={false}
+                className={`
+                  relative inline-flex items-center justify-center 
+                  px-4 py-3 rounded-2xl text-xs font-black transition-all duration-200 select-none active:scale-95
+                  border 
+                  ${selectedTags.length === 0 
+                    ? "bg-[#00c2e8] border-[#00c2e8] text-white" 
+                    : "bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100"}
+                `}
+              >
+                すべて表示
+              </Link>
+
+              {/* 動的タブ（「全員」を含む） */}
               {dynamicTabs.map((tag) => {
                 const isActive = selectedTags.includes(tag);
                 const nextUrl = toggleTag(selectedTags, tag);
@@ -247,12 +287,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 <div className="h-px bg-slate-200 flex-1 rounded-full"></div>
               </div>
 
-              {/* ★グリッドレイアウト: 画面幅に応じて最大4列まで展開
-                 スマホ: 1列
-                 タブレット: 2列
-                 PC: 3列
-                 大型PC: 4列 (xl:grid-cols-4)
-              */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 {group.items.map((it: any) => {
                   const now = isNow(it.start_time, it.end_time);
@@ -278,18 +312,15 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                         </div>
                       )}
 
-                      {/* 背景時間はさらに薄く */}
                       <div className="absolute -bottom-4 -right-2 text-[5rem] font-black text-slate-50/80 select-none watermark-text leading-none z-0 pointer-events-none">
                         {hhmm(it.start_time)}
                       </div>
 
                       <div className="relative z-10 flex items-start gap-4 w-full">
-                         {/* アイコン */}
                          <div className="shrink-0 text-[3rem] leading-none drop-shadow-sm filter grayscale-[0.1]">
                             {emoji}
                          </div>
 
-                         {/* コンテンツ */}
                          <div className="flex-1 min-w-0 flex flex-col h-full">
                             <div className="mb-2">
                                <div className="flex flex-wrap items-start gap-2 mb-1">
@@ -315,7 +346,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                               </div>
                             )}
 
-                            {/* フッター情報 (最下部へ押し下げ) */}
                             <div className="flex items-center gap-3 pt-3 border-t border-slate-50 mt-auto">
                                {it.location ? (
                                   <div className="flex items-center text-xs font-bold text-slate-500 truncate max-w-[70%]">
