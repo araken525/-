@@ -211,6 +211,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
         <div className="w-full max-w-sm bg-white rounded-[2rem] shadow-xl p-8 space-y-6 text-center">
           <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 mb-4"><Lock className="w-8 h-8" /></div>
           <h1 className="text-xl font-black text-slate-800">編集モード 🔐</h1>
+          {/* type="text" になっているので、日本語パスワードも入力可能です */}
           <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="w-full h-14 px-4 bg-slate-50 rounded-2xl text-center text-lg font-black outline-none focus:ring-4 focus:ring-cyan-50 transition-all"/>
           <button onClick={checkPassword} className="w-full h-14 bg-[#00c2e8] text-white font-black rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"><Unlock className="w-5 h-5" /> 認証する</button>
           {status && <div className="text-sm font-bold text-red-500 animate-pulse">{status}</div>}
@@ -234,8 +235,12 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
          </div>
       </header>
 
-      {/*ステータス通知*/}
-      {status && <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full shadow-lg bg-slate-800 text-white text-xs font-bold animate-bounce whitespace-nowrap">{status}</div>}
+      {/* ★修正: ステータス通知 (animate-bounce を削除し、フェードインに変更) */}
+      {status && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-xl bg-slate-800/90 text-white text-sm font-bold animate-in fade-in slide-in-from-top-2 duration-300 backdrop-blur-md whitespace-nowrap">
+          {status}
+        </div>
+      )}
 
       <div className="pt-20 px-4 max-w-lg mx-auto space-y-6">
         {/* イベント情報カード */}
@@ -293,14 +298,12 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
         <Plus className="w-8 h-8" />
       </button>
 
-      {/* === 入力フォーム (構造を刷新して途切れを防止) === */}
+      {/* === 入力フォーム === */}
       <div className={`fixed inset-0 z-50 flex items-end justify-center pointer-events-none ${isSheetOpen ? "visible" : "invisible"}`}>
          <div className={`absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${isSheetOpen ? "opacity-100 pointer-events-auto" : "opacity-0"}`} onClick={closeSheet}></div>
          
-         {/* シート本体: Flex Layoutに変更 */}
          <div ref={sheetRef} className={`relative w-full max-w-lg bg-white rounded-t-[2.5rem] shadow-2xl pointer-events-auto transition-transform duration-300 ease-out flex flex-col max-h-[95vh] ${isSheetOpen ? "translate-y-0" : "translate-y-full"}`}>
             
-            {/* 1. ヘッダー (固定・スクロールしない) */}
             <div className="shrink-0 relative h-14 flex items-center justify-center">
                <div className="w-12 h-1.5 bg-slate-200 rounded-full absolute top-4"></div>
                <button onClick={closeSheet} className="absolute right-6 top-4 p-2 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full transition-all z-10">
@@ -308,10 +311,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                </button>
             </div>
             
-            {/* 2. コンテンツ (スクロールする) */}
             <div className="flex-1 overflow-y-auto p-6 pt-0 space-y-6 no-scrollbar">
-               
-               {/* タイトル & アイコン */}
                <div className="space-y-4">
                   <div className="flex items-center gap-4">
                      <div className="w-16 h-16 shrink-0 bg-slate-50 rounded-2xl flex items-center justify-center relative shadow-inner">
@@ -333,7 +333,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                   </div>
                </div>
 
-               {/* 時間設定 */}
                <div className="grid grid-cols-2 gap-4">
                   <div className="bg-slate-50 rounded-2xl p-3">
                      <label className="text-[10px] font-bold text-slate-400 block mb-1">開始</label>
@@ -345,7 +344,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                   </div>
                </div>
 
-               {/* 対象タグ */}
                <div className="space-y-4">
                   <label className="text-xs font-bold text-slate-400 block -mb-2 pl-1">対象パート</label>
                   <button onClick={() => toggleTag("全員")} className={`w-full h-12 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all ${(formData.target === "全員" || !formData.target) ? "bg-[#00c2e8] text-white" : "bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
@@ -380,7 +378,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                   </div>
                </div>
 
-               {/* 並び順 */}
                <div className="bg-slate-50 rounded-2xl p-1 flex">
                   <button onClick={() => setFormData({...formData, sortOrder: -10})} className={`flex-1 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-all ${formData.sortOrder < 0 ? "bg-white text-blue-500 shadow-sm" : "text-slate-400"}`}><ArrowUp className="w-3.5 h-3.5"/> 先頭</button>
                   <button onClick={() => setFormData({...formData, sortOrder: 0})} className={`flex-1 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-all ${formData.sortOrder === 0 ? "bg-white text-slate-700 shadow-sm" : "text-slate-400"}`}><Minus className="w-3.5 h-3.5"/> 標準</button>
@@ -388,8 +385,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                </div>
             </div>
 
-            {/* 3. フッター (保存ボタン・固定) */}
-            {/* ★変更: シアン統一 & シャドウ削除 */}
             <div className="shrink-0 p-6 pt-0 bg-white">
                <button onClick={saveItem} className="w-full h-14 bg-[#00c2e8] rounded-[1.2rem] font-black text-white active:scale-95 transition-all flex items-center justify-center gap-2">
                   {editingId ? <><RefreshCw className="w-5 h-5"/> 更新する</> : <><Save className="w-5 h-5"/> リストに追加</>}
