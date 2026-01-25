@@ -125,8 +125,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         
         {/* === カード1: イベント基本情報 === */}
         <section className="relative bg-white rounded-[2rem] p-6 shadow-wolt overflow-hidden">
-           {/* 透かしサイズ変更: text-[120px] -> text-8xl */}
-           <div className="absolute -bottom-6 -right-2 text-8xl font-black text-slate-100/50 select-none watermark-text leading-none z-0">
+           {/* 透かしサイズ変更: text-[105px] (中間) */}
+           <div className="absolute -bottom-7 -right-4 text-[105px] font-black text-slate-100/50 select-none watermark-text leading-none z-0">
               {getDayNumber(event.date)}
            </div>
            
@@ -215,8 +215,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                         </div>
                       )}
 
-                      {/* 透かしサイズ変更: text-[7rem] -> text-6xl */}
-                      <div className="absolute -bottom-4 -right-2 text-6xl font-black text-slate-100/50 select-none watermark-text leading-none z-0">
+                      {/* 透かしサイズ変更: text-[5rem] (中間・約80px) */}
+                      <div className="absolute -bottom-5 -right-2 text-[5rem] font-black text-slate-100/50 select-none watermark-text leading-none z-0">
                         {hhmm(it.start_time)}
                       </div>
 
