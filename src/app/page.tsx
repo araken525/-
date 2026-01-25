@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Calendar, Smartphone, Zap, Plus, Search, ChevronDown, CheckCircle2, Music, Clapperboard, Briefcase, Heart } from "lucide-react";
+import { ArrowRight, Calendar, Smartphone, Zap, Plus, Search, ChevronDown, Music, Clapperboard, Briefcase, Heart } from "lucide-react";
 
 export default function Home() {
   const [showSearch, setShowSearch] = useState(false);
@@ -15,24 +14,33 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f9fb] font-sans text-slate-800 selection:bg-[#00c2e8] selection:text-white pb-20">
+    <main className="min-h-screen bg-[#f7f9fb] font-sans text-slate-800 selection:bg-[#00c2e8] selection:text-white pb-20 pt-16">
       
-      {/* === ヘッダー === */}
-      <header className="absolute top-0 inset-x-0 h-20 flex items-center justify-center z-10">
+      {/* === 1. ヘッダー (固定バーを追加) === */}
+      <header className="fixed top-0 inset-x-0 h-16 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-6 z-50">
         <div className="flex items-center gap-2 font-black text-2xl text-slate-800 tracking-tighter">
           <div className="w-8 h-8 bg-[#00c2e8] rounded-xl flex items-center justify-center text-white text-base shadow-sm">🎵</div>
-          Takt
+          TaiSuke
         </div>
+        <Link 
+          href="/create"
+          className="h-9 px-4 bg-[#00c2e8] text-white rounded-full font-black text-xs shadow-sm hover:bg-cyan-500 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+        >
+          <Plus className="w-3.5 h-3.5" /> 作成する
+        </Link>
       </header>
 
-      {/* === ヒーローセクション (主役エリア) === */}
-      <section className="pt-32 px-6 flex flex-col items-center text-center max-w-2xl mx-auto">
+      {/* === ヒーローセクション (キャッチコピー変更) === */}
+      <section className="pt-24 px-6 flex flex-col items-center text-center max-w-2xl mx-auto">
         <span className="px-3 py-1 bg-cyan-50 text-[#00c2e8] text-xs font-black rounded-full mb-6">無料・ログイン不要</span>
+        
+        {/* ★変更: キャッチコピー */}
         <h1 className="text-4xl sm:text-5xl font-black leading-tight tracking-tight text-slate-900 mb-6">
-          当日のタイムテーブル、<br />みんなのスマホへ。
+          当日のタイスケ、<br />みんなのスマホへ。
         </h1>
+        
         <p className="text-sm sm:text-base font-bold text-slate-500 mb-10 leading-relaxed max-w-md">
-          Takt（タクト）は、PDFより見やすく、Excelより手軽な、イベント進行表の共有ツールです。
+          TaiSuke（タイスケ）は、PDFより見やすく、Excelより手軽な、イベント進行表の共有ツールです。
         </p>
 
         {/* メインCTA（タイスケ作成） */}
@@ -71,9 +79,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* === 3つの特徴 (Wolt風の角丸カード) === */}
+      {/* === 3つの特徴 === */}
       <section className="mt-20 px-6 max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
-        
         <div className="bg-white p-6 rounded-[2rem] shadow-sm">
           <div className="w-12 h-12 bg-cyan-50 text-[#00c2e8] rounded-2xl flex items-center justify-center mb-4">
             <Zap className="w-6 h-6" />
@@ -103,10 +110,9 @@ export default function Home() {
             「時間が押した」「曲順が変わった」。当日の急なスケジュール変更も手元のスマホから即座に全員へ反映。
           </p>
         </div>
-
       </section>
 
-      {/* === 利用シーン (タグクラウド風) === */}
+      {/* === 利用シーン === */}
       <section className="mt-20 px-6 text-center">
         <p className="text-xs font-black text-slate-400 mb-6 tracking-widest">こんなイベントで使われています</p>
         <div className="flex flex-wrap justify-center gap-3 max-w-2xl mx-auto">
