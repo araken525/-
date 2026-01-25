@@ -5,7 +5,6 @@ import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RefreshBadge from "@/components/RefreshBadge";
 import Link from "next/link";
-// ▼ ここに Edit3 と Printer が入っているのが最新版の証拠です！
 import { MapPin, Calendar, Clock, Filter, X, Printer, Edit3 } from "lucide-react";
 
 /* === ヘルパー関数 === */
@@ -161,7 +160,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white pb-20">
       <EventHeader title={event.title} slug={slug} />
 
-      <div className="pt-24 px-4 w-full max-w-lg md:max-w-4xl mx-auto space-y-6">
+      {/* ★変更ポイント: max-w-6xl に拡張し、iPadでの横幅を確保。余白も md:px-8 に増量 */}
+      <div className="pt-24 px-4 md:px-8 w-full max-w-lg md:max-w-6xl mx-auto space-y-8">
         
         {/* イベント情報カード */}
         <section className="relative bg-white rounded-[2rem] p-8 overflow-hidden shadow-sm h-full min-h-[160px]">
@@ -239,10 +239,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             )}
           </div>
 
-          {/* ▼▼▼ ここが問題解決のポイントです！編集と印刷が分かれました ▼▼▼ */}
           <div className="shrink-0 pl-3 border-l border-slate-100 hidden sm:flex items-center gap-2">
             
-            {/* ✏️ 編集画面へのリンク（/edit/... に正しく飛びます） */}
             <Link 
               href={`/edit/${slug}`}
               className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-colors"
@@ -250,7 +248,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               <Edit3 className="w-4 h-4" /> 編集
             </Link>
 
-            {/* 🖨️ 印刷画面へのリンク（/print/... に正しく飛びます） */}
             <Link 
               href={printUrl} 
               target="_blank"
@@ -260,8 +257,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             </Link>
 
           </div>
-          {/* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */}
-
         </section>
 
         {/* タイムライン */}
@@ -281,6 +276,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 <div className="h-px bg-slate-200 flex-1 rounded-full"></div>
               </div>
 
+              {/* Gridレイアウトはそのまま。親コンテナが広がったので、3列・4列表示が綺麗に機能します */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 {group.items.map((it: any) => {
                   const now = isNow(it.start_time, it.end_time);
@@ -317,42 +313,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           )}
         </div>
       </div>
-
-      {/* === フッター (開発者への連絡) === */}
-      <footer className="mt-20 py-12 border-t border-slate-100 relative z-10 bg-white/50 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4 mb-8">
-           
-           {/* コピーライト */}
-           <div className="text-center md:text-left">
-              <div className="font-black text-slate-800 text-lg mb-1 tracking-tight">TaiSuke</div>
-              <div className="text-xs font-bold text-slate-400">© 2026 Time Schedule Sharing App</div>
-           </div>
-
-           {/* 開発者リンク (X / Twitter) */}
-           <a
-             href="https://x.com/araken525_toho?s=21"
-             target="_blank"
-             rel="noopener noreferrer"
-             className="group flex items-center gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-slate-300 hover:shadow-md transition-all"
-           >
-              <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform">
-                 {/* X ロゴ SVG */}
-                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-              </div>
-              <div className="text-left">
-                 <div className="text-[10px] font-bold text-slate-400 group-hover:text-[#00c2e8] transition-colors">開発者へ連絡・要望</div>
-                 <div className="text-xs font-black text-slate-700">@araken525_toho</div>
-              </div>
-           </a>
-        </div>
-        
-        {/* ▼▼▼ 追加: PRODUCED BY ENSEMBLE LABS ▼▼▼ */}
-        <div className="text-center border-t border-slate-100 pt-8 mt-8">
-           <div className="text-[10px] font-black text-slate-300 tracking-[0.2em]">
-              PRODUCED BY ENSEMBLE LABS
-           </div>
-        </div>
-      </footer>
 
       {lastUpdated && <RefreshBadge dateText={relativeJa(lastUpdated)} />}
       
