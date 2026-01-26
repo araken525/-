@@ -36,7 +36,7 @@ function getTargetColor(t: string) {
   return "bg-cyan-50 text-[#00c2e8]";
 }
 
-// ★修正: アイコンは変えるが、色は全て「青」にする
+// ★修正: デフォルトのLinkも含めて、全て「青」にする
 function getMaterialInfo(url: string) {
   const u = url.toLowerCase();
   
@@ -58,7 +58,9 @@ function getMaterialInfo(url: string) {
   if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
     return { icon: ImageIcon, ...style, label: "Image" };
   }
-  return { icon: Link2, color: "text-slate-400", bg: "bg-slate-100", label: "Link" };
+  
+  // ここを修正しました！ (グレー設定を削除し、青スタイルを適用)
+  return { icon: Link2, ...style, label: "Link" };
 }
 
 const EMOJI_PRESETS = ["🎵", "🎻", "🍱", "🎤", "🚌", "🚽", "🚬", "☕", "🍻", "🏨", "🎫", "✨", "🧹", "🚩"];
