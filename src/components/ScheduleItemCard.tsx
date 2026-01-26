@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, MapPin, ChevronDown, ChevronUp } from "lucide-react";
+// ▼ Link2 (資料用アイコン) を追加
+import { Clock, MapPin, ChevronDown, ChevronUp, Link2 } from "lucide-react";
 
 type ScheduleItemCardProps = {
   it: any;
@@ -11,6 +12,7 @@ type ScheduleItemCardProps = {
   badgeColor: string;
   startHhmm: string;
   endHhmm: string | null;
+  materials: any[]; // ★追加: 全資料データを受け取る
 };
 
 export default function ScheduleItemCard({
@@ -21,17 +23,24 @@ export default function ScheduleItemCard({
   badgeColor,
   startHhmm,
   endHhmm,
+  materials,
 }: ScheduleItemCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const hasLongNote =
     it.note && (it.note.length > 80 || it.note.split("\n").length > 3);
 
+  // ★追加: このカードに紐付いている資料だけを抽出
+  const linkedMaterials = materials.filter((m) => {
+    if (!it.material_ids) return false;
+    const ids = it.material_ids.split(","); // "1,3" -> ["1", "3"]
+    return ids.includes(String(m.id));
+  });
+
   return (
     <div
       className={`
         relative bg-white rounded-[1.5rem] p-6 flex gap-4 items-start overflow-hidden h-full flex-col
-        /* ▼▼ アニメーションを削除し、固定デザインに変更 ▼▼ */
         ${now 
           ? "shadow-lg border-2 border-[#00c2e8] z-10" 
           : "shadow-sm border border-slate-50"}
@@ -96,6 +105,24 @@ export default function ScheduleItemCard({
                   )}
                 </button>
               )}
+            </div>
+          )}
+
+          {/* ★追加: 紐付いた資料がある場合のみ表示 (Lucideアイコン使用) */}
+          {linkedMaterials.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {linkedMaterials.map((m) => (
+                <a
+                  key={m.id}
+                  href={m.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 bg-cyan-50 text-[#00c2e8] px-3 py-2 rounded-xl text-xs font-bold hover:bg-[#00c2e8] hover:text-white transition-all border border-cyan-100 shadow-sm"
+                >
+                  <Link2 className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate max-w-[140px]">{m.title}</span>
+                </a>
+              ))}
             </div>
           )}
 

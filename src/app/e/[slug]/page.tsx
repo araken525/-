@@ -5,10 +5,9 @@ import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RefreshBadge from "@/components/RefreshBadge";
 import Link from "next/link";
-// ▼ Link2 (URLリンク用アイコン) を追加
 import { MapPin, Calendar, Clock, Filter, X, Link2, FileText } from "lucide-react";
 
-/* === ヘルパー関数 (ロジック変更なし) === */
+/* === ヘルパー関数 (変更なし) === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
 
 function getDayNumber(dateStr: string) {
@@ -109,15 +108,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { data: event } = await supabase.from("events").select("*").eq("slug", slug).maybeSingle();
   if (!event) return <main className="min-h-screen flex items-center justify-center"><div className="text-slate-400 font-bold">イベントが見つかりません</div></main>;
 
-  // スケジュール取得
   const { data: items } = await supabase.from("schedule_items").select("*").eq("event_id", event.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
   const allItems = items ?? [];
 
-  // ★追加: 資料データ取得（箱がないとエラーになる可能性があるのでtryで囲むか、SQL実行前提とする）
   const { data: materials } = await supabase.from("event_materials").select("*").eq("event_id", event.id).order("sort_order", { ascending: true });
   const hasMaterials = materials && materials.length > 0;
 
-  // タグ集計ロジック
   const tagsSet = new Set<string>();
   allItems.forEach(item => {
     if (!item.target || item.target === "all" || item.target === "全員") {
@@ -134,7 +130,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const otherTabs = Array.from(tagsSet).filter(t => t !== "全員").sort();
   const dynamicTabs = tagsSet.has("全員") ? ["全員", ...otherTabs] : otherTabs;
 
-  // フィルターロジック
   const filtered = allItems.filter(it => {
     if (selectedTags.length === 0) return true;
     const itTargets = (!it.target || it.target === "all" || it.target === "全員") 
@@ -149,7 +144,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
   const groups = groupByStartTime(filtered);
 
-  // 最終更新日時計算
   const candidates: Date[] = [];
   const evUpd = toDate((event as any).updated_at);
   if (evUpd) candidates.push(evUpd);
@@ -232,7 +226,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </div>
         </section>
 
-        {/* ★追加: 資料リンク集エリア (データがある時だけ表示) */}
+        {/* 資料リンク集エリア */}
         {hasMaterials && (
           <section className="space-y-3">
              <div className="pl-2 flex items-center gap-2">
@@ -308,6 +302,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                         badgeColor={badgeColor}
                         startHhmm={startHhmm}
                         endHhmm={endHhmm}
+                        materials={materials ?? []} // ★追加: 全資料データをカードに渡す
                       />
                     );
                   })}
