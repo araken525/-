@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-// ▼ Link2 (資料用アイコン) を追加
 import { Clock, MapPin, ChevronDown, ChevronUp, Link2 } from "lucide-react";
 
 type ScheduleItemCardProps = {
@@ -12,7 +11,7 @@ type ScheduleItemCardProps = {
   badgeColor: string;
   startHhmm: string;
   endHhmm: string | null;
-  materials: any[]; // ★追加: 全資料データを受け取る
+  materials: any[];
 };
 
 export default function ScheduleItemCard({
@@ -30,10 +29,10 @@ export default function ScheduleItemCard({
   const hasLongNote =
     it.note && (it.note.length > 80 || it.note.split("\n").length > 3);
 
-  // ★追加: このカードに紐付いている資料だけを抽出
+  // 紐付いている資料を抽出
   const linkedMaterials = materials.filter((m) => {
     if (!it.material_ids) return false;
-    const ids = it.material_ids.split(","); // "1,3" -> ["1", "3"]
+    const ids = it.material_ids.split(",");
     return ids.includes(String(m.id));
   });
 
@@ -108,19 +107,21 @@ export default function ScheduleItemCard({
             </div>
           )}
 
-          {/* ★追加: 紐付いた資料がある場合のみ表示 (Lucideアイコン使用) */}
+          {/* ★B案: ミニマルなテキストリンクデザイン */}
           {linkedMaterials.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-col gap-1 mb-4 mt-1">
               {linkedMaterials.map((m) => (
                 <a
                   key={m.id}
                   href={m.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 bg-cyan-50 text-[#00c2e8] px-3 py-2 rounded-xl text-xs font-bold hover:bg-[#00c2e8] hover:text-white transition-all border border-cyan-100 shadow-sm"
+                  className="group flex items-center gap-2 w-fit"
                 >
-                  <Link2 className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate max-w-[140px]">{m.title}</span>
+                  <Link2 className="w-3.5 h-3.5 text-[#00c2e8] shrink-0" />
+                  <span className="text-xs font-bold text-[#00c2e8] border-b border-transparent group-hover:border-[#00c2e8] transition-all truncate max-w-[200px]">
+                    {m.title}
+                  </span>
                 </a>
               ))}
             </div>
