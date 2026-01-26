@@ -5,8 +5,8 @@ import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RefreshBadge from "@/components/RefreshBadge";
 import Link from "next/link";
-// ▼ Link2, FileText に加えて、Youtube, Video, Image などを追加
-import { MapPin, Calendar, Clock, Filter, X, Link2, FileText, Youtube, Video, Image as ImageIcon } from "lucide-react";
+// ▼ Sparkles, ArrowRight を追加 (フッターの装飾用)
+import { MapPin, Calendar, Clock, Filter, X, Link2, FileText, Youtube, Video, Image as ImageIcon, Sparkles, ArrowRight } from "lucide-react";
 
 /* === ヘルパー関数 (ロジック変更なし) === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
@@ -52,7 +52,7 @@ function getTargetColor(t: string) {
   return "bg-cyan-50 text-[#00c2e8]";
 }
 
-// ★追加: URLからアイコンと色を自動判定するロジック
+// URLからアイコンと色を自動判定するロジック (変更なし)
 function getMaterialInfo(url: string) {
   const u = url.toLowerCase();
   if (u.includes("youtube") || u.includes("youtu.be")) {
@@ -62,13 +62,11 @@ function getMaterialInfo(url: string) {
     return { icon: Video, color: "text-pink-500", bg: "bg-pink-50 hover:bg-pink-500 hover:text-white", label: "Video" };
   }
   if (u.endsWith(".pdf")) {
-    // PDFはオレンジ色にしてAcrobatっぽさを演出
     return { icon: FileText, color: "text-orange-500", bg: "bg-orange-50 hover:bg-orange-500 hover:text-white", label: "PDF" };
   }
   if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
     return { icon: ImageIcon, color: "text-green-500", bg: "bg-green-50 hover:bg-green-500 hover:text-white", label: "Image" };
   }
-  // デフォルト
   return { icon: Link2, color: "text-[#00c2e8]", bg: "bg-cyan-50 hover:bg-[#00c2e8] hover:text-white", label: "Link" };
 }
 
@@ -247,7 +245,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </div>
         </section>
 
-        {/* 資料リンク集エリア (賢いアイコン対応版) */}
+        {/* 資料リンク集エリア */}
         {hasMaterials && (
           <section className="space-y-3">
              <div className="pl-2 flex items-center gap-2">
@@ -256,9 +254,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
              </div>
              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                {materials.map((m) => {
-                 // ここでURLからアイコン情報を取得
                  const { icon: Icon, color, bg, label } = getMaterialInfo(m.url);
-                 
                  return (
                    <a 
                      key={m.id} 
@@ -348,6 +344,68 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       </div>
 
       {lastUpdated && <RefreshBadge dateText={relativeJa(lastUpdated)} />}
+
+      {/* ★追加: 戦略的フッターエリア (ユーザー獲得CTA + ブランディング) */}
+      <footer className="mt-32 pb-12 px-4">
+        {/* CTA Card: アプリ利用促進 */}
+        <div className="max-w-xl mx-auto bg-gradient-to-br from-[#00c2e8] to-blue-600 rounded-[2rem] p-8 text-center text-white shadow-xl shadow-cyan-200/50 mb-12 relative overflow-hidden group">
+          {/* 装飾 */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2 pointer-events-none"></div>
+
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-black mb-4 border border-white/20 shadow-sm">
+               <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+               <span>完全無料・Beta版公開中</span>
+            </div>
+            <h3 className="text-2xl font-black mb-3 leading-tight tracking-tight drop-shadow-sm">
+              あなたの団体でも、<br/>
+              <span className="text-cyan-100">TaiSuke</span> を使いませんか？
+            </h3>
+            <p className="text-sm font-bold text-cyan-50 mb-8 leading-relaxed opacity-90">
+              練習日程、本番のタイムテーブル、資料共有。<br/>
+              面倒な連絡を、これひとつでスマートに完結。
+            </p>
+            <Link href="/" className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-4 bg-white text-[#00c2e8] rounded-2xl font-black text-sm hover:bg-cyan-50 transition-all active:scale-95 shadow-lg">
+              無料でイベントを作る <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Branding Footer */}
+        <div className="max-w-xl mx-auto text-center space-y-8">
+           {/* リンク集 */}
+           <div className="flex flex-wrap justify-center gap-4 text-xs font-bold text-slate-400">
+              <Link href="/" className="hover:text-[#00c2e8] transition-colors">トップページ</Link>
+              <span className="text-slate-300">|</span>
+              <a href="https://x.com/araken525_toho" target="_blank" rel="noopener noreferrer" className="hover:text-[#00c2e8] transition-colors">開発者 (X)</a>
+              <span className="text-slate-300">|</span>
+              <a href="https://kawasakiebase.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#00c2e8] transition-colors">運営元</a>
+           </div>
+
+           {/* ロゴ & コピーライト */}
+           <div className="space-y-2">
+              <div className="text-2xl font-black text-slate-300 tracking-tighter">TaiSuke</div>
+              <div className="text-[10px] text-slate-400 font-bold">
+                 © 2026 Time Schedule Sharing App
+              </div>
+           </div>
+
+           {/* Ensemble Labs Badge */}
+           <div className="pt-8 border-t border-slate-100">
+              <p className="text-[10px] font-black text-slate-300 tracking-[0.2em] mb-3">PRODUCED BY</p>
+              <a 
+                href="https://kawasakiebase.com" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all group"
+              >
+                 <span className="w-2.5 h-2.5 rounded-full bg-[#00c2e8] group-hover:scale-125 transition-transform shadow-sm shadow-cyan-200"></span>
+                 <span className="text-xs font-bold text-slate-600 group-hover:text-slate-900 tracking-wide">ENSEMBLE LABS</span>
+              </a>
+           </div>
+        </div>
+      </footer>
     </main>
   );
 }
