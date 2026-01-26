@@ -52,22 +52,29 @@ function getTargetColor(t: string) {
   return "bg-cyan-50 text-[#00c2e8]";
 }
 
-// URLからアイコンと色を自動判定するロジック (変更なし)
+// ★修正: アイコンは変えるが、色は全て「青」にする
 function getMaterialInfo(url: string) {
   const u = url.toLowerCase();
+  
+  // 共通の青色スタイル
+  const style = { 
+    color: "text-[#00c2e8]", 
+    bg: "bg-cyan-50 hover:bg-[#00c2e8] hover:text-white" 
+  };
+
   if (u.includes("youtube") || u.includes("youtu.be")) {
-    return { icon: Youtube, color: "text-red-500", bg: "bg-red-50 hover:bg-red-500 hover:text-white", label: "YouTube" };
+    return { icon: Youtube, ...style, label: "YouTube" };
   }
   if (u.endsWith(".mp4") || u.endsWith(".mov") || u.includes("vimeo")) {
-    return { icon: Video, color: "text-pink-500", bg: "bg-pink-50 hover:bg-pink-500 hover:text-white", label: "Video" };
+    return { icon: Video, ...style, label: "Video" };
   }
   if (u.endsWith(".pdf")) {
-    return { icon: FileText, color: "text-orange-500", bg: "bg-orange-50 hover:bg-orange-500 hover:text-white", label: "PDF" };
+    return { icon: FileText, ...style, label: "PDF" };
   }
   if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
-    return { icon: ImageIcon, color: "text-green-500", bg: "bg-green-50 hover:bg-green-500 hover:text-white", label: "Image" };
+    return { icon: ImageIcon, ...style, label: "Image" };
   }
-  return { icon: Link2, color: "text-[#00c2e8]", bg: "bg-cyan-50 hover:bg-[#00c2e8] hover:text-white", label: "Link" };
+  return { icon: Link2, ...style, label: "Link" };
 }
 
 function groupByStartTime(items: any[]) {
