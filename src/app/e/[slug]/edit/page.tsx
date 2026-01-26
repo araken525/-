@@ -2,7 +2,8 @@
 
 import { useState, use, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Lock, Unlock, ArrowUpRight, LogOut, Save, Plus, RefreshCw, MapPin, AlignLeft, Edit3, Trash2, X, Clock, Calendar, ArrowUp, ArrowDown, Minus, Check, Link2, FileText, Paperclip } from "lucide-react";
+// ▼ Youtube, Video, Image as ImageIcon を追加
+import { Lock, Unlock, ArrowUpRight, LogOut, Save, Plus, RefreshCw, MapPin, AlignLeft, Edit3, Trash2, X, Clock, Calendar, ArrowUp, ArrowDown, Minus, Check, Link2, FileText, Paperclip, Youtube, Video, Image as ImageIcon } from "lucide-react";
 
 /* ===== ヘルパー関数 & 定数 (変更なし) ===== */
 function hhmm(t: string) { return String(t).slice(0, 5); }
@@ -33,6 +34,24 @@ function detectEmoji(title: string) {
 function getTargetColor(t: string) {
   if (!t || t === "all" || t === "全員") return "bg-slate-100 text-slate-500";
   return "bg-cyan-50 text-[#00c2e8]";
+}
+
+// ★追加: URLからアイコンと色を自動判定するロジック
+function getMaterialInfo(url: string) {
+  const u = url.toLowerCase();
+  if (u.includes("youtube") || u.includes("youtu.be")) {
+    return { icon: Youtube, color: "text-red-500", bg: "bg-red-50", label: "YouTube" };
+  }
+  if (u.endsWith(".mp4") || u.endsWith(".mov") || u.includes("vimeo")) {
+    return { icon: Video, color: "text-pink-500", bg: "bg-pink-50", label: "Video" };
+  }
+  if (u.endsWith(".pdf")) {
+    return { icon: FileText, color: "text-orange-500", bg: "bg-orange-50", label: "PDF" };
+  }
+  if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+    return { icon: ImageIcon, color: "text-green-500", bg: "bg-green-50", label: "Image" };
+  }
+  return { icon: Link2, color: "text-slate-400", bg: "bg-slate-100", label: "Link" };
 }
 
 const EMOJI_PRESETS = ["🎵", "🎻", "🍱", "🎤", "🚌", "🚽", "🚬", "☕", "🍻", "🏨", "🎫", "✨", "🧹", "🚩"];
@@ -69,7 +88,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     target: "全員", 
     emoji: "🎵", 
     sortOrder: 0,
-    materialIds: [] as string[] // ★追加: 紐付ける資料IDの配列
+    materialIds: [] as string[]
   });
   
   const [recentTags, setRecentTags] = useState<string[]>(["全員"]); 
@@ -154,7 +173,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
         target: item.target ?? "全員", 
         emoji: item.emoji || detectEmoji(item.title || ""), 
         sortOrder: item.sort_order ?? 0,
-        // ★追加: 文字列(1,3,5)を配列に変換してセット
         materialIds: item.material_ids ? item.material_ids.split(",") : []
       });
     } else {
@@ -162,7 +180,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
       setFormData({ 
         ...formData, 
         title: "", location: "", note: "", emoji: "🎵", sortOrder: 0, 
-        materialIds: [] // 新規は空
+        materialIds: []
       }); 
     }
     setNewTagInput("");
@@ -197,7 +215,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     setNewTagInput("");
   }
 
-  // ★追加: 紐付け資料のトグルロジック
   function toggleMaterialLink(matId: number) {
     const idStr = String(matId);
     let currentIds = [...formData.materialIds];
@@ -209,7 +226,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     setFormData({ ...formData, materialIds: currentIds });
   }
 
-  // 資料追加ロジック
   async function addMaterial() {
     if (!matTitle.trim() || !matUrl.trim()) return;
     setMatLoading(true);
@@ -230,7 +246,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     }
   }
 
-  // 資料削除ロジック
   async function removeMaterial(id: number) {
     if (!confirm("このリンクを削除しますか？")) return;
     const { error } = await supabase.from("event_materials").delete().eq("id", id);
@@ -254,7 +269,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
       target: formData.target.trim() || "全員", 
       emoji: formData.emoji || "🎵", 
       sort_order: formData.sortOrder,
-      // ★追加: 配列をカンマ区切り文字列にして保存
       material_ids: formData.materialIds.length > 0 ? formData.materialIds.join(",") : null
     };
     setStatus(editingId ? "更新中..." : "追加中...");
@@ -347,23 +361,28 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
               
               {materials.length > 0 ? (
                  <div className="space-y-2">
-                   {materials.map(m => (
-                      <div key={m.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl group">
-                         <div className="flex items-center gap-3 overflow-hidden">
-                            <FileText className="w-4 h-4 text-[#00c2e8] shrink-0" />
-                            <div className="min-w-0">
-                               <div className="text-xs font-bold text-slate-800 truncate">{m.title}</div>
-                               <div className="text-[10px] text-slate-400 truncate opacity-70">{m.url}</div>
-                            </div>
-                         </div>
-                         <button 
-                           onClick={() => removeMaterial(m.id)}
-                           className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all shrink-0"
-                         >
-                            <Trash2 className="w-4 h-4" />
-                         </button>
-                      </div>
-                   ))}
+                   {materials.map(m => {
+                      const { icon: Icon, color, bg } = getMaterialInfo(m.url);
+                      return (
+                        <div key={m.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl group">
+                           <div className="flex items-center gap-3 overflow-hidden">
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${bg}`}>
+                                 <Icon className={`w-4 h-4 ${color}`} />
+                              </div>
+                              <div className="min-w-0">
+                                 <div className="text-xs font-bold text-slate-800 truncate">{m.title}</div>
+                                 <div className="text-[10px] text-slate-400 truncate opacity-70">{m.url}</div>
+                              </div>
+                           </div>
+                           <button 
+                             onClick={() => removeMaterial(m.id)}
+                             className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all shrink-0"
+                           >
+                              <Trash2 className="w-4 h-4" />
+                           </button>
+                        </div>
+                      );
+                   })}
                  </div>
               ) : (
                  <p className="text-xs text-slate-400 text-center py-2">登録されたリンクはありません</p>
@@ -406,8 +425,10 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                const emoji = it.emoji || detectEmoji(it.title);
                const duration = getDuration(it.start_time, it.end_time);
                const displayTarget = it.target && it.target !== "all" ? it.target.replace(/,/g, "・") : "全員";
-               // ★追加: 紐付いている資料の数を確認
-               const linkedCount = it.material_ids ? it.material_ids.split(",").length : 0;
+               
+               // ★修正: 亡霊データ対策 (現在のmaterialsに存在するIDだけをカウント)
+               const currentMaterialIds = it.material_ids ? it.material_ids.split(",") : [];
+               const validCount = currentMaterialIds.filter((id: string) => materials.some(m => String(m.id) === id)).length;
                
                return (
                 <div key={it.id} className="group relative bg-white rounded-[1.5rem] p-5 flex gap-5 items-stretch shadow-sm border border-transparent transition-all hover:shadow-md">
@@ -426,11 +447,10 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                     <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-400">
                        {it.location && <div className="flex items-center"><MapPin className="w-3 h-3 mr-1 text-slate-300"/>{it.location}</div>}
                        {duration && <div>⏳ {duration}</div>}
-                       {/* 紐付けバッジ */}
-                       {linkedCount > 0 && (
+                       {validCount > 0 && (
                           <div className="flex items-center text-[#00c2e8] bg-cyan-50 px-2 py-0.5 rounded-full">
                             <Paperclip className="w-3 h-3 mr-1"/>
-                            {linkedCount}件の資料
+                            {validCount}件の資料
                           </div>
                        )}
                     </div>
@@ -491,9 +511,15 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                      <label className="text-[10px] font-bold text-slate-400 block mb-1">開始</label>
                      <input type="time" value={formData.startTime} onChange={(e)=>setFormData({...formData, startTime:e.target.value})} className="w-full bg-transparent text-xl font-black text-center outline-none"/>
                   </div>
-                  <div className="bg-slate-50 rounded-2xl p-3">
+                  {/* ★修正: 終了時間をクリアできるように相対配置 + ×ボタン */}
+                  <div className="bg-slate-50 rounded-2xl p-3 relative group">
                      <label className="text-[10px] font-bold text-slate-400 block mb-1">終了 (任意)</label>
                      <input type="time" value={formData.endTime} onChange={(e)=>setFormData({...formData, endTime:e.target.value})} className="w-full bg-transparent text-xl font-black text-center outline-none text-slate-600 placeholder:text-slate-300"/>
+                     {formData.endTime && (
+                       <button onClick={() => setFormData({...formData, endTime: ""})} className="absolute top-1/2 -translate-y-1/2 right-3 w-6 h-6 flex items-center justify-center bg-slate-200 text-slate-500 rounded-full hover:bg-slate-300 transition-all">
+                          <X className="w-3 h-3" />
+                       </button>
+                     )}
                   </div>
                </div>
 
@@ -540,7 +566,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                   </div>
                </div>
                
-               {/* ★追加: 資料紐付けエリア (資料がある時だけ表示) */}
                {materials.length > 0 && (
                   <div className="space-y-3">
                      <div className="flex items-center gap-2 px-1">
@@ -550,6 +575,8 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                      <div className="grid grid-cols-1 gap-2">
                         {materials.map(m => {
                            const isLinked = formData.materialIds.includes(String(m.id));
+                           // ★修正: リスト内でもアイコンを自動判定して表示
+                           const { icon: Icon, color, bg } = getMaterialInfo(m.url);
                            return (
                               <button 
                                 key={m.id} 
@@ -557,7 +584,9 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                                 className={`flex items-center justify-between p-3 rounded-xl border transition-all ${isLinked ? "bg-cyan-50 border-cyan-200" : "bg-slate-50 border-transparent hover:bg-slate-100"}`}
                               >
                                  <div className="flex items-center gap-3 overflow-hidden">
-                                    <FileText className={`w-4 h-4 shrink-0 ${isLinked ? "text-[#00c2e8]" : "text-slate-400"}`} />
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${bg}`}>
+                                       <Icon className={`w-4 h-4 ${color}`} />
+                                    </div>
                                     <span className={`text-xs font-bold truncate ${isLinked ? "text-slate-800" : "text-slate-500"}`}>{m.title}</span>
                                  </div>
                                  {isLinked && <Check className="w-4 h-4 text-[#00c2e8]" />}
