@@ -15,22 +15,22 @@ type ScheduleItemCardProps = {
   materials: any[];
 };
 
-// ★追加: URLからアイコンと色を自動判定するロジック
-function getMaterialInfo(url: string) {
+// ★修正: アイコンは変えるが、色は「青(#00c2e8)」で統一する
+function getMaterialIcon(url: string) {
   const u = url.toLowerCase();
   if (u.includes("youtube") || u.includes("youtu.be")) {
-    return { icon: Youtube, color: "text-red-500", border: "group-hover:border-red-500" };
+    return Youtube;
   }
   if (u.endsWith(".mp4") || u.endsWith(".mov") || u.includes("vimeo")) {
-    return { icon: Video, color: "text-pink-500", border: "group-hover:border-pink-500" };
+    return Video;
   }
   if (u.endsWith(".pdf")) {
-    return { icon: FileText, color: "text-orange-500", border: "group-hover:border-orange-500" };
+    return FileText;
   }
   if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
-    return { icon: ImageIcon, color: "text-green-500", border: "group-hover:border-green-500" };
+    return ImageIcon;
   }
-  return { icon: Link2, color: "text-[#00c2e8]", border: "group-hover:border-[#00c2e8]" };
+  return Link2;
 }
 
 export default function ScheduleItemCard({
@@ -126,11 +126,11 @@ export default function ScheduleItemCard({
             </div>
           )}
 
-          {/* ★修正: アイコン自動判定を適用 */}
+          {/* ★修正: 全てテーマカラー(青)で統一 */}
           {linkedMaterials.length > 0 && (
             <div className="flex flex-col gap-1 mb-4 mt-1">
               {linkedMaterials.map((m) => {
-                const { icon: Icon, color, border } = getMaterialInfo(m.url);
+                const Icon = getMaterialIcon(m.url);
                 return (
                   <a
                     key={m.id}
@@ -139,8 +139,8 @@ export default function ScheduleItemCard({
                     rel="noopener noreferrer"
                     className="group flex items-center gap-2 w-fit"
                   >
-                    <Icon className={`w-3.5 h-3.5 shrink-0 ${color}`} />
-                    <span className={`text-xs font-bold ${color} border-b border-transparent ${border} transition-all truncate max-w-[200px]`}>
+                    <Icon className="w-3.5 h-3.5 shrink-0 text-[#00c2e8]" />
+                    <span className="text-xs font-bold text-[#00c2e8] border-b border-transparent group-hover:border-[#00c2e8] transition-all truncate max-w-[200px]">
                       {m.title}
                     </span>
                   </a>
