@@ -5,10 +5,10 @@ import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RefreshBadge from "@/components/RefreshBadge";
 import Link from "next/link";
-// ▼ 編集・印刷ボタンを削除したので、Edit3, Printer のインポートも削除して整理しました
-import { MapPin, Calendar, Clock, Filter, X } from "lucide-react";
+// ▼ Link2 (URLリンク用アイコン) を追加
+import { MapPin, Calendar, Clock, Filter, X, Link2, FileText } from "lucide-react";
 
-/* === ヘルパー関数 (ロジックは一切変更なし) === */
+/* === ヘルパー関数 (ロジック変更なし) === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
 
 function getDayNumber(dateStr: string) {
@@ -109,9 +109,15 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { data: event } = await supabase.from("events").select("*").eq("slug", slug).maybeSingle();
   if (!event) return <main className="min-h-screen flex items-center justify-center"><div className="text-slate-400 font-bold">イベントが見つかりません</div></main>;
 
+  // スケジュール取得
   const { data: items } = await supabase.from("schedule_items").select("*").eq("event_id", event.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
   const allItems = items ?? [];
 
+  // ★追加: 資料データ取得（箱がないとエラーになる可能性があるのでtryで囲むか、SQL実行前提とする）
+  const { data: materials } = await supabase.from("event_materials").select("*").eq("event_id", event.id).order("sort_order", { ascending: true });
+  const hasMaterials = materials && materials.length > 0;
+
+  // タグ集計ロジック
   const tagsSet = new Set<string>();
   allItems.forEach(item => {
     if (!item.target || item.target === "all" || item.target === "全員") {
@@ -128,23 +134,22 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const otherTabs = Array.from(tagsSet).filter(t => t !== "全員").sort();
   const dynamicTabs = tagsSet.has("全員") ? ["全員", ...otherTabs] : otherTabs;
 
+  // フィルターロジック
   const filtered = allItems.filter(it => {
     if (selectedTags.length === 0) return true;
-
     const itTargets = (!it.target || it.target === "all" || it.target === "全員") 
       ? ["全員"] 
       : it.target.split(",").map((t: string) => {
           const trimmed = t.trim();
           return (trimmed === "all") ? "全員" : trimmed;
         });
-
     if (itTargets.includes("全員")) return true;
-
     return itTargets.some((tag: string) => selectedTags.includes(tag));
   });
 
   const groups = groupByStartTime(filtered);
 
+  // 最終更新日時計算
   const candidates: Date[] = [];
   const evUpd = toDate((event as any).updated_at);
   if (evUpd) candidates.push(evUpd);
@@ -158,18 +163,15 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white pb-20">
       <EventHeader title={event.title} slug={slug} />
 
-      {/* ★修正ポイント1: max-w-7xl に拡張し、iPad Proの横幅もフル活用。余白も広げました */}
       <div className="pt-24 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-8">
         
         {/* イベント情報カード */}
         <section className="relative bg-white rounded-[2rem] p-8 overflow-hidden shadow-sm h-full min-h-[160px]">
            <div className="absolute inset-0 bg-[conic-gradient(at_top_left,_var(--tw-gradient-stops))] from-cyan-200 via-blue-100 to-[#00c2e8] opacity-80"></div>
            <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/40 rounded-full blur-3xl mix-blend-overlay"></div>
-
            <div className="absolute -bottom-10 -right-4 text-[120px] font-black text-white/40 select-none leading-none z-0 tracking-tighter -rotate-6 mix-blend-overlay">
               {getDayNumber(event.date)}
            </div>
-
            <div className="relative z-10 text-left">
              <div className="inline-flex items-center gap-1.5 bg-white/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-cyan-700 mb-3 shadow-sm">
                 <Calendar className="w-3.5 h-3.5" />
@@ -192,25 +194,20 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               <Filter className="w-4 h-4 text-slate-300 mr-1" />
               <span className="text-xs font-black text-slate-300">表示切替</span>
             </div>
-
             <Link
               href={`/e/${slug}`}
               scroll={false}
               className={`
                 shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-colors select-none
-                ${selectedTags.length === 0 
-                  ? "bg-[#00c2e8] text-white" 
-                  : "bg-slate-50 text-slate-500"}
+                ${selectedTags.length === 0 ? "bg-[#00c2e8] text-white" : "bg-slate-50 text-slate-500"}
               `}
             >
               すべて
             </Link>
-
             {dynamicTabs.map((tag) => {
               const isActive = selectedTags.includes(tag);
               const nextUrl = toggleTag(selectedTags, tag);
               const href = nextUrl ? `/e/${slug}?t=${encodeURIComponent(nextUrl)}` : `/e/${slug}`;
-
               return (
                 <Link
                   key={tag}
@@ -218,16 +215,13 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                   scroll={false}
                   className={`
                     shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-colors select-none
-                    ${isActive 
-                      ? "bg-[#00c2e8] text-white" 
-                      : "bg-slate-50 text-slate-500"}
+                    ${isActive ? "bg-[#00c2e8] text-white" : "bg-slate-50 text-slate-500"}
                   `}
                 >
                   {tag}
                 </Link>
               );
             })}
-
             {selectedTags.length > 0 && (
               <div className="pl-2 border-l border-slate-100 shrink-0">
                 <Link href={`/e/${slug}`} scroll={false} className="flex items-center text-xs font-bold text-slate-400 bg-slate-50 px-3 py-2 rounded-xl">
@@ -236,9 +230,38 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               </div>
             )}
           </div>
-          
-          {/* ★修正ポイント2: ここにあった編集・印刷ボタンを削除しました（ヘッダーにあるため） */}
         </section>
+
+        {/* ★追加: 資料リンク集エリア (データがある時だけ表示) */}
+        {hasMaterials && (
+          <section className="space-y-3">
+             <div className="pl-2 flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-slate-300" />
+                <h2 className="text-xs font-black text-slate-400 uppercase tracking-wider">配布資料・リンク</h2>
+             </div>
+             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+               {materials.map((m) => (
+                 <a 
+                   key={m.id} 
+                   href={m.url} 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm border border-transparent hover:border-cyan-100 hover:shadow-md transition-all group"
+                 >
+                    <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center shrink-0 group-hover:bg-[#00c2e8] transition-colors">
+                       <FileText className="w-5 h-5 text-[#00c2e8] group-hover:text-white transition-colors" />
+                    </div>
+                    <div className="min-w-0">
+                       <div className="text-xs font-bold text-slate-400 mb-0.5">Link</div>
+                       <div className="text-sm font-black text-slate-800 truncate leading-tight group-hover:text-[#00c2e8] transition-colors">
+                         {m.title}
+                       </div>
+                    </div>
+                 </a>
+               ))}
+             </div>
+          </section>
+        )}
 
         {/* タイムライン */}
         <div className="space-y-10 w-full pt-4">
@@ -248,23 +271,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </div>
 
           {groups.map((group) => {
-             // ★修正ポイント3: アイテム数に応じたスマートなグリッド調整
              const itemCount = group.items.length;
              let gridClass = "";
-             
-             if (itemCount === 1) {
-               // 1個のとき: 幅を広げすぎないように3xlに制限しつつ、1列で大きく表示
-               gridClass = "grid-cols-1 max-w-3xl"; 
-             } else if (itemCount === 2) {
-               // 2個のとき: 画面を半分ずつ使う（幅制限は少し緩く）
-               gridClass = "grid-cols-1 md:grid-cols-2 max-w-5xl";
-             } else if (itemCount === 3) {
-               // 3個のとき: iPad以上で3列
-               gridClass = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
-             } else {
-               // 4個以上のとき: フル活用
-               gridClass = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
-             }
+             if (itemCount === 1) gridClass = "grid-cols-1 max-w-3xl"; 
+             else if (itemCount === 2) gridClass = "grid-cols-1 md:grid-cols-2 max-w-5xl";
+             else if (itemCount === 3) gridClass = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
+             else gridClass = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
 
              return (
               <div key={group.time}>
@@ -276,7 +288,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                   <div className="h-px bg-slate-200 flex-1 rounded-full"></div>
                 </div>
 
-                {/* スマートグリッドを適用 */}
                 <div className={`grid gap-4 md:gap-6 ${gridClass}`}>
                   {group.items.map((it: any) => {
                     const now = isNow(it.start_time, it.end_time);
@@ -316,7 +327,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       </div>
 
       {lastUpdated && <RefreshBadge dateText={relativeJa(lastUpdated)} />}
-      
     </main>
   );
 }
