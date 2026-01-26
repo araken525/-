@@ -2,10 +2,11 @@
 
 import { useState, use, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Lock, Unlock, ArrowUpRight, LogOut, Save, Plus, RefreshCw, MapPin, AlignLeft, Edit3, Trash2, X, Clock, Calendar, ArrowUp, ArrowDown, Minus, Check, Link2, FileText, Paperclip, Youtube, Video, Image as ImageIcon, Sparkles, ArrowRight, GripVertical, MoreHorizontal } from "lucide-react";
+import { Lock, Unlock, ArrowUpRight, LogOut, Save, Plus, RefreshCw, MapPin, AlignLeft, Edit3, Trash2, X, Clock, Calendar, ArrowUp, ArrowDown, Minus, Check, Link2, FileText, Paperclip, Youtube, Video, Image as ImageIcon, Sparkles, ArrowRight, Settings, ChevronDown, ChevronUp, XCircle } from "lucide-react";
 
-/* ===== ヘルパー関数 & 定数 (変更なし) ===== */
+/* ===== ヘルパー関数 ===== */
 function hhmm(t: string) { return String(t).slice(0, 5); }
+
 function getDuration(start: string, end?: string | null) {
   if (!end) return null;
   const [sh, sm] = start.split(":").map(Number);
@@ -14,8 +15,11 @@ function getDuration(start: string, end?: string | null) {
   if (diffMin <= 0) return null;
   const h = Math.floor(diffMin / 60);
   const m = diffMin % 60;
+  
+  if (h === 0) return `${m}分`;
   return m === 0 ? `${h}時間` : `${h}時間${m}分`;
 }
+
 function detectEmoji(title: string) {
   const t = title.toLowerCase();
   if (t.includes("休憩") || t.includes("昼") || t.includes("ランチ") || t.includes("ご飯")) return "🍱";
@@ -79,6 +83,10 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
+
+  // UI状態 (並び替え・タグ編集)
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [isTagEditMode, setIsTagEditMode] = useState(false);
 
   // フォーム状態
   const [formData, setFormData] = useState({
@@ -186,11 +194,15 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
       }); 
     }
     setNewTagInput("");
+    setIsSortOpen(false); // シートを開くときは閉じる
+    setIsTagEditMode(false); // タグ編集も終了
     setIsSheetOpen(true);
   }
   function closeSheet() { setIsSheetOpen(false); setTimeout(() => setEditingId(null), 300); }
 
   function toggleTag(tag: string) {
+    if (isTagEditMode) return; // 編集モード中は選択させない
+
     if (tag === "全員") {
       setFormData({ ...formData, target: "全員" });
       return;
@@ -215,6 +227,12 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     if (!currentTags.includes(t)) currentTags.push(t);
     setFormData({ ...formData, target: currentTags.join(",") });
     setNewTagInput("");
+  }
+
+  // ★追加: タグ削除機能
+  function deleteRecentTag(tag: string) {
+    if (tag === "全員") return;
+    setRecentTags(recentTags.filter(t => t !== tag));
   }
 
   function toggleMaterialLink(matId: number) {
@@ -389,7 +407,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                  <div className="text-[10px] font-bold text-slate-400">{materials.length}件</div>
               </div>
               
-              {/* 入力フォーム (境界を明確化) */}
+              {/* 入力フォーム */}
               <div className="p-4 bg-white space-y-3">
                  <div className="space-y-2">
                     <input 
@@ -422,13 +440,13 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                  )}
               </div>
 
-              {/* 登録済みリスト */}
+              {/* 登録済みリスト (スマホのホバー演出廃止) */}
               <div className="bg-slate-50/50 p-2 space-y-1 border-t border-slate-100 min-h-[100px]">
                  {materials.length > 0 ? materials.map(m => {
                     const { icon: Icon, color, bg } = getMaterialInfo(m.url);
                     const isEditing = editingMaterialId === m.id;
                     return (
-                      <div key={m.id} className={`flex items-center justify-between p-2.5 rounded-xl transition-all group bg-white border ${isEditing ? "border-[#00c2e8] shadow-sm" : "border-slate-100 hover:border-slate-300"}`}>
+                      <div key={m.id} className={`flex items-center justify-between p-2.5 rounded-xl transition-all group bg-white border ${isEditing ? "border-[#00c2e8] shadow-sm" : "border-slate-100 sm:hover:border-slate-300"}`}>
                          <div className="flex items-center gap-3 overflow-hidden">
                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${bg}`}>
                                <Icon className={`w-4 h-4 ${color}`} />
@@ -438,7 +456,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                                <div className="text-[10px] text-slate-400 truncate opacity-70">{m.url}</div>
                             </div>
                          </div>
-                         <div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                         <div className="flex items-center gap-1 shrink-0">
                            <button onClick={() => startEditMaterial(m)} className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-[#00c2e8] hover:bg-cyan-50 transition-all"><Edit3 className="w-3.5 h-3.5" /></button>
                            <button onClick={() => removeMaterial(m.id)} className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
                          </div>
@@ -454,7 +472,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
             </section>
           </div>
 
-          {/* 右カラム: スケジュール */}
+          {/* 右カラム: スケジュール (スマホのホバー演出廃止) */}
           <section className="space-y-4 md:col-span-8 pb-32">
             <div className="flex items-center justify-between mb-4 px-1">
                <span className="text-xs font-bold text-slate-400">スケジュール ({items.length}件)</span>
@@ -469,14 +487,14 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                const validCount = currentMaterialIds.filter((id: string) => materials.some(m => String(m.id) === id)).length;
                
                return (
-                <div key={it.id} className="relative bg-white rounded-[1.5rem] p-5 flex gap-5 items-stretch shadow-sm border border-slate-100 hover:border-slate-300 transition-all group">
-                  {/* 左側: 時間と絵文字 */}
+                <div key={it.id} className="relative bg-white rounded-[1.5rem] p-5 flex gap-5 items-stretch shadow-sm border border-slate-100 sm:hover:border-slate-300 transition-all group">
+                  {/* 左側 */}
                   <div className="flex flex-col items-center shrink-0 space-y-2 pt-1">
                      <div className="text-lg font-black text-slate-800 leading-none">{hhmm(it.start_time)}</div>
                      <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-3xl shadow-inner">{emoji}</div>
                   </div>
 
-                  {/* 中央: コンテンツ */}
+                  {/* 中央 */}
                   <div className="flex-1 min-w-0 flex flex-col justify-center py-1 pr-12">
                     <div className="flex flex-wrap items-center gap-2 mb-1.5">
                        <h3 className="text-lg font-black leading-tight text-slate-900">{it.title}</h3>
@@ -502,7 +520,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                     </div>
                   </div>
 
-                  {/* 右上: 常時表示のアクションボタン (スマホ対策) */}
+                  {/* 右上ボタン (常時表示・スマホ操作性向上) */}
                   <div className="absolute top-4 right-4 flex flex-col gap-2">
                      <button onClick={() => openSheet(it)} className="w-9 h-9 rounded-xl bg-slate-50 text-slate-400 hover:text-[#00c2e8] hover:bg-cyan-50 flex items-center justify-center transition-all shadow-sm active:scale-95" title="編集">
                         <Edit3 className="w-4 h-4"/>
@@ -523,7 +541,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
         <Plus className="w-8 h-8" />
       </button>
 
-      {/* 入力フォーム (リッチUI化) */}
+      {/* 入力フォーム */}
       <div className={`fixed inset-0 z-50 flex items-end justify-center pointer-events-none ${isSheetOpen ? "visible" : "invisible"}`}>
          <div className={`absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 ${isSheetOpen ? "opacity-100 pointer-events-auto" : "opacity-0"}`} onClick={closeSheet}></div>
          
@@ -538,11 +556,11 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                <div className="space-y-4">
                   <div className="flex items-start gap-4">
                      <div className="w-20 h-20 shrink-0 bg-slate-50 rounded-2xl flex items-center justify-center relative shadow-inner border border-slate-100">
-                        <input type="text" value={formData.emoji} onChange={(e)=>setFormData({...formData, emoji:e.target.value})} className="w-full h-full bg-transparent text-center text-5xl outline-none p-0" placeholder="🎵"/>
+                        <input type="text" value={formData.emoji} onChange={(e)=>setFormData({...formData, emoji:e.target.value})} className="w-full h-full bg-transparent text-center text-5xl outline-none p-0 appearance-none" placeholder="🎵"/>
                      </div>
                      <div className="flex-1 pt-1">
                         <label className="text-[10px] font-bold text-slate-400 block mb-1">タイトル</label>
-                        <input type="text" value={formData.title} onChange={(e)=>setFormData({...formData, title:e.target.value})} placeholder="練習, 移動, 本番..." className="w-full bg-transparent text-2xl font-black placeholder:text-slate-200 outline-none border-b-2 border-slate-100 focus:border-[#00c2e8] transition-colors py-1 text-slate-800"/>
+                        <input type="text" value={formData.title} onChange={(e)=>setFormData({...formData, title:e.target.value})} placeholder="練習, 移動, 本番..." className="w-full bg-transparent text-2xl font-black placeholder:text-slate-200 outline-none border-b-2 border-slate-100 focus:border-[#00c2e8] transition-colors py-1 text-slate-800 appearance-none rounded-none"/>
                      </div>
                   </div>
                   <div className="flex gap-2 overflow-x-auto no-scrollbar py-2 mask-linear">
@@ -554,7 +572,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                   </div>
                </div>
 
-               {/* 2. タイムブロック (大きく見やすく) */}
+               {/* 2. タイムブロック (iOS対応: 枠線追加, appearance-none) */}
                <div className="bg-slate-50 p-4 rounded-3xl space-y-4 border border-slate-100">
                   <div className="flex items-center gap-2 mb-2">
                      <Clock className="w-4 h-4 text-[#00c2e8]"/>
@@ -563,14 +581,27 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                   <div className="flex items-center gap-4">
                      <div className="flex-1">
                         <label className="text-[10px] font-bold text-slate-400 block mb-1 text-center">開始</label>
-                        <input type="time" value={formData.startTime} onChange={(e)=>setFormData({...formData, startTime:e.target.value})} className="w-full h-14 bg-white rounded-xl text-2xl font-black text-center outline-none shadow-sm focus:ring-2 focus:ring-cyan-100 transition-all text-slate-800"/>
+                        <input type="time" value={formData.startTime} onChange={(e)=>setFormData({...formData, startTime:e.target.value})} className="w-full h-14 bg-white border border-slate-200 rounded-xl text-2xl font-black text-center outline-none shadow-sm focus:ring-2 focus:ring-cyan-100 focus:border-cyan-200 transition-all text-slate-800 appearance-none"/>
                      </div>
                      <div className="text-slate-300 pt-4"><ArrowRight className="w-6 h-6"/></div>
                      <div className="flex-1 relative">
                         <label className="text-[10px] font-bold text-slate-400 block mb-1 text-center">終了</label>
-                        <input type="time" value={formData.endTime} onChange={(e)=>setFormData({...formData, endTime:e.target.value})} className="w-full h-14 bg-white rounded-xl text-2xl font-black text-center outline-none shadow-sm focus:ring-2 focus:ring-cyan-100 transition-all text-slate-800 placeholder:text-slate-200"/>
+                        {/* iOSの空欄対策: データがない時はテキスト色を透明にしてプレースホルダーを表示しているように見せる */}
+                        <div className="relative w-full h-14">
+                           <input 
+                              type="time" 
+                              value={formData.endTime} 
+                              onChange={(e)=>setFormData({...formData, endTime:e.target.value})} 
+                              className={`w-full h-full bg-white border border-slate-200 rounded-xl text-2xl font-black text-center outline-none shadow-sm focus:ring-2 focus:ring-cyan-100 focus:border-cyan-200 transition-all appearance-none ${!formData.endTime ? 'text-transparent' : 'text-slate-800'}`}
+                           />
+                           {!formData.endTime && (
+                              <div className="absolute inset-0 flex items-center justify-center text-slate-300 text-2xl font-black pointer-events-none tracking-widest">
+                                 --:--
+                              </div>
+                           )}
+                        </div>
                         {formData.endTime && (
-                          <button onClick={() => setFormData({...formData, endTime: ""})} className="absolute -top-2 -right-2 w-6 h-6 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm"><X className="w-3 h-3"/></button>
+                          <button onClick={() => setFormData({...formData, endTime: ""})} className="absolute -top-2 -right-2 w-6 h-6 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm z-10"><X className="w-3 h-3"/></button>
                         )}
                      </div>
                   </div>
@@ -579,33 +610,64 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                {/* 3. 詳細情報 */}
                <div className="space-y-4">
                   <div>
-                     <label className="text-[10px] font-bold text-slate-400 block mb-2">対象タグ</label>
+                     <div className="flex items-center justify-between mb-2">
+                        <label className="text-[10px] font-bold text-slate-400 block">対象タグ</label>
+                        {/* ★追加: タグ編集モード切替ボタン */}
+                        <button 
+                           onClick={() => setIsTagEditMode(!isTagEditMode)}
+                           className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 ${isTagEditMode ? "bg-red-50 text-red-500" : "bg-slate-100 text-slate-400"}`}
+                        >
+                           {isTagEditMode ? "完了" : "編集"}
+                        </button>
+                     </div>
+                     
                      <div className="flex flex-wrap gap-2">
-                        <button onClick={() => toggleTag("全員")} className={`h-9 px-4 rounded-full font-bold text-xs flex items-center gap-1 transition-all ${(formData.target === "全員" || !formData.target) ? "bg-[#00c2e8] text-white shadow-md shadow-cyan-200" : "bg-slate-100 text-slate-500"}`}>
+                        <button onClick={() => toggleTag("全員")} className={`h-9 px-4 rounded-full font-bold text-xs flex items-center gap-1 transition-all ${(formData.target === "全員" || !formData.target) ? "bg-[#00c2e8] text-white shadow-md shadow-cyan-200" : "bg-slate-100 text-slate-500"} ${isTagEditMode ? "opacity-50 pointer-events-none" : ""}`}>
                            {(formData.target === "全員" || !formData.target) && <Check className="w-3 h-3"/>} 全員
                         </button>
+                        
                         {recentTags.filter(t => t !== "全員").map(t => {
                            const currentList = formData.target ? formData.target.split(",").map(x => x.trim()) : [];
                            const isActive = currentList.includes(t);
+                           
                            return (
-                              <button key={t} onClick={() => toggleTag(t)} className={`h-9 px-3 rounded-full font-bold text-xs transition-all flex items-center gap-1 ${isActive ? "bg-cyan-50 text-[#00c2e8] border border-cyan-200" : "bg-white border border-slate-200 text-slate-500"}`}>
-                                 {isActive && <Check className="w-3 h-3"/>} {t}
+                              <button 
+                                 key={t} 
+                                 onClick={() => isTagEditMode ? deleteRecentTag(t) : toggleTag(t)} 
+                                 className={`
+                                    h-9 px-3 rounded-full font-bold text-xs transition-all flex items-center gap-1 relative
+                                    ${isTagEditMode 
+                                       ? "bg-red-50 text-red-500 border border-red-100 pr-8 animate-pulse-slow" 
+                                       : isActive ? "bg-cyan-50 text-[#00c2e8] border border-cyan-200" : "bg-white border border-slate-200 text-slate-500"
+                                    }
+                                 `}
+                              >
+                                 {(!isTagEditMode && isActive) && <Check className="w-3 h-3"/>} 
+                                 {t}
+                                 {isTagEditMode && (
+                                    <div className="absolute right-1 top-1/2 -translate-y-1/2">
+                                       <XCircle className="w-4 h-4 fill-red-200 text-red-500" />
+                                    </div>
+                                 )}
                               </button>
                            )
                         })}
                      </div>
-                     <div className="flex gap-2 mt-3">
-                        <input type="text" value={newTagInput} onChange={(e) => setNewTagInput(e.target.value)} placeholder="新しいタグ..." className="flex-1 h-9 bg-slate-50 rounded-lg px-3 text-xs font-bold outline-none focus:ring-2 focus:ring-cyan-100"/>
-                        <button onClick={addNewTag} disabled={!newTagInput.trim()} className="h-9 px-3 bg-slate-800 text-white rounded-lg text-xs font-bold disabled:opacity-50">追加</button>
-                     </div>
+                     
+                     {!isTagEditMode && (
+                        <div className="flex gap-2 mt-3">
+                           <input type="text" value={newTagInput} onChange={(e) => setNewTagInput(e.target.value)} placeholder="新しいタグ..." className="flex-1 h-9 bg-slate-50 rounded-lg px-3 text-xs font-bold outline-none focus:ring-2 focus:ring-cyan-100 appearance-none"/>
+                           <button onClick={addNewTag} disabled={!newTagInput.trim()} className="h-9 px-3 bg-slate-800 text-white rounded-lg text-xs font-bold disabled:opacity-50">追加</button>
+                        </div>
+                     )}
                   </div>
 
                   <div className="space-y-3">
-                     <div className="flex items-center gap-3 bg-slate-50 rounded-2xl px-4 h-12">
+                     <div className="flex items-center gap-3 bg-slate-50 rounded-2xl px-4 h-12 border border-slate-100">
                         <MapPin className="w-4 h-4 text-slate-400 shrink-0"/>
-                        <input type="text" value={formData.location} onChange={(e)=>setFormData({...formData, location:e.target.value})} placeholder="場所 (例: 大ホール)" className="flex-1 bg-transparent text-sm font-bold outline-none text-slate-700"/>
+                        <input type="text" value={formData.location} onChange={(e)=>setFormData({...formData, location:e.target.value})} placeholder="場所 (例: 大ホール)" className="flex-1 bg-transparent text-sm font-bold outline-none text-slate-700 appearance-none"/>
                      </div>
-                     <div className="flex items-start gap-3 bg-slate-50 rounded-2xl px-4 py-3">
+                     <div className="flex items-start gap-3 bg-slate-50 rounded-2xl px-4 py-3 border border-slate-100">
                         <AlignLeft className="w-4 h-4 text-slate-400 shrink-0 mt-1"/>
                         <textarea 
                            value={formData.note} 
@@ -615,13 +677,13 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                               e.target.style.height = `${e.target.scrollHeight}px`;
                            }} 
                            placeholder="メモ・備考" 
-                           className="flex-1 bg-transparent text-sm font-medium outline-none resize-none min-h-[4rem] text-slate-700"
+                           className="flex-1 bg-transparent text-sm font-medium outline-none resize-none min-h-[4rem] text-slate-700 appearance-none"
                         ></textarea>
                      </div>
                   </div>
                </div>
                
-               {/* 4. 資料紐付け (リスト表示改善) */}
+               {/* 4. 資料紐付け */}
                {materials.length > 0 && (
                   <div className="space-y-3 pt-2 border-t border-slate-100">
                      <div className="flex items-center gap-2 px-1 text-slate-400">
@@ -652,13 +714,35 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                   </div>
                )}
 
-               <div className="flex items-center justify-between gap-4 pt-4">
-                  <div className="flex gap-1">
-                     <button onClick={() => setFormData({...formData, sortOrder: -10})} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${formData.sortOrder < 0 ? "bg-[#00c2e8] text-white shadow-md" : "bg-slate-100 text-slate-400"}`}><ArrowUp className="w-5 h-5"/></button>
-                     <button onClick={() => setFormData({...formData, sortOrder: 0})} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${formData.sortOrder === 0 ? "bg-slate-800 text-white shadow-md" : "bg-slate-100 text-slate-400"}`}><Minus className="w-5 h-5"/></button>
-                     <button onClick={() => setFormData({...formData, sortOrder: 10})} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${formData.sortOrder > 0 ? "bg-orange-500 text-white shadow-md" : "bg-slate-100 text-slate-400"}`}><ArrowDown className="w-5 h-5"/></button>
-                  </div>
-                  <div className="text-[10px] font-bold text-slate-400">並び順</div>
+               {/* ★追加: 折りたたみ式の並び順設定 */}
+               <div className="pt-4 border-t border-slate-100">
+                  <button 
+                     onClick={() => setIsSortOpen(!isSortOpen)}
+                     className="flex items-center justify-between w-full py-2"
+                  >
+                     <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+                        <Settings className="w-4 h-4" />
+                        高度な設定・並び順
+                     </div>
+                     {isSortOpen ? <ChevronUp className="w-4 h-4 text-slate-300"/> : <ChevronDown className="w-4 h-4 text-slate-300"/>}
+                  </button>
+                  
+                  {isSortOpen && (
+                     <div className="flex items-center justify-between gap-4 pt-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <button onClick={() => setFormData({...formData, sortOrder: -10})} className={`flex-1 py-3 rounded-xl flex flex-col items-center justify-center gap-1 transition-all border ${formData.sortOrder < 0 ? "bg-cyan-50 border-cyan-200 text-[#00c2e8]" : "bg-white border-slate-100 text-slate-400"}`}>
+                           <ArrowUp className="w-5 h-5"/>
+                           <span className="text-[10px] font-black">一番上</span>
+                        </button>
+                        <button onClick={() => setFormData({...formData, sortOrder: 0})} className={`flex-1 py-3 rounded-xl flex flex-col items-center justify-center gap-1 transition-all border ${formData.sortOrder === 0 ? "bg-slate-800 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-400"}`}>
+                           <Minus className="w-5 h-5"/>
+                           <span className="text-[10px] font-black">標準</span>
+                        </button>
+                        <button onClick={() => setFormData({...formData, sortOrder: 10})} className={`flex-1 py-3 rounded-xl flex flex-col items-center justify-center gap-1 transition-all border ${formData.sortOrder > 0 ? "bg-orange-50 border-orange-200 text-orange-500" : "bg-white border-slate-100 text-slate-400"}`}>
+                           <ArrowDown className="w-5 h-5"/>
+                           <span className="text-[10px] font-black">一番下</span>
+                        </button>
+                     </div>
+                  )}
                </div>
             </div>
 
@@ -670,7 +754,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
          </div>
       </div>
       
-      {/* フッター (リッチ版維持) */}
+      {/* フッター (変更なし) */}
       <footer className="mt-32 pb-12 px-4">
         {/* CTA Card */}
         <div className="max-w-xl mx-auto bg-gradient-to-br from-[#00c2e8] to-blue-600 rounded-[2rem] p-8 text-center text-white shadow-xl shadow-cyan-200/50 mb-12 relative overflow-hidden group">
