@@ -5,9 +5,10 @@ import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RefreshBadge from "@/components/RefreshBadge";
 import Link from "next/link";
-import { MapPin, Calendar, Clock, Filter, X, Link2, FileText } from "lucide-react";
+// ▼ Link2, FileText に加えて、Youtube, Video, Image などを追加
+import { MapPin, Calendar, Clock, Filter, X, Link2, FileText, Youtube, Video, Image as ImageIcon } from "lucide-react";
 
-/* === ヘルパー関数 (変更なし) === */
+/* === ヘルパー関数 (ロジック変更なし) === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
 
 function getDayNumber(dateStr: string) {
@@ -49,6 +50,26 @@ function detectEmoji(title: string) {
 function getTargetColor(t: string) {
   if (!t || t === "all" || t === "全員") return "bg-slate-100 text-slate-500";
   return "bg-cyan-50 text-[#00c2e8]";
+}
+
+// ★追加: URLからアイコンと色を自動判定するロジック
+function getMaterialInfo(url: string) {
+  const u = url.toLowerCase();
+  if (u.includes("youtube") || u.includes("youtu.be")) {
+    return { icon: Youtube, color: "text-red-500", bg: "bg-red-50 hover:bg-red-500 hover:text-white", label: "YouTube" };
+  }
+  if (u.endsWith(".mp4") || u.endsWith(".mov") || u.includes("vimeo")) {
+    return { icon: Video, color: "text-pink-500", bg: "bg-pink-50 hover:bg-pink-500 hover:text-white", label: "Video" };
+  }
+  if (u.endsWith(".pdf")) {
+    // PDFはオレンジ色にしてAcrobatっぽさを演出
+    return { icon: FileText, color: "text-orange-500", bg: "bg-orange-50 hover:bg-orange-500 hover:text-white", label: "PDF" };
+  }
+  if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+    return { icon: ImageIcon, color: "text-green-500", bg: "bg-green-50 hover:bg-green-500 hover:text-white", label: "Image" };
+  }
+  // デフォルト
+  return { icon: Link2, color: "text-[#00c2e8]", bg: "bg-cyan-50 hover:bg-[#00c2e8] hover:text-white", label: "Link" };
 }
 
 function groupByStartTime(items: any[]) {
@@ -226,7 +247,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </div>
         </section>
 
-        {/* 資料リンク集エリア */}
+        {/* 資料リンク集エリア (賢いアイコン対応版) */}
         {hasMaterials && (
           <section className="space-y-3">
              <div className="pl-2 flex items-center gap-2">
@@ -234,25 +255,30 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 <h2 className="text-xs font-black text-slate-400 uppercase tracking-wider">配布資料・リンク</h2>
              </div>
              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-               {materials.map((m) => (
-                 <a 
-                   key={m.id} 
-                   href={m.url} 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm border border-transparent hover:border-cyan-100 hover:shadow-md transition-all group"
-                 >
-                    <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center shrink-0 group-hover:bg-[#00c2e8] transition-colors">
-                       <FileText className="w-5 h-5 text-[#00c2e8] group-hover:text-white transition-colors" />
-                    </div>
-                    <div className="min-w-0">
-                       <div className="text-xs font-bold text-slate-400 mb-0.5">Link</div>
-                       <div className="text-sm font-black text-slate-800 truncate leading-tight group-hover:text-[#00c2e8] transition-colors">
-                         {m.title}
-                       </div>
-                    </div>
-                 </a>
-               ))}
+               {materials.map((m) => {
+                 // ここでURLからアイコン情報を取得
+                 const { icon: Icon, color, bg, label } = getMaterialInfo(m.url);
+                 
+                 return (
+                   <a 
+                     key={m.id} 
+                     href={m.url} 
+                     target="_blank" 
+                     rel="noopener noreferrer"
+                     className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm border border-transparent hover:border-cyan-100 hover:shadow-md transition-all group"
+                   >
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${bg}`}>
+                         <Icon className={`w-5 h-5 transition-colors ${color} group-hover:text-white`} />
+                      </div>
+                      <div className="min-w-0">
+                         <div className="text-xs font-bold text-slate-400 mb-0.5">{label}</div>
+                         <div className="text-sm font-black text-slate-800 truncate leading-tight group-hover:text-[#00c2e8] transition-colors">
+                           {m.title}
+                         </div>
+                      </div>
+                   </a>
+                 );
+               })}
              </div>
           </section>
         )}
@@ -302,7 +328,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                         badgeColor={badgeColor}
                         startHhmm={startHhmm}
                         endHhmm={endHhmm}
-                        materials={materials ?? []} // ★追加: 全資料データをカードに渡す
+                        materials={materials ?? []}
                       />
                     );
                   })}
