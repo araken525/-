@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, MapPin, ChevronDown, ChevronUp, Link2 } from "lucide-react";
+// ▼ アイコンを追加
+import { Clock, MapPin, ChevronDown, ChevronUp, Link2, Youtube, Video, FileText, Image as ImageIcon } from "lucide-react";
 
 type ScheduleItemCardProps = {
   it: any;
@@ -13,6 +14,24 @@ type ScheduleItemCardProps = {
   endHhmm: string | null;
   materials: any[];
 };
+
+// ★追加: URLからアイコンと色を自動判定するロジック
+function getMaterialInfo(url: string) {
+  const u = url.toLowerCase();
+  if (u.includes("youtube") || u.includes("youtu.be")) {
+    return { icon: Youtube, color: "text-red-500", border: "group-hover:border-red-500" };
+  }
+  if (u.endsWith(".mp4") || u.endsWith(".mov") || u.includes("vimeo")) {
+    return { icon: Video, color: "text-pink-500", border: "group-hover:border-pink-500" };
+  }
+  if (u.endsWith(".pdf")) {
+    return { icon: FileText, color: "text-orange-500", border: "group-hover:border-orange-500" };
+  }
+  if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+    return { icon: ImageIcon, color: "text-green-500", border: "group-hover:border-green-500" };
+  }
+  return { icon: Link2, color: "text-[#00c2e8]", border: "group-hover:border-[#00c2e8]" };
+}
 
 export default function ScheduleItemCard({
   it,
@@ -107,23 +126,26 @@ export default function ScheduleItemCard({
             </div>
           )}
 
-          {/* ★B案: ミニマルなテキストリンクデザイン */}
+          {/* ★修正: アイコン自動判定を適用 */}
           {linkedMaterials.length > 0 && (
             <div className="flex flex-col gap-1 mb-4 mt-1">
-              {linkedMaterials.map((m) => (
-                <a
-                  key={m.id}
-                  href={m.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-2 w-fit"
-                >
-                  <Link2 className="w-3.5 h-3.5 text-[#00c2e8] shrink-0" />
-                  <span className="text-xs font-bold text-[#00c2e8] border-b border-transparent group-hover:border-[#00c2e8] transition-all truncate max-w-[200px]">
-                    {m.title}
-                  </span>
-                </a>
-              ))}
+              {linkedMaterials.map((m) => {
+                const { icon: Icon, color, border } = getMaterialInfo(m.url);
+                return (
+                  <a
+                    key={m.id}
+                    href={m.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-2 w-fit"
+                  >
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${color}`} />
+                    <span className={`text-xs font-bold ${color} border-b border-transparent ${border} transition-all truncate max-w-[200px]`}>
+                      {m.title}
+                    </span>
+                  </a>
+                );
+              })}
             </div>
           )}
 
