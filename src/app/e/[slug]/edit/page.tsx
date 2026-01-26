@@ -2,8 +2,7 @@
 
 import { useState, use, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
-// ▼ Sparkles, ArrowRight を追加
-import { Lock, Unlock, ArrowUpRight, LogOut, Save, Plus, RefreshCw, MapPin, AlignLeft, Edit3, Trash2, X, Clock, Calendar, ArrowUp, ArrowDown, Minus, Check, Link2, FileText, Paperclip, Youtube, Video, Image as ImageIcon, Sparkles, ArrowRight } from "lucide-react";
+import { Lock, Unlock, ArrowUpRight, LogOut, Save, Plus, RefreshCw, MapPin, AlignLeft, Edit3, Trash2, X, Clock, Calendar, ArrowUp, ArrowDown, Minus, Check, Link2, FileText, Paperclip, Youtube, Video, Image as ImageIcon, Sparkles, ArrowRight, GripVertical, MoreHorizontal } from "lucide-react";
 
 /* ===== ヘルパー関数 & 定数 (変更なし) ===== */
 function hhmm(t: string) { return String(t).slice(0, 5); }
@@ -36,15 +35,10 @@ function getTargetColor(t: string) {
   return "bg-cyan-50 text-[#00c2e8]";
 }
 
-// ★修正: デフォルトのLinkも含めて、全て「青」にする
+// アイコン自動判定 (全て青色テーマ)
 function getMaterialInfo(url: string) {
   const u = url.toLowerCase();
-  
-  // 共通の青色スタイル
-  const style = { 
-    color: "text-[#00c2e8]", 
-    bg: "bg-cyan-50" 
-  };
+  const style = { color: "text-[#00c2e8]", bg: "bg-cyan-50" };
 
   if (u.includes("youtube") || u.includes("youtu.be")) {
     return { icon: Youtube, ...style, label: "YouTube" };
@@ -58,8 +52,6 @@ function getMaterialInfo(url: string) {
   if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
     return { icon: ImageIcon, ...style, label: "Image" };
   }
-  
-  // ここを修正しました！ (グレー設定を削除し、青スタイルを適用)
   return { icon: Link2, ...style, label: "Link" };
 }
 
@@ -81,7 +73,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
   const [matTitle, setMatTitle] = useState("");
   const [matUrl, setMatUrl] = useState("");
   const [matLoading, setMatLoading] = useState(false);
-  // 編集中の資料ID
   const [editingMaterialId, setEditingMaterialId] = useState<number | null>(null);
 
   // 編集シート状態
@@ -113,7 +104,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     })();
   }, [slug]);
 
-  // データ読み込み（スケジュール＆資料）
+  // データ読み込み
   async function loadAllData() {
     if (!event?.id) return;
     
@@ -131,7 +122,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
       setRecentTags(["全員", ...Array.from(tags)]);
     }
 
-    // 資料データ読み込み
+    // 資料データ
     const { data: mData } = await supabase.from("event_materials").select("*").eq("event_id", event.id).order("sort_order", { ascending: true });
     setMaterials(mData ?? []);
   }
@@ -237,21 +228,18 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     setFormData({ ...formData, materialIds: currentIds });
   }
 
-  // 編集モード開始
   function startEditMaterial(m: any) {
     setEditingMaterialId(m.id);
     setMatTitle(m.title);
     setMatUrl(m.url);
   }
 
-  // 編集モードキャンセル
   function cancelEditMaterial() {
     setEditingMaterialId(null);
     setMatTitle("");
     setMatUrl("");
   }
 
-  // 資料の更新ロジック
   async function updateMaterial() {
     if (!matTitle.trim() || !matUrl.trim() || !editingMaterialId) return;
     setMatLoading(true);
@@ -272,7 +260,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     }
   }
 
-  // 資料追加ロジック
   async function addMaterial() {
     if (!matTitle.trim() || !matUrl.trim()) return;
     setMatLoading(true);
@@ -372,10 +359,10 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
       <div className="pt-20 px-4 w-full max-w-lg md:max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
           
-          {/* 左カラム */}
+          {/* 左カラム: イベント情報 & 資料管理 */}
           <div className="md:col-span-4 md:sticky md:top-24 space-y-6">
             {event && (
-              <section className="bg-white rounded-[1.5rem] p-6 shadow-sm">
+              <section className="bg-white rounded-[1.5rem] p-6 shadow-sm border border-slate-50">
                  <div>
                    <h1 className="text-xl font-black text-slate-800 leading-tight mb-3">{event.title}</h1>
                    <div className="space-y-2">
@@ -388,112 +375,89 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                         {event.venue_name || "未設定"}
                       </div>
                    </div>
-                   <div className="mt-4 pt-4 border-t border-slate-100">
-                      <p className="text-xs font-bold text-slate-400 mb-2">編集のヒント</p>
-                      <ul className="text-xs text-slate-500 space-y-1 list-disc pl-4">
-                        <li>右下の「＋」ボタンで追加</li>
-                        <li>項目タップで編集</li>
-                        <li>ゴミ箱アイコンで削除</li>
-                      </ul>
-                   </div>
                  </div>
               </section>
             )}
 
-            {/* 配布資料・リンク管理エリア */}
-            <section className="bg-white rounded-[1.5rem] p-6 shadow-sm space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                 <Link2 className="w-4 h-4 text-slate-400" />
-                 <h3 className="text-sm font-black text-slate-700">配布資料・リンク</h3>
+            {/* 資料管理エリア */}
+            <section className="bg-white rounded-[1.5rem] shadow-sm border border-slate-50 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                 <div className="flex items-center gap-2">
+                    <Link2 className="w-4 h-4 text-[#00c2e8]" />
+                    <h3 className="text-sm font-black text-slate-700">資料リンク管理</h3>
+                 </div>
+                 <div className="text-[10px] font-bold text-slate-400">{materials.length}件</div>
               </div>
               
-              {materials.length > 0 ? (
+              {/* 入力フォーム (境界を明確化) */}
+              <div className="p-4 bg-white space-y-3">
                  <div className="space-y-2">
-                   {materials.map(m => {
-                      const { icon: Icon, color, bg } = getMaterialInfo(m.url);
-                      const isEditing = editingMaterialId === m.id;
-                      return (
-                        <div key={m.id} className={`flex items-center justify-between p-3 rounded-xl transition-all ${isEditing ? "bg-cyan-50 border border-cyan-200" : "bg-slate-50 border border-transparent"}`}>
-                           <div className="flex items-center gap-3 overflow-hidden">
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${bg}`}>
-                                 <Icon className={`w-4 h-4 ${color}`} />
-                              </div>
-                              <div className="min-w-0">
-                                 <div className={`text-xs font-bold truncate ${isEditing ? "text-[#00c2e8]" : "text-slate-800"}`}>{m.title}</div>
-                                 <div className="text-[10px] text-slate-400 truncate opacity-70">{m.url}</div>
-                              </div>
-                           </div>
-                           <div className="flex items-center gap-1 shrink-0">
-                             <button 
-                               onClick={() => startEditMaterial(m)}
-                               className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${isEditing ? "text-[#00c2e8] bg-white shadow-sm" : "text-slate-300 hover:text-[#00c2e8] hover:bg-cyan-50"}`}
-                             >
-                                <Edit3 className="w-4 h-4" />
-                             </button>
-                             <button 
-                               onClick={() => removeMaterial(m.id)}
-                               className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
-                             >
-                                <Trash2 className="w-4 h-4" />
-                             </button>
-                           </div>
-                        </div>
-                      );
-                   })}
+                    <input 
+                      type="text" 
+                      value={matTitle}
+                      onChange={(e) => setMatTitle(e.target.value)}
+                      placeholder="タイトル (例: 進行表)" 
+                      className="w-full h-10 px-3 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-cyan-100 transition-all border border-transparent focus:border-cyan-100"
+                    />
+                    <input 
+                      type="text" 
+                      value={matUrl}
+                      onChange={(e) => setMatUrl(e.target.value)}
+                      placeholder="URL (https://...)" 
+                      className="w-full h-10 px-3 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-cyan-100 transition-all border border-transparent focus:border-cyan-100"
+                    />
                  </div>
-              ) : (
-                 <p className="text-xs text-slate-400 text-center py-2">登録されたリンクはありません</p>
-              )}
-
-              <div className="pt-2 space-y-2">
-                 <input 
-                   type="text" 
-                   value={matTitle}
-                   onChange={(e) => setMatTitle(e.target.value)}
-                   placeholder="タイトル (例: 配置図)" 
-                   className="w-full h-10 px-3 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
-                 />
-                 <input 
-                   type="text" 
-                   value={matUrl}
-                   onChange={(e) => setMatUrl(e.target.value)}
-                   placeholder="URL (https://...)" 
-                   className="w-full h-10 px-3 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
-                 />
                  
                  {editingMaterialId ? (
                    <div className="flex gap-2">
-                      <button 
-                         onClick={cancelEditMaterial}
-                         className="flex-1 h-10 bg-slate-100 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-200 transition-all"
-                      >
-                         キャンセル
-                      </button>
-                      <button 
-                         onClick={updateMaterial}
-                         disabled={!matTitle || !matUrl || matLoading}
-                         className="flex-[2] h-10 bg-[#00c2e8] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-cyan-500 disabled:opacity-50 transition-all"
-                      >
-                         {matLoading ? "更新中..." : <><RefreshCw className="w-4 h-4" /> 変更を保存</>}
+                      <button onClick={cancelEditMaterial} className="flex-1 h-10 bg-slate-100 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-200 transition-all">キャンセル</button>
+                      <button onClick={updateMaterial} disabled={!matTitle || !matUrl || matLoading} className="flex-[2] h-10 bg-[#00c2e8] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-cyan-500 disabled:opacity-50 transition-all">
+                         {matLoading ? "更新中" : <><RefreshCw className="w-3.5 h-3.5" /> 保存</>}
                       </button>
                    </div>
                  ) : (
-                   <button 
-                     onClick={addMaterial}
-                     disabled={!matTitle || !matUrl || matLoading}
-                     className="w-full h-10 bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-black disabled:opacity-50 transition-all"
-                   >
-                     {matLoading ? "追加中..." : <><Plus className="w-4 h-4" /> リンクを追加</>}
+                   <button onClick={addMaterial} disabled={!matTitle || !matUrl || matLoading} className="w-full h-10 bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-black disabled:opacity-50 transition-all shadow-sm">
+                     {matLoading ? "追加中..." : <><Plus className="w-3.5 h-3.5" /> 新規追加</>}
                    </button>
+                 )}
+              </div>
+
+              {/* 登録済みリスト */}
+              <div className="bg-slate-50/50 p-2 space-y-1 border-t border-slate-100 min-h-[100px]">
+                 {materials.length > 0 ? materials.map(m => {
+                    const { icon: Icon, color, bg } = getMaterialInfo(m.url);
+                    const isEditing = editingMaterialId === m.id;
+                    return (
+                      <div key={m.id} className={`flex items-center justify-between p-2.5 rounded-xl transition-all group bg-white border ${isEditing ? "border-[#00c2e8] shadow-sm" : "border-slate-100 hover:border-slate-300"}`}>
+                         <div className="flex items-center gap-3 overflow-hidden">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${bg}`}>
+                               <Icon className={`w-4 h-4 ${color}`} />
+                            </div>
+                            <div className="min-w-0">
+                               <div className={`text-xs font-bold truncate ${isEditing ? "text-[#00c2e8]" : "text-slate-800"}`}>{m.title}</div>
+                               <div className="text-[10px] text-slate-400 truncate opacity-70">{m.url}</div>
+                            </div>
+                         </div>
+                         <div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                           <button onClick={() => startEditMaterial(m)} className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-[#00c2e8] hover:bg-cyan-50 transition-all"><Edit3 className="w-3.5 h-3.5" /></button>
+                           <button onClick={() => removeMaterial(m.id)} className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+                         </div>
+                      </div>
+                    );
+                 }) : (
+                    <div className="flex flex-col items-center justify-center py-8 text-slate-300 gap-2">
+                       <Link2 className="w-6 h-6 opacity-50"/>
+                       <span className="text-xs font-bold">まだリンクがありません</span>
+                    </div>
                  )}
               </div>
             </section>
           </div>
 
           {/* 右カラム: スケジュール */}
-          <section className="space-y-4 md:col-span-8">
-            <div className="flex items-center gap-2 mb-2 px-1 md:hidden">
-               <span className="text-xs font-bold text-slate-400">スケジュール一覧</span>
+          <section className="space-y-4 md:col-span-8 pb-32">
+            <div className="flex items-center justify-between mb-4 px-1">
+               <span className="text-xs font-bold text-slate-400">スケジュール ({items.length}件)</span>
             </div>
             
             {items.map((it) => {
@@ -501,131 +465,147 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                const emoji = it.emoji || detectEmoji(it.title);
                const duration = getDuration(it.start_time, it.end_time);
                const displayTarget = it.target && it.target !== "all" ? it.target.replace(/,/g, "・") : "全員";
-               
                const currentMaterialIds = it.material_ids ? it.material_ids.split(",") : [];
                const validCount = currentMaterialIds.filter((id: string) => materials.some(m => String(m.id) === id)).length;
                
                return (
-                <div key={it.id} className="group relative bg-white rounded-[1.5rem] p-5 flex gap-5 items-stretch shadow-sm border border-transparent transition-all hover:shadow-md">
-                  <div className="flex flex-col items-center shrink-0 space-y-2">
+                <div key={it.id} className="relative bg-white rounded-[1.5rem] p-5 flex gap-5 items-stretch shadow-sm border border-slate-100 hover:border-slate-300 transition-all group">
+                  {/* 左側: 時間と絵文字 */}
+                  <div className="flex flex-col items-center shrink-0 space-y-2 pt-1">
                      <div className="text-lg font-black text-slate-800 leading-none">{hhmm(it.start_time)}</div>
-                     <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-3xl">{emoji}</div>
+                     <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-3xl shadow-inner">{emoji}</div>
                   </div>
-                  <div className="flex-1 min-w-0 flex flex-col justify-center py-1">
-                    <div className="flex justify-between items-start mb-1">
+
+                  {/* 中央: コンテンツ */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-center py-1 pr-12">
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
                        <h3 className="text-lg font-black leading-tight text-slate-900">{it.title}</h3>
-                       <span className={`ml-2 shrink-0 px-2 py-0.5 rounded-md text-[10px] font-black ${badgeColor}`}>{displayTarget}</span>
+                       <span className={`px-2 py-0.5 rounded-md text-[10px] font-black ${badgeColor}`}>{displayTarget}</span>
                     </div>
-                    {it.end_time && <div className="flex items-center text-sm font-bold text-[#00c2e8] mb-1"><Clock className="w-3.5 h-3.5 mr-1"/>~{hhmm(it.end_time)} まで</div>}
-                    {it.note && <div className="text-xs text-slate-600 leading-relaxed font-medium mb-2 line-clamp-2">{it.note}</div>}
+                    
+                    {it.end_time && (
+                       <div className="flex items-center text-xs font-bold text-[#00c2e8] mb-2 bg-cyan-50 w-fit px-2 py-0.5 rounded-lg">
+                          <Clock className="w-3 h-3 mr-1"/>~{hhmm(it.end_time)}
+                       </div>
+                    )}
+                    
+                    {it.note && <div className="text-xs text-slate-600 leading-relaxed font-medium mb-3 line-clamp-2">{it.note}</div>}
                     
                     <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-400">
-                       {it.location && <div className="flex items-center"><MapPin className="w-3 h-3 mr-1 text-slate-300"/>{it.location}</div>}
-                       {duration && <div>⏳ {duration}</div>}
+                       {it.location && <div className="flex items-center bg-slate-50 px-2 py-1 rounded-md"><MapPin className="w-3 h-3 mr-1 text-slate-300"/>{it.location}</div>}
+                       {duration && <div className="bg-slate-50 px-2 py-1 rounded-md">⏳ {duration}</div>}
                        {validCount > 0 && (
-                          <div className="flex items-center text-[#00c2e8] bg-cyan-50 px-2 py-0.5 rounded-full">
-                            <Paperclip className="w-3 h-3 mr-1"/>
-                            {validCount}件の資料
+                          <div className="flex items-center text-[#00c2e8] bg-cyan-50 px-2 py-1 rounded-md">
+                            <Paperclip className="w-3 h-3 mr-1"/>{validCount}件
                           </div>
                        )}
                     </div>
                   </div>
-                  <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[1px] rounded-[1.5rem] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end p-4 gap-2">
-                     <button onClick={() => openSheet(it)} className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-blue-500 hover:bg-blue-50 active:scale-95 transition-all" title="編集"><Edit3 className="w-5 h-5"/></button>
-                     <button onClick={() => removeItem(it.id)} className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-red-500 hover:bg-red-50 active:scale-95 transition-all" title="削除"><Trash2 className="w-5 h-5"/></button>
+
+                  {/* 右上: 常時表示のアクションボタン (スマホ対策) */}
+                  <div className="absolute top-4 right-4 flex flex-col gap-2">
+                     <button onClick={() => openSheet(it)} className="w-9 h-9 rounded-xl bg-slate-50 text-slate-400 hover:text-[#00c2e8] hover:bg-cyan-50 flex items-center justify-center transition-all shadow-sm active:scale-95" title="編集">
+                        <Edit3 className="w-4 h-4"/>
+                     </button>
+                     <button onClick={() => removeItem(it.id)} className="w-9 h-9 rounded-xl bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-all shadow-sm active:scale-95" title="削除">
+                        <Trash2 className="w-4 h-4"/>
+                     </button>
                   </div>
                 </div>
                );
             })}
-            {items.length === 0 && <div className="text-center py-12 text-slate-400 font-bold text-sm">予定がありません。「＋」ボタンで追加しましょう！</div>}
+            {items.length === 0 && <div className="text-center py-20 bg-white rounded-[2rem] border-2 border-dashed border-slate-100 text-slate-300 font-bold">まだ予定がありません</div>}
           </section>
-
         </div>
       </div>
 
-      <button onClick={() => openSheet()} className="fixed bottom-6 right-6 w-14 h-14 bg-[#00c2e8] rounded-full shadow-lg text-white flex items-center justify-center active:scale-90 transition-all z-30 hover:scale-105">
+      <button onClick={() => openSheet()} className="fixed bottom-6 right-6 w-14 h-14 bg-[#00c2e8] rounded-full shadow-xl shadow-cyan-200 text-white flex items-center justify-center active:scale-90 transition-all z-30 hover:scale-105 hover:bg-cyan-400">
         <Plus className="w-8 h-8" />
       </button>
 
-      {/* 入力フォーム */}
+      {/* 入力フォーム (リッチUI化) */}
       <div className={`fixed inset-0 z-50 flex items-end justify-center pointer-events-none ${isSheetOpen ? "visible" : "invisible"}`}>
-         <div className={`absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${isSheetOpen ? "opacity-100 pointer-events-auto" : "opacity-0"}`} onClick={closeSheet}></div>
+         <div className={`absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 ${isSheetOpen ? "opacity-100 pointer-events-auto" : "opacity-0"}`} onClick={closeSheet}></div>
          
          <div ref={sheetRef} className={`relative w-full max-w-lg bg-white rounded-t-[2.5rem] shadow-2xl pointer-events-auto transition-transform duration-300 ease-out flex flex-col max-h-[95vh] ${isSheetOpen ? "translate-y-0" : "translate-y-full"}`}>
-            <div className="shrink-0 relative h-14 flex items-center justify-center">
+            {/* ハンドルバー */}
+            <div className="shrink-0 relative h-12 flex items-center justify-center cursor-pointer" onClick={closeSheet}>
                <div className="w-12 h-1.5 bg-slate-200 rounded-full absolute top-4"></div>
-               <button onClick={closeSheet} className="absolute right-6 top-4 p-2 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full transition-all z-10">
-                  <X className="w-5 h-5" />
-               </button>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-6 pt-0 space-y-6 no-scrollbar">
+            <div className="flex-1 overflow-y-auto px-6 pb-6 pt-0 space-y-8 no-scrollbar">
+               {/* 1. タイトルセクション */}
                <div className="space-y-4">
+                  <div className="flex items-start gap-4">
+                     <div className="w-20 h-20 shrink-0 bg-slate-50 rounded-2xl flex items-center justify-center relative shadow-inner border border-slate-100">
+                        <input type="text" value={formData.emoji} onChange={(e)=>setFormData({...formData, emoji:e.target.value})} className="w-full h-full bg-transparent text-center text-5xl outline-none p-0" placeholder="🎵"/>
+                     </div>
+                     <div className="flex-1 pt-1">
+                        <label className="text-[10px] font-bold text-slate-400 block mb-1">タイトル</label>
+                        <input type="text" value={formData.title} onChange={(e)=>setFormData({...formData, title:e.target.value})} placeholder="練習, 移動, 本番..." className="w-full bg-transparent text-2xl font-black placeholder:text-slate-200 outline-none border-b-2 border-slate-100 focus:border-[#00c2e8] transition-colors py-1 text-slate-800"/>
+                     </div>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar py-2 mask-linear">
+                     {EMOJI_PRESETS.map((emoji) => (
+                        <button key={emoji} onClick={() => setFormData({...formData, emoji})} className={`shrink-0 w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${formData.emoji === emoji ? "bg-cyan-50 text-[#00c2e8] scale-110 shadow-sm border border-cyan-100" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}>
+                           {emoji}
+                        </button>
+                     ))}
+                  </div>
+               </div>
+
+               {/* 2. タイムブロック (大きく見やすく) */}
+               <div className="bg-slate-50 p-4 rounded-3xl space-y-4 border border-slate-100">
+                  <div className="flex items-center gap-2 mb-2">
+                     <Clock className="w-4 h-4 text-[#00c2e8]"/>
+                     <span className="text-xs font-bold text-slate-500">時間設定</span>
+                  </div>
                   <div className="flex items-center gap-4">
-                     <div className="w-16 h-16 shrink-0 bg-slate-50 rounded-2xl flex items-center justify-center relative shadow-inner">
-                        <input type="text" value={formData.emoji} onChange={(e)=>setFormData({...formData, emoji:e.target.value})} className="w-full h-full bg-transparent text-center text-4xl outline-none" placeholder="🎵"/>
-                     </div>
                      <div className="flex-1">
-                        <input type="text" value={formData.title} onChange={(e)=>setFormData({...formData, title:e.target.value})} placeholder="何をする？" className="w-full h-16 bg-transparent text-2xl font-black placeholder:text-slate-300 outline-none border-b-2 border-slate-100 focus:border-[#00c2e8] transition-colors"/>
+                        <label className="text-[10px] font-bold text-slate-400 block mb-1 text-center">開始</label>
+                        <input type="time" value={formData.startTime} onChange={(e)=>setFormData({...formData, startTime:e.target.value})} className="w-full h-14 bg-white rounded-xl text-2xl font-black text-center outline-none shadow-sm focus:ring-2 focus:ring-cyan-100 transition-all text-slate-800"/>
                      </div>
-                  </div>
-                  <div>
-                     <p className="text-xs font-bold text-slate-400 mb-2 pl-1">アイコンをえらぶ</p>
-                     <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-                        {EMOJI_PRESETS.map((emoji) => (
-                           <button key={emoji} onClick={() => setFormData({...formData, emoji})} className={`shrink-0 w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${formData.emoji === emoji ? "bg-cyan-50 text-[#00c2e8] scale-110" : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}>
-                              {emoji}
-                           </button>
-                        ))}
+                     <div className="text-slate-300 pt-4"><ArrowRight className="w-6 h-6"/></div>
+                     <div className="flex-1 relative">
+                        <label className="text-[10px] font-bold text-slate-400 block mb-1 text-center">終了</label>
+                        <input type="time" value={formData.endTime} onChange={(e)=>setFormData({...formData, endTime:e.target.value})} className="w-full h-14 bg-white rounded-xl text-2xl font-black text-center outline-none shadow-sm focus:ring-2 focus:ring-cyan-100 transition-all text-slate-800 placeholder:text-slate-200"/>
+                        {formData.endTime && (
+                          <button onClick={() => setFormData({...formData, endTime: ""})} className="absolute -top-2 -right-2 w-6 h-6 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm"><X className="w-3 h-3"/></button>
+                        )}
                      </div>
                   </div>
                </div>
 
-               <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-50 rounded-2xl p-3">
-                     <label className="text-[10px] font-bold text-slate-400 block mb-1">開始</label>
-                     <input type="time" value={formData.startTime} onChange={(e)=>setFormData({...formData, startTime:e.target.value})} className="w-full bg-transparent text-xl font-black text-center outline-none"/>
-                  </div>
-                  {/* 終了時間をクリアできる機能 */}
-                  <div className="bg-slate-50 rounded-2xl p-3 relative group">
-                     <label className="text-[10px] font-bold text-slate-400 block mb-1">終了 (任意)</label>
-                     <input type="time" value={formData.endTime} onChange={(e)=>setFormData({...formData, endTime:e.target.value})} className="w-full bg-transparent text-xl font-black text-center outline-none text-slate-600 placeholder:text-slate-300"/>
-                     {formData.endTime && (
-                       <button onClick={() => setFormData({...formData, endTime: ""})} className="absolute top-1/2 -translate-y-1/2 right-3 w-6 h-6 flex items-center justify-center bg-slate-200 text-slate-500 rounded-full hover:bg-slate-300 transition-all">
-                          <X className="w-3 h-3" />
-                       </button>
-                     )}
-                  </div>
-               </div>
-
+               {/* 3. 詳細情報 */}
                <div className="space-y-4">
-                  <label className="text-xs font-bold text-slate-400 block -mb-2 pl-1">対象パート</label>
-                  <button onClick={() => toggleTag("全員")} className={`w-full h-12 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all ${(formData.target === "全員" || !formData.target) ? "bg-[#00c2e8] text-white" : "bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
-                     {(formData.target === "全員" || !formData.target) && <Check className="w-4 h-4"/>}全員
-                  </button>
-                  {recentTags.filter(t => t !== "全員").length > 0 && (
-                     <div className="grid grid-cols-3 gap-2">
-                        {recentTags.filter(t => t !== "全員").map((t) => {
+                  <div>
+                     <label className="text-[10px] font-bold text-slate-400 block mb-2">対象タグ</label>
+                     <div className="flex flex-wrap gap-2">
+                        <button onClick={() => toggleTag("全員")} className={`h-9 px-4 rounded-full font-bold text-xs flex items-center gap-1 transition-all ${(formData.target === "全員" || !formData.target) ? "bg-[#00c2e8] text-white shadow-md shadow-cyan-200" : "bg-slate-100 text-slate-500"}`}>
+                           {(formData.target === "全員" || !formData.target) && <Check className="w-3 h-3"/>} 全員
+                        </button>
+                        {recentTags.filter(t => t !== "全員").map(t => {
                            const currentList = formData.target ? formData.target.split(",").map(x => x.trim()) : [];
                            const isActive = currentList.includes(t);
                            return (
-                              <button key={t} onClick={() => toggleTag(t)} className={`h-10 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 ${isActive ? "bg-cyan-50 text-[#00c2e8] border border-cyan-100" : "bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent"}`}>
-                                 {isActive && <Check className="w-3 h-3"/>}<span className="truncate">{t}</span>
+                              <button key={t} onClick={() => toggleTag(t)} className={`h-9 px-3 rounded-full font-bold text-xs transition-all flex items-center gap-1 ${isActive ? "bg-cyan-50 text-[#00c2e8] border border-cyan-200" : "bg-white border border-slate-200 text-slate-500"}`}>
+                                 {isActive && <Check className="w-3 h-3"/>} {t}
                               </button>
-                           );
+                           )
                         })}
                      </div>
-                  )}
-                  <div className="flex gap-2">
-                     <input type="text" value={newTagInput} onChange={(e) => setNewTagInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewTag())} placeholder="新しいタグを追加..." className="flex-1 h-10 bg-slate-50 rounded-xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-cyan-100 transition-all"/>
-                     <button onClick={addNewTag} disabled={!newTagInput.trim()} className="h-10 px-4 bg-slate-800 text-white rounded-xl font-bold text-sm disabled:opacity-30 transition-all">追加</button>
-                  </div>
-                  <div className="space-y-3 pt-2">
-                     <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 h-12">
-                        <MapPin className="w-4 h-4 text-slate-400 shrink-0"/>
-                        <input type="text" value={formData.location} onChange={(e)=>setFormData({...formData, location:e.target.value})} placeholder="場所を追加" className="flex-1 bg-transparent text-sm font-bold outline-none"/>
+                     <div className="flex gap-2 mt-3">
+                        <input type="text" value={newTagInput} onChange={(e) => setNewTagInput(e.target.value)} placeholder="新しいタグ..." className="flex-1 h-9 bg-slate-50 rounded-lg px-3 text-xs font-bold outline-none focus:ring-2 focus:ring-cyan-100"/>
+                        <button onClick={addNewTag} disabled={!newTagInput.trim()} className="h-9 px-3 bg-slate-800 text-white rounded-lg text-xs font-bold disabled:opacity-50">追加</button>
                      </div>
-                     <div className="flex items-start gap-3 bg-slate-50 rounded-xl px-4 py-3">
+                  </div>
+
+                  <div className="space-y-3">
+                     <div className="flex items-center gap-3 bg-slate-50 rounded-2xl px-4 h-12">
+                        <MapPin className="w-4 h-4 text-slate-400 shrink-0"/>
+                        <input type="text" value={formData.location} onChange={(e)=>setFormData({...formData, location:e.target.value})} placeholder="場所 (例: 大ホール)" className="flex-1 bg-transparent text-sm font-bold outline-none text-slate-700"/>
+                     </div>
+                     <div className="flex items-start gap-3 bg-slate-50 rounded-2xl px-4 py-3">
                         <AlignLeft className="w-4 h-4 text-slate-400 shrink-0 mt-1"/>
                         <textarea 
                            value={formData.note} 
@@ -634,29 +614,29 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                               e.target.style.height = "auto";
                               e.target.style.height = `${e.target.scrollHeight}px`;
                            }} 
-                           placeholder="メモを追加" 
-                           className="flex-1 bg-transparent text-sm font-medium outline-none resize-none min-h-[5rem] overflow-hidden"
+                           placeholder="メモ・備考" 
+                           className="flex-1 bg-transparent text-sm font-medium outline-none resize-none min-h-[4rem] text-slate-700"
                         ></textarea>
                      </div>
                   </div>
                </div>
                
+               {/* 4. 資料紐付け (リスト表示改善) */}
                {materials.length > 0 && (
-                  <div className="space-y-3">
-                     <div className="flex items-center gap-2 px-1">
-                        <Paperclip className="w-4 h-4 text-slate-400" />
-                        <label className="text-xs font-bold text-slate-400">資料を紐付ける</label>
+                  <div className="space-y-3 pt-2 border-t border-slate-100">
+                     <div className="flex items-center gap-2 px-1 text-slate-400">
+                        <Paperclip className="w-4 h-4" />
+                        <span className="text-xs font-bold">資料を紐付ける</span>
                      </div>
                      <div className="grid grid-cols-1 gap-2">
                         {materials.map(m => {
                            const isLinked = formData.materialIds.includes(String(m.id));
-                           // アイコン自動判定
                            const { icon: Icon, color, bg } = getMaterialInfo(m.url);
                            return (
                               <button 
                                 key={m.id} 
                                 onClick={() => toggleMaterialLink(m.id)}
-                                className={`flex items-center justify-between p-3 rounded-xl border transition-all ${isLinked ? "bg-cyan-50 border-cyan-200" : "bg-slate-50 border-transparent hover:bg-slate-100"}`}
+                                className={`flex items-center justify-between p-3 rounded-xl border transition-all ${isLinked ? "bg-cyan-50 border-cyan-200 shadow-sm" : "bg-white border-slate-100 hover:bg-slate-50"}`}
                               >
                                  <div className="flex items-center gap-3 overflow-hidden">
                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${bg}`}>
@@ -664,7 +644,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                                     </div>
                                     <span className={`text-xs font-bold truncate ${isLinked ? "text-slate-800" : "text-slate-500"}`}>{m.title}</span>
                                  </div>
-                                 {isLinked && <Check className="w-4 h-4 text-[#00c2e8]" />}
+                                 {isLinked ? <div className="w-5 h-5 bg-[#00c2e8] rounded-full flex items-center justify-center"><Check className="w-3 h-3 text-white"/></div> : <div className="w-5 h-5 rounded-full border-2 border-slate-200"></div>}
                               </button>
                            )
                         })}
@@ -672,51 +652,42 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                   </div>
                )}
 
-               <div className="bg-slate-50 rounded-2xl p-1 flex">
-                  <button onClick={() => setFormData({...formData, sortOrder: -10})} className={`flex-1 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-all ${formData.sortOrder < 0 ? "bg-white text-blue-500 shadow-sm" : "text-slate-400"}`}><ArrowUp className="w-3.5 h-3.5"/> 先頭</button>
-                  <button onClick={() => setFormData({...formData, sortOrder: 0})} className={`flex-1 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-all ${formData.sortOrder === 0 ? "bg-white text-slate-700 shadow-sm" : "text-slate-400"}`}><Minus className="w-3.5 h-3.5"/> 標準</button>
-                  <button onClick={() => setFormData({...formData, sortOrder: 10})} className={`flex-1 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-all ${formData.sortOrder > 0 ? "bg-white text-orange-500 shadow-sm" : "text-slate-400"}`}><ArrowDown className="w-3.5 h-3.5"/> 末尾</button>
+               <div className="flex items-center justify-between gap-4 pt-4">
+                  <div className="flex gap-1">
+                     <button onClick={() => setFormData({...formData, sortOrder: -10})} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${formData.sortOrder < 0 ? "bg-[#00c2e8] text-white shadow-md" : "bg-slate-100 text-slate-400"}`}><ArrowUp className="w-5 h-5"/></button>
+                     <button onClick={() => setFormData({...formData, sortOrder: 0})} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${formData.sortOrder === 0 ? "bg-slate-800 text-white shadow-md" : "bg-slate-100 text-slate-400"}`}><Minus className="w-5 h-5"/></button>
+                     <button onClick={() => setFormData({...formData, sortOrder: 10})} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${formData.sortOrder > 0 ? "bg-orange-500 text-white shadow-md" : "bg-slate-100 text-slate-400"}`}><ArrowDown className="w-5 h-5"/></button>
+                  </div>
+                  <div className="text-[10px] font-bold text-slate-400">並び順</div>
                </div>
             </div>
 
-            <div className="shrink-0 p-6 pt-0 bg-white">
-               <button onClick={saveItem} className="w-full h-14 bg-[#00c2e8] rounded-[1.2rem] font-black text-white active:scale-95 transition-all flex items-center justify-center gap-2">
-                  {editingId ? <><RefreshCw className="w-5 h-5"/> 更新する</> : <><Save className="w-5 h-5"/> リストに追加</>}
+            <div className="shrink-0 p-6 pt-2 bg-white pb-8">
+               <button onClick={saveItem} className="w-full h-14 bg-[#00c2e8] rounded-2xl font-black text-white active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-200/50 hover:bg-cyan-400">
+                  {editingId ? <><RefreshCw className="w-5 h-5"/> 変更を保存</> : <><Save className="w-5 h-5"/> リストに追加</>}
                </button>
             </div>
          </div>
       </div>
       
-      {/* ★追加: 戦略的フッターエリア (ユーザー獲得CTA + ブランディング) */}
+      {/* フッター (リッチ版維持) */}
       <footer className="mt-32 pb-12 px-4">
-        {/* CTA Card: アプリ利用促進 */}
+        {/* CTA Card */}
         <div className="max-w-xl mx-auto bg-gradient-to-br from-[#00c2e8] to-blue-600 rounded-[2rem] p-8 text-center text-white shadow-xl shadow-cyan-200/50 mb-12 relative overflow-hidden group">
-          {/* 装飾 */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
           <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2 pointer-events-none"></div>
-
           <div className="relative z-10">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-black mb-4 border border-white/20 shadow-sm">
                <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
                <span>完全無料・Beta版公開中</span>
             </div>
-            <h3 className="text-2xl font-black mb-3 leading-tight tracking-tight drop-shadow-sm">
-              あなたの団体でも、<br/>
-              <span className="text-cyan-100">TaiSuke</span> を使いませんか？
-            </h3>
-            <p className="text-sm font-bold text-cyan-50 mb-8 leading-relaxed opacity-90">
-              練習日程、本番のタイムテーブル、資料共有。<br/>
-              面倒な連絡を、これひとつでスマートに完結。
-            </p>
-            <a href="/" className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-4 bg-white text-[#00c2e8] rounded-2xl font-black text-sm hover:bg-cyan-50 transition-all active:scale-95 shadow-lg">
-              無料でイベントを作る <ArrowRight className="w-4 h-4" />
-            </a>
+            <h3 className="text-2xl font-black mb-3 leading-tight tracking-tight drop-shadow-sm">あなたの団体でも、<br/><span className="text-cyan-100">TaiSuke</span> を使いませんか？</h3>
+            <p className="text-sm font-bold text-cyan-50 mb-8 leading-relaxed opacity-90">練習日程、本番のタイムテーブル、資料共有。<br/>面倒な連絡を、これひとつでスマートに完結。</p>
+            <a href="/" className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-4 bg-white text-[#00c2e8] rounded-2xl font-black text-sm hover:bg-cyan-50 transition-all active:scale-95 shadow-lg">無料でイベントを作る <ArrowRight className="w-4 h-4" /></a>
           </div>
         </div>
-
         {/* Branding Footer */}
         <div className="max-w-xl mx-auto text-center space-y-8">
-           {/* リンク集 */}
            <div className="flex flex-wrap justify-center gap-4 text-xs font-bold text-slate-400">
               <a href="/" className="hover:text-[#00c2e8] transition-colors">トップページ</a>
               <span className="text-slate-300">|</span>
@@ -724,24 +695,13 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
               <span className="text-slate-300">|</span>
               <a href="https://kawasakiebase.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#00c2e8] transition-colors">運営元</a>
            </div>
-
-           {/* ロゴ & コピーライト */}
            <div className="space-y-2">
               <div className="text-2xl font-black text-slate-300 tracking-tighter">TaiSuke</div>
-              <div className="text-[10px] text-slate-400 font-bold">
-                 © 2026 Time Schedule Sharing App
-              </div>
+              <div className="text-[10px] text-slate-400 font-bold">© 2026 Time Schedule Sharing App</div>
            </div>
-
-           {/* Ensemble Labs Badge */}
            <div className="pt-8 border-t border-slate-100">
               <p className="text-[10px] font-black text-slate-300 tracking-[0.2em] mb-3">PRODUCED BY</p>
-              <a 
-                href="https://kawasakiebase.com" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all group"
-              >
+              <a href="https://kawasakiebase.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all group">
                  <span className="w-2.5 h-2.5 rounded-full bg-[#00c2e8] group-hover:scale-125 transition-transform shadow-sm shadow-cyan-200"></span>
                  <span className="text-xs font-bold text-slate-600 group-hover:text-slate-900 tracking-wide">ENSEMBLE LABS</span>
               </a>
