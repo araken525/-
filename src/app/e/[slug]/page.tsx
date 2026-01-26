@@ -5,7 +5,6 @@ import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RefreshBadge from "@/components/RefreshBadge";
 import Link from "next/link";
-// ▼ Sparkles, ArrowRight を追加 (フッターの装飾用)
 import { MapPin, Calendar, Clock, Filter, X, Link2, FileText, Youtube, Video, Image as ImageIcon, Sparkles, ArrowRight } from "lucide-react";
 
 /* === ヘルパー関数 (ロジック変更なし) === */
@@ -30,9 +29,11 @@ function getDuration(start: string, end?: string | null) {
   const [eh, em] = end.split(":").map(Number);
   const diffMin = (eh * 60 + em) - (sh * 60 + sm);
   if (diffMin <= 0) return null;
-  if (diffMin < 60) return `${diffMin}分`;
   const h = Math.floor(diffMin / 60);
   const m = diffMin % 60;
+  
+  // 0時間の時は分だけ表示 (編集画面と合わせる)
+  if (h === 0) return `${m}分`;
   return m === 0 ? `${h}時間` : `${h}時間${m}分`;
 }
 
@@ -52,14 +53,14 @@ function getTargetColor(t: string) {
   return "bg-cyan-50 text-[#00c2e8]";
 }
 
-// ★修正: アイコンは変えるが、色は全て「青」にする
+// ★修正: ホバーをPC限定(sm:)にし、色は青で統一
 function getMaterialInfo(url: string) {
   const u = url.toLowerCase();
   
-  // 共通の青色スタイル
+  // 共通スタイル: ホバーはsm以上のみ、色は青
   const style = { 
     color: "text-[#00c2e8]", 
-    bg: "bg-cyan-50 hover:bg-[#00c2e8] hover:text-white" 
+    bg: "bg-cyan-50 sm:hover:bg-[#00c2e8] sm:hover:text-white transition-colors" 
   };
 
   if (u.includes("youtube") || u.includes("youtu.be")) {
@@ -218,7 +219,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               href={`/e/${slug}`}
               scroll={false}
               className={`
-                shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-colors select-none
+                shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-colors select-none active:scale-95
                 ${selectedTags.length === 0 ? "bg-[#00c2e8] text-white" : "bg-slate-50 text-slate-500"}
               `}
             >
@@ -234,7 +235,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                   href={href}
                   scroll={false}
                   className={`
-                    shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-colors select-none
+                    shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-colors select-none active:scale-95
                     ${isActive ? "bg-[#00c2e8] text-white" : "bg-slate-50 text-slate-500"}
                   `}
                 >
@@ -244,7 +245,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             })}
             {selectedTags.length > 0 && (
               <div className="pl-2 border-l border-slate-100 shrink-0">
-                <Link href={`/e/${slug}`} scroll={false} className="flex items-center text-xs font-bold text-slate-400 bg-slate-50 px-3 py-2 rounded-xl">
+                <Link href={`/e/${slug}`} scroll={false} className="flex items-center text-xs font-bold text-slate-400 bg-slate-50 px-3 py-2 rounded-xl active:scale-95 active:bg-slate-100 transition-all">
                    <X className="w-3.5 h-3.5 mr-1" /> クリア
                 </Link>
               </div>
@@ -252,7 +253,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </div>
         </section>
 
-        {/* 資料リンク集エリア */}
+        {/* 資料リンク集エリア (ホバー演出をPC限定に) */}
         {hasMaterials && (
           <section className="space-y-3">
              <div className="pl-2 flex items-center gap-2">
@@ -262,20 +263,21 @@ export default async function Page({ params, searchParams }: { params: Promise<{
              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                {materials.map((m) => {
                  const { icon: Icon, color, bg, label } = getMaterialInfo(m.url);
+                 
                  return (
                    <a 
                      key={m.id} 
                      href={m.url} 
                      target="_blank" 
                      rel="noopener noreferrer"
-                     className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm border border-transparent hover:border-cyan-100 hover:shadow-md transition-all group"
+                     className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm border border-transparent sm:hover:border-cyan-100 sm:hover:shadow-md active:scale-95 transition-all group"
                    >
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${bg}`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${bg}`}>
                          <Icon className={`w-5 h-5 transition-colors ${color} group-hover:text-white`} />
                       </div>
                       <div className="min-w-0">
                          <div className="text-xs font-bold text-slate-400 mb-0.5">{label}</div>
-                         <div className="text-sm font-black text-slate-800 truncate leading-tight group-hover:text-[#00c2e8] transition-colors">
+                         <div className="text-sm font-black text-slate-800 truncate leading-tight sm:group-hover:text-[#00c2e8] transition-colors">
                            {m.title}
                          </div>
                       </div>
@@ -352,11 +354,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
       {lastUpdated && <RefreshBadge dateText={relativeJa(lastUpdated)} />}
 
-      {/* ★追加: 戦略的フッターエリア (ユーザー獲得CTA + ブランディング) */}
+      {/* フッター (ホバーをPC限定に) */}
       <footer className="mt-32 pb-12 px-4">
-        {/* CTA Card: アプリ利用促進 */}
         <div className="max-w-xl mx-auto bg-gradient-to-br from-[#00c2e8] to-blue-600 rounded-[2rem] p-8 text-center text-white shadow-xl shadow-cyan-200/50 mb-12 relative overflow-hidden group">
-          {/* 装飾 */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
           <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2 pointer-events-none"></div>
 
@@ -373,24 +373,21 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               練習日程、本番のタイムテーブル、資料共有。<br/>
               面倒な連絡を、これひとつでスマートに完結。
             </p>
-            <Link href="/" className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-4 bg-white text-[#00c2e8] rounded-2xl font-black text-sm hover:bg-cyan-50 transition-all active:scale-95 shadow-lg">
+            <Link href="/" className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-4 bg-white text-[#00c2e8] rounded-2xl font-black text-sm sm:hover:bg-cyan-50 transition-all active:scale-95 shadow-lg">
               無料でイベントを作る <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
 
-        {/* Branding Footer */}
         <div className="max-w-xl mx-auto text-center space-y-8">
-           {/* リンク集 */}
            <div className="flex flex-wrap justify-center gap-4 text-xs font-bold text-slate-400">
-              <Link href="/" className="hover:text-[#00c2e8] transition-colors">トップページ</Link>
+              <Link href="/" className="sm:hover:text-[#00c2e8] active:opacity-70 transition-colors">トップページ</Link>
               <span className="text-slate-300">|</span>
-              <a href="https://x.com/araken525_toho" target="_blank" rel="noopener noreferrer" className="hover:text-[#00c2e8] transition-colors">開発者 (X)</a>
+              <a href="https://x.com/araken525_toho" target="_blank" rel="noopener noreferrer" className="sm:hover:text-[#00c2e8] active:opacity-70 transition-colors">開発者 (X)</a>
               <span className="text-slate-300">|</span>
-              <a href="https://kawasakiebase.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#00c2e8] transition-colors">運営元</a>
+              <a href="https://kawasakiebase.com" target="_blank" rel="noopener noreferrer" className="sm:hover:text-[#00c2e8] active:opacity-70 transition-colors">運営元</a>
            </div>
 
-           {/* ロゴ & コピーライト */}
            <div className="space-y-2">
               <div className="text-2xl font-black text-slate-300 tracking-tighter">TaiSuke</div>
               <div className="text-[10px] text-slate-400 font-bold">
@@ -398,17 +395,16 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               </div>
            </div>
 
-           {/* Ensemble Labs Badge */}
            <div className="pt-8 border-t border-slate-100">
               <p className="text-[10px] font-black text-slate-300 tracking-[0.2em] mb-3">PRODUCED BY</p>
               <a 
                 href="https://kawasakiebase.com" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all group"
+                className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white border border-slate-100 shadow-sm sm:hover:shadow-md sm:hover:border-slate-200 transition-all group"
               >
-                 <span className="w-2.5 h-2.5 rounded-full bg-[#00c2e8] group-hover:scale-125 transition-transform shadow-sm shadow-cyan-200"></span>
-                 <span className="text-xs font-bold text-slate-600 group-hover:text-slate-900 tracking-wide">ENSEMBLE LABS</span>
+                 <span className="w-2.5 h-2.5 rounded-full bg-[#00c2e8] sm:group-hover:scale-125 transition-transform shadow-sm shadow-cyan-200"></span>
+                 <span className="text-xs font-bold text-slate-600 sm:group-hover:text-slate-900 tracking-wide">ENSEMBLE LABS</span>
               </a>
            </div>
         </div>
