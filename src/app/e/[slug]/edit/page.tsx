@@ -2,9 +2,10 @@
 
 import { useState, use, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Lock, Unlock, ArrowUpRight, LogOut, Save, Plus, RefreshCw, MapPin, AlignLeft, Edit3, Trash2, X, Clock, Calendar, ArrowUp, ArrowDown, Minus, Check } from "lucide-react";
+// Link2, FileText を追加インポート
+import { Lock, Unlock, ArrowUpRight, LogOut, Save, Plus, RefreshCw, MapPin, AlignLeft, Edit3, Trash2, X, Clock, Calendar, ArrowUp, ArrowDown, Minus, Check, Link2, FileText } from "lucide-react";
 
-/* ===== ヘルパー関数 & 定数 ===== */
+/* ===== ヘルパー関数 & 定数 (変更なし) ===== */
 function hhmm(t: string) { return String(t).slice(0, 5); }
 function getDuration(start: string, end?: string | null) {
   if (!end) return null;
@@ -35,7 +36,6 @@ function getTargetColor(t: string) {
   return "bg-cyan-50 text-[#00c2e8]";
 }
 
-// アイコンパレット
 const EMOJI_PRESETS = ["🎵", "🎻", "🍱", "🎤", "🚌", "🚽", "🚬", "☕", "🍻", "🏨", "🎫", "✨", "🧹", "🚩"];
 
 /* ===== メインコンポーネント ===== */
@@ -49,6 +49,12 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
   const [event, setEvent] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
   
+  // ★追加: 資料リンク用ステート
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [matTitle, setMatTitle] = useState("");
+  const [matUrl, setMatUrl] = useState("");
+  const [matLoading, setMatLoading] = useState(false);
+
   // 編集シート状態
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -59,7 +65,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     startTime: "10:00", endTime: "", title: "", location: "", note: "", target: "全員", emoji: "🎵", sortOrder: 0
   });
   
-  // タグ関連ステート
   const [recentTags, setRecentTags] = useState<string[]>(["全員"]); 
   const [newTagInput, setNewTagInput] = useState("");
 
@@ -71,13 +76,16 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     })();
   }, [slug]);
 
-  async function loadItems() {
+  // データ読み込み（スケジュール＆資料）
+  async function loadAllData() {
     if (!event?.id) return;
-    const { data } = await supabase.from("schedule_items").select("*").eq("event_id", event.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
-    setItems(data ?? []);
-    if (data) {
+    
+    // スケジュール
+    const { data: sData } = await supabase.from("schedule_items").select("*").eq("event_id", event.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
+    setItems(sData ?? []);
+    if (sData) {
       const tags = new Set<string>(recentTags);
-      data.forEach((it) => { 
+      sData.forEach((it) => { 
          if (it.target && it.target !== "all") {
             it.target.split(",").forEach((t: string) => tags.add(t.trim()));
          }
@@ -85,8 +93,13 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
       tags.delete("全員");
       setRecentTags(["全員", ...Array.from(tags)]);
     }
+
+    // ★追加: 資料データ読み込み
+    const { data: mData } = await supabase.from("event_materials").select("*").eq("event_id", event.id).order("sort_order", { ascending: true });
+    setMaterials(mData ?? []);
   }
-  useEffect(() => { if (event?.id) loadItems(); }, [event?.id]);
+
+  useEffect(() => { if (event?.id) loadAllData(); }, [event?.id]);
   useEffect(() => { if (sessionStorage.getItem(`edit-ok:${slug}`)) setOk(true); }, [slug]);
 
   // 自動絵文字推測
@@ -99,7 +112,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     }
   }, [formData.title]);
 
-  // シート外クリックで閉じる
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (sheetRef.current && !sheetRef.current.contains(event.target as Node)) closeSheet();
@@ -116,7 +128,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     if (!data?.edit_password) return setStatus("PW未設定");
     if (data.edit_password === password) {
       sessionStorage.setItem(`edit-ok:${slug}`, "true");
-      setOk(true); setStatus(""); loadItems();
+      setOk(true); setStatus(""); loadAllData();
     } else { setStatus("パスワードが違います"); }
   }
   function resetLock() {
@@ -140,44 +152,63 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
   }
   function closeSheet() { setIsSheetOpen(false); setTimeout(() => setEditingId(null), 300); }
 
-  // タグの複数選択ロジック
   function toggleTag(tag: string) {
     if (tag === "全員") {
       setFormData({ ...formData, target: "全員" });
       return;
     }
-
-    let currentTags = formData.target 
-      ? formData.target.split(",").map(t => t.trim()).filter(Boolean) 
-      : [];
-
+    let currentTags = formData.target ? formData.target.split(",").map(t => t.trim()).filter(Boolean) : [];
     if (currentTags.includes("全員")) currentTags = [];
-
     if (currentTags.includes(tag)) {
       currentTags = currentTags.filter(t => t !== tag);
     } else {
       currentTags.push(tag);
     }
-
     const newTarget = currentTags.length === 0 ? "全員" : currentTags.join(",");
     setFormData({ ...formData, target: newTarget });
   }
 
-  // 新規タグ追加ロジック
   function addNewTag() {
     const t = newTagInput.trim();
     if (!t) return;
-    
-    if (!recentTags.includes(t)) {
-      setRecentTags([...recentTags, t]);
-    }
-    
+    if (!recentTags.includes(t)) setRecentTags([...recentTags, t]);
     let currentTags = formData.target ? formData.target.split(",").map(x => x.trim()).filter(Boolean) : [];
     if (currentTags.includes("全員")) currentTags = [];
     if (!currentTags.includes(t)) currentTags.push(t);
-    
     setFormData({ ...formData, target: currentTags.join(",") });
     setNewTagInput("");
+  }
+
+  // ★追加: 資料追加ロジック
+  async function addMaterial() {
+    if (!matTitle.trim() || !matUrl.trim()) return;
+    setMatLoading(true);
+    const { error } = await supabase.from("event_materials").insert({
+      event_id: event.id,
+      title: matTitle.trim(),
+      url: matUrl.trim(),
+      sort_order: materials.length + 1
+    });
+    setMatLoading(false);
+    if (error) {
+       setStatus("エラー: " + error.message);
+       setTimeout(() => setStatus(""), 2000);
+    } else {
+       setMatTitle("");
+       setMatUrl("");
+       loadAllData();
+    }
+  }
+
+  // ★追加: 資料削除ロジック
+  async function removeMaterial(id: number) {
+    if (!confirm("このリンクを削除しますか？")) return;
+    const { error } = await supabase.from("event_materials").delete().eq("id", id);
+    if (error) {
+      setStatus("削除エラー");
+    } else {
+      loadAllData();
+    }
   }
 
   async function saveItem() {
@@ -194,17 +225,16 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
       : await supabase.from("schedule_items").insert(payload);
     if (res.error) return setStatus("エラー: " + res.error.message);
     setStatus(editingId ? "更新しました" : "追加しました");
-    closeSheet(); loadItems(); setTimeout(() => setStatus(""), 2000);
+    closeSheet(); loadAllData(); setTimeout(() => setStatus(""), 2000);
   }
 
   async function removeItem(id: string) {
     if (!confirm("本当に削除しますか？")) return;
     const { error } = await supabase.from("schedule_items").delete().eq("id", id);
     if (error) return setStatus("エラー: " + error.message);
-    loadItems(); setStatus("削除しました"); setTimeout(() => setStatus(""), 2000);
+    loadAllData(); setStatus("削除しました"); setTimeout(() => setStatus(""), 2000);
   }
 
-  // --- 描画 ---
   if (!ok) {
     return (
       <main className="min-h-screen bg-[#f7f9fb] flex items-center justify-center p-6 font-sans">
@@ -222,7 +252,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
 
   return (
     <main className="min-h-screen bg-[#f7f9fb] pb-32 font-sans selection:bg-[#00c2e8] selection:text-white relative">
-      {/* ヘッダー */}
       <header className="fixed top-0 inset-x-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 h-14 flex items-center justify-between shadow-sm">
          <div className="flex items-center gap-2 font-black text-slate-800 truncate">
             <Edit3 className="w-4 h-4 text-[#00c2e8]" />
@@ -234,7 +263,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
          </div>
       </header>
 
-      {/* ステータス通知 (フェードイン形式) */}
       {status && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-xl bg-slate-800/90 text-white text-sm font-bold animate-in fade-in slide-in-from-top-2 duration-300 backdrop-blur-md whitespace-nowrap">
           {status}
@@ -244,7 +272,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
       <div className="pt-20 px-4 w-full max-w-lg md:max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
           
-          {/* 左カラム: イベント情報 (固定) */}
+          {/* 左カラム */}
           <div className="md:col-span-4 md:sticky md:top-24 space-y-6">
             {event && (
               <section className="bg-white rounded-[1.5rem] p-6 shadow-sm">
@@ -271,9 +299,67 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                  </div>
               </section>
             )}
+
+            {/* ★追加: 配布資料・リンク管理エリア */}
+            <section className="bg-white rounded-[1.5rem] p-6 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                 <Link2 className="w-4 h-4 text-slate-400" />
+                 <h3 className="text-sm font-black text-slate-700">配布資料・リンク</h3>
+              </div>
+              
+              {/* 登録済みリスト */}
+              {materials.length > 0 ? (
+                 <div className="space-y-2">
+                   {materials.map(m => (
+                      <div key={m.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl group">
+                         <div className="flex items-center gap-3 overflow-hidden">
+                            <FileText className="w-4 h-4 text-[#00c2e8] shrink-0" />
+                            <div className="min-w-0">
+                               <div className="text-xs font-bold text-slate-800 truncate">{m.title}</div>
+                               <div className="text-[10px] text-slate-400 truncate opacity-70">{m.url}</div>
+                            </div>
+                         </div>
+                         <button 
+                           onClick={() => removeMaterial(m.id)}
+                           className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all shrink-0"
+                         >
+                            <Trash2 className="w-4 h-4" />
+                         </button>
+                      </div>
+                   ))}
+                 </div>
+              ) : (
+                 <p className="text-xs text-slate-400 text-center py-2">登録されたリンクはありません</p>
+              )}
+
+              {/* 追加フォーム */}
+              <div className="pt-2 space-y-2">
+                 <input 
+                   type="text" 
+                   value={matTitle}
+                   onChange={(e) => setMatTitle(e.target.value)}
+                   placeholder="タイトル (例: 配置図)" 
+                   className="w-full h-10 px-3 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-cyan-100"
+                 />
+                 <input 
+                   type="text" 
+                   value={matUrl}
+                   onChange={(e) => setMatUrl(e.target.value)}
+                   placeholder="URL (https://...)" 
+                   className="w-full h-10 px-3 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-cyan-100"
+                 />
+                 <button 
+                   onClick={addMaterial}
+                   disabled={!matTitle || !matUrl || matLoading}
+                   className="w-full h-10 bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-black disabled:opacity-50 transition-all"
+                 >
+                   {matLoading ? "追加中..." : <><Plus className="w-4 h-4" /> リンクを追加</>}
+                 </button>
+              </div>
+            </section>
           </div>
 
-          {/* 右カラム: 編集リスト (スクロール) */}
+          {/* 右カラム: スケジュール (変更なし) */}
           <section className="space-y-4 md:col-span-8">
             <div className="flex items-center gap-2 mb-2 px-1 md:hidden">
                <span className="text-xs font-bold text-slate-400">スケジュール一覧</span>
@@ -316,17 +402,15 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
         </div>
       </div>
 
-      {/* FAB */}
       <button onClick={() => openSheet()} className="fixed bottom-6 right-6 w-14 h-14 bg-[#00c2e8] rounded-full shadow-lg text-white flex items-center justify-center active:scale-90 transition-all z-30 hover:scale-105">
         <Plus className="w-8 h-8" />
       </button>
 
-      {/* === 入力フォーム (ロジック・デザイン維持) === */}
+      {/* 入力フォーム (変更なし) */}
       <div className={`fixed inset-0 z-50 flex items-end justify-center pointer-events-none ${isSheetOpen ? "visible" : "invisible"}`}>
          <div className={`absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${isSheetOpen ? "opacity-100 pointer-events-auto" : "opacity-0"}`} onClick={closeSheet}></div>
          
          <div ref={sheetRef} className={`relative w-full max-w-lg bg-white rounded-t-[2.5rem] shadow-2xl pointer-events-auto transition-transform duration-300 ease-out flex flex-col max-h-[95vh] ${isSheetOpen ? "translate-y-0" : "translate-y-full"}`}>
-            
             <div className="shrink-0 relative h-14 flex items-center justify-center">
                <div className="w-12 h-1.5 bg-slate-200 rounded-full absolute top-4"></div>
                <button onClick={closeSheet} className="absolute right-6 top-4 p-2 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full transition-all z-10">
@@ -394,15 +478,12 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                         <MapPin className="w-4 h-4 text-slate-400 shrink-0"/>
                         <input type="text" value={formData.location} onChange={(e)=>setFormData({...formData, location:e.target.value})} placeholder="場所を追加" className="flex-1 bg-transparent text-sm font-bold outline-none"/>
                      </div>
-
-                     {/* ▼▼▼ ここが今回の修正箇所です ▼▼▼ */}
                      <div className="flex items-start gap-3 bg-slate-50 rounded-xl px-4 py-3">
                         <AlignLeft className="w-4 h-4 text-slate-400 shrink-0 mt-1"/>
                         <textarea 
                            value={formData.note} 
                            onChange={(e) => {
                               setFormData({ ...formData, note: e.target.value });
-                              // 入力に合わせて高さを自動で調整するロジック
                               e.target.style.height = "auto";
                               e.target.style.height = `${e.target.scrollHeight}px`;
                            }} 
@@ -410,8 +491,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                            className="flex-1 bg-transparent text-sm font-medium outline-none resize-none min-h-[5rem] overflow-hidden"
                         ></textarea>
                      </div>
-                     {/* ▲▲▲ ここが今回の修正箇所です ▲▲▲ */}
-
                   </div>
                </div>
 
@@ -430,25 +509,15 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
          </div>
       </div>
       
-      {/* === フッター (開発者への連絡) === */}
+      {/* フッター (変更なし) */}
       <footer className="mt-20 py-12 border-t border-slate-100 relative z-10 bg-white/50 backdrop-blur-sm">
         <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4 mb-8">
-           
-           {/* コピーライト */}
            <div className="text-center md:text-left">
               <div className="font-black text-slate-800 text-lg mb-1 tracking-tight">TaiSuke</div>
               <div className="text-xs font-bold text-slate-400">© 2026 Time Schedule Sharing App</div>
            </div>
-
-           {/* 開発者リンク (X / Twitter) */}
-           <a
-             href="https://x.com/araken525_toho?s=21"
-             target="_blank"
-             rel="noopener noreferrer"
-             className="group flex items-center gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-slate-300 hover:shadow-md transition-all"
-           >
+           <a href="https://x.com/araken525_toho?s=21" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-slate-300 hover:shadow-md transition-all">
               <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform">
-                 {/* X ロゴ SVG */}
                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
               </div>
               <div className="text-left">
@@ -457,15 +526,12 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
               </div>
            </a>
         </div>
-        
-        {/* ▼▼▼ 追加: PRODUCED BY ENSEMBLE LABS ▼▼▼ */}
         <div className="text-center border-t border-slate-100 pt-8 mt-8">
            <div className="text-[10px] font-black text-slate-300 tracking-[0.2em]">
               PRODUCED BY ENSEMBLE LABS
            </div>
         </div>
       </footer>
-
     </main>
   );
 }
