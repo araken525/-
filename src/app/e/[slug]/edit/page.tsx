@@ -2,7 +2,8 @@
 
 import { useState, use, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Lock, Unlock, ArrowUpRight, LogOut, Save, Plus, RefreshCw, MapPin, AlignLeft, Edit3, Trash2, X, Clock, Calendar, ArrowUp, ArrowDown, Minus, Check, Link2, FileText, Paperclip, Youtube, Video, Image as ImageIcon } from "lucide-react";
+// ▼ Sparkles, ArrowRight を追加
+import { Lock, Unlock, ArrowUpRight, LogOut, Save, Plus, RefreshCw, MapPin, AlignLeft, Edit3, Trash2, X, Clock, Calendar, ArrowUp, ArrowDown, Minus, Check, Link2, FileText, Paperclip, Youtube, Video, Image as ImageIcon, Sparkles, ArrowRight } from "lucide-react";
 
 /* ===== ヘルパー関数 & 定数 (変更なし) ===== */
 function hhmm(t: string) { return String(t).slice(0, 5); }
@@ -71,7 +72,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
   const [matTitle, setMatTitle] = useState("");
   const [matUrl, setMatUrl] = useState("");
   const [matLoading, setMatLoading] = useState(false);
-  // ★追加: 編集中の資料ID
+  // 編集中の資料ID
   const [editingMaterialId, setEditingMaterialId] = useState<number | null>(null);
 
   // 編集シート状態
@@ -227,21 +228,21 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     setFormData({ ...formData, materialIds: currentIds });
   }
 
-  // ★追加: 編集モード開始
+  // 編集モード開始
   function startEditMaterial(m: any) {
     setEditingMaterialId(m.id);
     setMatTitle(m.title);
     setMatUrl(m.url);
   }
 
-  // ★追加: 編集モードキャンセル
+  // 編集モードキャンセル
   function cancelEditMaterial() {
     setEditingMaterialId(null);
     setMatTitle("");
     setMatUrl("");
   }
 
-  // ★追加: 資料の更新ロジック
+  // 資料の更新ロジック
   async function updateMaterial() {
     if (!matTitle.trim() || !matUrl.trim() || !editingMaterialId) return;
     setMatLoading(true);
@@ -255,7 +256,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     } else {
        setMatTitle("");
        setMatUrl("");
-       setEditingMaterialId(null); // 編集モード終了
+       setEditingMaterialId(null);
        loadAllData();
        setStatus("リンクを更新しました");
        setTimeout(() => setStatus(""), 2000);
@@ -289,7 +290,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     if (error) {
       setStatus("削除エラー");
     } else {
-      // もし編集中だったものを消した場合はリセット
       if (editingMaterialId === id) cancelEditMaterial();
       loadAllData();
     }
@@ -402,7 +402,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                  <div className="space-y-2">
                    {materials.map(m => {
                       const { icon: Icon, color, bg } = getMaterialInfo(m.url);
-                      // 編集中かどうかでスタイルを変える
                       const isEditing = editingMaterialId === m.id;
                       return (
                         <div key={m.id} className={`flex items-center justify-between p-3 rounded-xl transition-all ${isEditing ? "bg-cyan-50 border border-cyan-200" : "bg-slate-50 border border-transparent"}`}>
@@ -416,7 +415,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                               </div>
                            </div>
                            <div className="flex items-center gap-1 shrink-0">
-                             {/* ★追加: 編集ボタン */}
                              <button 
                                onClick={() => startEditMaterial(m)}
                                className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${isEditing ? "text-[#00c2e8] bg-white shadow-sm" : "text-slate-300 hover:text-[#00c2e8] hover:bg-cyan-50"}`}
@@ -454,7 +452,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                    className="w-full h-10 px-3 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
                  />
                  
-                 {/* ★修正: 編集モード時は「更新」ボタンと「キャンセル」ボタンを表示 */}
                  {editingMaterialId ? (
                    <div className="flex gap-2">
                       <button 
@@ -496,7 +493,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                const duration = getDuration(it.start_time, it.end_time);
                const displayTarget = it.target && it.target !== "all" ? it.target.replace(/,/g, "・") : "全員";
                
-               // 亡霊データ対策: 現在のmaterialsに存在するIDだけをカウント
                const currentMaterialIds = it.material_ids ? it.material_ids.split(",") : [];
                const validCount = currentMaterialIds.filter((id: string) => materials.some(m => String(m.id) === id)).length;
                
@@ -682,26 +678,64 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
          </div>
       </div>
       
-      {/* フッター (変更なし) */}
-      <footer className="mt-20 py-12 border-t border-slate-100 relative z-10 bg-white/50 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4 mb-8">
-           <div className="text-center md:text-left">
-              <div className="font-black text-slate-800 text-lg mb-1 tracking-tight">TaiSuke</div>
-              <div className="text-xs font-bold text-slate-400">© 2026 Time Schedule Sharing App</div>
-           </div>
-           <a href="https://x.com/araken525_toho?s=21" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-slate-300 hover:shadow-md transition-all">
-              <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform">
-                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-              </div>
-              <div className="text-left">
-                 <div className="text-[10px] font-bold text-slate-400 group-hover:text-[#00c2e8] transition-colors">開発者へ連絡・要望</div>
-                 <div className="text-xs font-black text-slate-700">@araken525_toho</div>
-              </div>
-           </a>
+      {/* ★追加: 戦略的フッターエリア (ユーザー獲得CTA + ブランディング) */}
+      <footer className="mt-32 pb-12 px-4">
+        {/* CTA Card: アプリ利用促進 */}
+        <div className="max-w-xl mx-auto bg-gradient-to-br from-[#00c2e8] to-blue-600 rounded-[2rem] p-8 text-center text-white shadow-xl shadow-cyan-200/50 mb-12 relative overflow-hidden group">
+          {/* 装飾 */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2 pointer-events-none"></div>
+
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-black mb-4 border border-white/20 shadow-sm">
+               <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+               <span>完全無料・Beta版公開中</span>
+            </div>
+            <h3 className="text-2xl font-black mb-3 leading-tight tracking-tight drop-shadow-sm">
+              あなたの団体でも、<br/>
+              <span className="text-cyan-100">TaiSuke</span> を使いませんか？
+            </h3>
+            <p className="text-sm font-bold text-cyan-50 mb-8 leading-relaxed opacity-90">
+              練習日程、本番のタイムテーブル、資料共有。<br/>
+              面倒な連絡を、これひとつでスマートに完結。
+            </p>
+            <a href="/" className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-4 bg-white text-[#00c2e8] rounded-2xl font-black text-sm hover:bg-cyan-50 transition-all active:scale-95 shadow-lg">
+              無料でイベントを作る <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
         </div>
-        <div className="text-center border-t border-slate-100 pt-8 mt-8">
-           <div className="text-[10px] font-black text-slate-300 tracking-[0.2em]">
-              PRODUCED BY ENSEMBLE LABS
+
+        {/* Branding Footer */}
+        <div className="max-w-xl mx-auto text-center space-y-8">
+           {/* リンク集 */}
+           <div className="flex flex-wrap justify-center gap-4 text-xs font-bold text-slate-400">
+              <a href="/" className="hover:text-[#00c2e8] transition-colors">トップページ</a>
+              <span className="text-slate-300">|</span>
+              <a href="https://x.com/araken525_toho" target="_blank" rel="noopener noreferrer" className="hover:text-[#00c2e8] transition-colors">開発者 (X)</a>
+              <span className="text-slate-300">|</span>
+              <a href="https://kawasakiebase.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#00c2e8] transition-colors">運営元</a>
+           </div>
+
+           {/* ロゴ & コピーライト */}
+           <div className="space-y-2">
+              <div className="text-2xl font-black text-slate-300 tracking-tighter">TaiSuke</div>
+              <div className="text-[10px] text-slate-400 font-bold">
+                 © 2026 Time Schedule Sharing App
+              </div>
+           </div>
+
+           {/* Ensemble Labs Badge */}
+           <div className="pt-8 border-t border-slate-100">
+              <p className="text-[10px] font-black text-slate-300 tracking-[0.2em] mb-3">PRODUCED BY</p>
+              <a 
+                href="https://kawasakiebase.com" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all group"
+              >
+                 <span className="w-2.5 h-2.5 rounded-full bg-[#00c2e8] group-hover:scale-125 transition-transform shadow-sm shadow-cyan-200"></span>
+                 <span className="text-xs font-bold text-slate-600 group-hover:text-slate-900 tracking-wide">ENSEMBLE LABS</span>
+              </a>
            </div>
         </div>
       </footer>
