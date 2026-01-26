@@ -2,7 +2,6 @@
 
 import { useState, use, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
-// ▼ Youtube, Video, Image as ImageIcon を追加
 import { Lock, Unlock, ArrowUpRight, LogOut, Save, Plus, RefreshCw, MapPin, AlignLeft, Edit3, Trash2, X, Clock, Calendar, ArrowUp, ArrowDown, Minus, Check, Link2, FileText, Paperclip, Youtube, Video, Image as ImageIcon } from "lucide-react";
 
 /* ===== ヘルパー関数 & 定数 (変更なし) ===== */
@@ -36,7 +35,7 @@ function getTargetColor(t: string) {
   return "bg-cyan-50 text-[#00c2e8]";
 }
 
-// ★追加: URLからアイコンと色を自動判定するロジック
+// URLからアイコンと色を自動判定するロジック (変更なし)
 function getMaterialInfo(url: string) {
   const u = url.toLowerCase();
   if (u.includes("youtube") || u.includes("youtu.be")) {
@@ -72,6 +71,8 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
   const [matTitle, setMatTitle] = useState("");
   const [matUrl, setMatUrl] = useState("");
   const [matLoading, setMatLoading] = useState(false);
+  // ★追加: 編集中の資料ID
+  const [editingMaterialId, setEditingMaterialId] = useState<number | null>(null);
 
   // 編集シート状態
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -226,6 +227,42 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     setFormData({ ...formData, materialIds: currentIds });
   }
 
+  // ★追加: 編集モード開始
+  function startEditMaterial(m: any) {
+    setEditingMaterialId(m.id);
+    setMatTitle(m.title);
+    setMatUrl(m.url);
+  }
+
+  // ★追加: 編集モードキャンセル
+  function cancelEditMaterial() {
+    setEditingMaterialId(null);
+    setMatTitle("");
+    setMatUrl("");
+  }
+
+  // ★追加: 資料の更新ロジック
+  async function updateMaterial() {
+    if (!matTitle.trim() || !matUrl.trim() || !editingMaterialId) return;
+    setMatLoading(true);
+    const { error } = await supabase.from("event_materials").update({
+      title: matTitle.trim(),
+      url: matUrl.trim()
+    }).eq("id", editingMaterialId);
+    setMatLoading(false);
+    if (error) {
+       setStatus("エラー: " + error.message);
+    } else {
+       setMatTitle("");
+       setMatUrl("");
+       setEditingMaterialId(null); // 編集モード終了
+       loadAllData();
+       setStatus("リンクを更新しました");
+       setTimeout(() => setStatus(""), 2000);
+    }
+  }
+
+  // 資料追加ロジック
   async function addMaterial() {
     if (!matTitle.trim() || !matUrl.trim()) return;
     setMatLoading(true);
@@ -252,6 +289,8 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     if (error) {
       setStatus("削除エラー");
     } else {
+      // もし編集中だったものを消した場合はリセット
+      if (editingMaterialId === id) cancelEditMaterial();
       loadAllData();
     }
   }
@@ -363,23 +402,34 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                  <div className="space-y-2">
                    {materials.map(m => {
                       const { icon: Icon, color, bg } = getMaterialInfo(m.url);
+                      // 編集中かどうかでスタイルを変える
+                      const isEditing = editingMaterialId === m.id;
                       return (
-                        <div key={m.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl group">
+                        <div key={m.id} className={`flex items-center justify-between p-3 rounded-xl transition-all ${isEditing ? "bg-cyan-50 border border-cyan-200" : "bg-slate-50 border border-transparent"}`}>
                            <div className="flex items-center gap-3 overflow-hidden">
                               <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${bg}`}>
                                  <Icon className={`w-4 h-4 ${color}`} />
                               </div>
                               <div className="min-w-0">
-                                 <div className="text-xs font-bold text-slate-800 truncate">{m.title}</div>
+                                 <div className={`text-xs font-bold truncate ${isEditing ? "text-[#00c2e8]" : "text-slate-800"}`}>{m.title}</div>
                                  <div className="text-[10px] text-slate-400 truncate opacity-70">{m.url}</div>
                               </div>
                            </div>
-                           <button 
-                             onClick={() => removeMaterial(m.id)}
-                             className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all shrink-0"
-                           >
-                              <Trash2 className="w-4 h-4" />
-                           </button>
+                           <div className="flex items-center gap-1 shrink-0">
+                             {/* ★追加: 編集ボタン */}
+                             <button 
+                               onClick={() => startEditMaterial(m)}
+                               className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${isEditing ? "text-[#00c2e8] bg-white shadow-sm" : "text-slate-300 hover:text-[#00c2e8] hover:bg-cyan-50"}`}
+                             >
+                                <Edit3 className="w-4 h-4" />
+                             </button>
+                             <button 
+                               onClick={() => removeMaterial(m.id)}
+                               className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                             >
+                                <Trash2 className="w-4 h-4" />
+                             </button>
+                           </div>
                         </div>
                       );
                    })}
@@ -394,22 +444,42 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                    value={matTitle}
                    onChange={(e) => setMatTitle(e.target.value)}
                    placeholder="タイトル (例: 配置図)" 
-                   className="w-full h-10 px-3 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-cyan-100"
+                   className="w-full h-10 px-3 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
                  />
                  <input 
                    type="text" 
                    value={matUrl}
                    onChange={(e) => setMatUrl(e.target.value)}
                    placeholder="URL (https://...)" 
-                   className="w-full h-10 px-3 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-cyan-100"
+                   className="w-full h-10 px-3 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-cyan-100 transition-all"
                  />
-                 <button 
-                   onClick={addMaterial}
-                   disabled={!matTitle || !matUrl || matLoading}
-                   className="w-full h-10 bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-black disabled:opacity-50 transition-all"
-                 >
-                   {matLoading ? "追加中..." : <><Plus className="w-4 h-4" /> リンクを追加</>}
-                 </button>
+                 
+                 {/* ★修正: 編集モード時は「更新」ボタンと「キャンセル」ボタンを表示 */}
+                 {editingMaterialId ? (
+                   <div className="flex gap-2">
+                      <button 
+                         onClick={cancelEditMaterial}
+                         className="flex-1 h-10 bg-slate-100 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-200 transition-all"
+                      >
+                         キャンセル
+                      </button>
+                      <button 
+                         onClick={updateMaterial}
+                         disabled={!matTitle || !matUrl || matLoading}
+                         className="flex-[2] h-10 bg-[#00c2e8] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-cyan-500 disabled:opacity-50 transition-all"
+                      >
+                         {matLoading ? "更新中..." : <><RefreshCw className="w-4 h-4" /> 変更を保存</>}
+                      </button>
+                   </div>
+                 ) : (
+                   <button 
+                     onClick={addMaterial}
+                     disabled={!matTitle || !matUrl || matLoading}
+                     className="w-full h-10 bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-black disabled:opacity-50 transition-all"
+                   >
+                     {matLoading ? "追加中..." : <><Plus className="w-4 h-4" /> リンクを追加</>}
+                   </button>
+                 )}
               </div>
             </section>
           </div>
@@ -426,7 +496,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                const duration = getDuration(it.start_time, it.end_time);
                const displayTarget = it.target && it.target !== "all" ? it.target.replace(/,/g, "・") : "全員";
                
-               // ★修正: 亡霊データ対策 (現在のmaterialsに存在するIDだけをカウント)
+               // 亡霊データ対策: 現在のmaterialsに存在するIDだけをカウント
                const currentMaterialIds = it.material_ids ? it.material_ids.split(",") : [];
                const validCount = currentMaterialIds.filter((id: string) => materials.some(m => String(m.id) === id)).length;
                
@@ -511,7 +581,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                      <label className="text-[10px] font-bold text-slate-400 block mb-1">開始</label>
                      <input type="time" value={formData.startTime} onChange={(e)=>setFormData({...formData, startTime:e.target.value})} className="w-full bg-transparent text-xl font-black text-center outline-none"/>
                   </div>
-                  {/* ★修正: 終了時間をクリアできるように相対配置 + ×ボタン */}
+                  {/* 終了時間をクリアできる機能 */}
                   <div className="bg-slate-50 rounded-2xl p-3 relative group">
                      <label className="text-[10px] font-bold text-slate-400 block mb-1">終了 (任意)</label>
                      <input type="time" value={formData.endTime} onChange={(e)=>setFormData({...formData, endTime:e.target.value})} className="w-full bg-transparent text-xl font-black text-center outline-none text-slate-600 placeholder:text-slate-300"/>
@@ -575,7 +645,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                      <div className="grid grid-cols-1 gap-2">
                         {materials.map(m => {
                            const isLinked = formData.materialIds.includes(String(m.id));
-                           // ★修正: リスト内でもアイコンを自動判定して表示
+                           // アイコン自動判定
                            const { icon: Icon, color, bg } = getMaterialInfo(m.url);
                            return (
                               <button 
