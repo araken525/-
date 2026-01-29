@@ -4,8 +4,8 @@ import { useState, use, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { 
   Lock, Unlock, ArrowUpRight, LogOut, Edit3, 
-  Calendar, MapPin, Sparkles, ArrowRight, Plus, 
-  ListOrdered, Settings2, LayoutDashboard 
+  Sparkles, ArrowRight, Plus, 
+  ListOrdered, Settings2
 } from "lucide-react";
 
 // 分割したコンポーネントをインポート
@@ -13,6 +13,7 @@ import EditMaterials from "@/components/edit/EditMaterials";
 import EditEmergencyContacts from "@/components/edit/EditEmergencyContacts";
 import EditScheduleList from "@/components/edit/EditScheduleList";
 import EditItemSheet from "@/components/edit/EditItemSheet";
+import EditEventInfo from "@/components/edit/EditEventInfo"; // ★追加
 
 export default function EditPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -51,6 +52,13 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
 
   async function loadAllData() {
     if (!event?.id) return;
+
+    // イベント情報自体の再取得 (タイトルなどが変わった場合のため)
+    const { data: eData } = await supabase.from("events").select("*").eq("id", event.id).single();
+    if (eData) {
+      setEvent(eData);
+      if (eData.emergency_contacts) setContacts(eData.emergency_contacts);
+    }
     
     // スケジュール
     const { data: sData } = await supabase.from("schedule_items").select("*").eq("event_id", event.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
@@ -74,10 +82,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
     // 資料
     const { data: mData } = await supabase.from("event_materials").select("*").eq("event_id", event.id).order("sort_order", { ascending: true });
     setMaterials(mData ?? []);
-
-    // 連絡先
-    const { data: eData } = await supabase.from("events").select("emergency_contacts").eq("id", event.id).single();
-    if (eData?.emergency_contacts) setContacts(eData.emergency_contacts);
   }
 
   useEffect(() => { if (event?.id) loadAllData(); }, [event?.id]);
@@ -170,33 +174,15 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
           
           {/* === 左カラム: 設定・資料・連絡先 === */}
-          {/* モバイル: activeTab='settings'の時だけ表示 / デスクトップ: 常に表示 */}
           <div className={`md:col-span-4 md:sticky md:top-24 space-y-6 ${activeTab === 'settings' ? 'block animate-in fade-in slide-in-from-left-4 duration-300' : 'hidden md:block'}`}>
             
-            {/* イベント基本情報カード */}
+            {/* ★ イベント基本情報の編集コンポーネント */}
             {event && (
-              <section className="bg-white rounded-[1.5rem] p-6 shadow-sm border border-slate-50">
-                 <div className="flex items-center gap-2 mb-3 text-slate-400">
-                    <LayoutDashboard className="w-4 h-4"/>
-                    <span className="text-xs font-bold">基本情報</span>
-                 </div>
-                 <h1 className="text-xl font-black text-slate-800 leading-tight mb-4">{event.title}</h1>
-                 <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-bold text-slate-500 bg-slate-50 p-2.5 rounded-xl">
-                      <Calendar className="w-4 h-4 text-slate-400 shrink-0"/>
-                      {event.date}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm font-bold text-slate-500 bg-slate-50 p-2.5 rounded-xl">
-                      <MapPin className="w-4 h-4 text-slate-400 shrink-0"/>
-                      {event.venue_name || "未設定"}
-                    </div>
-                 </div>
-                 <div className="mt-4 pt-4 border-t border-slate-50">
-                    <p className="text-[10px] text-slate-400 leading-relaxed">
-                       ※ タイトルや日付の変更は、現在データベース直接操作が必要です。<br/>(今後のアップデートで対応予定)
-                    </p>
-                 </div>
-              </section>
+              <EditEventInfo 
+                event={event} 
+                onUpdate={loadAllData} 
+                setStatus={setStatus} 
+              />
             )}
 
             {/* 資料管理 */}
@@ -217,7 +203,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
           </div>
 
           {/* === 右カラム: スケジュール一覧 === */}
-          {/* モバイル: activeTab='schedule'の時だけ表示 / デスクトップ: 常に表示 */}
           <div className={`md:col-span-8 ${activeTab === 'schedule' ? 'block animate-in fade-in slide-in-from-right-4 duration-300' : 'hidden md:block'}`}>
              <EditScheduleList 
                items={items} 
@@ -231,7 +216,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
       </div>
 
       {/* 5. 新規追加ボタン (FAB) */}
-      {/* モバイルではスケジュールタブの時のみ表示。デスクトップでは常に表示 */}
       <button 
          onClick={() => openSheet()} 
          className={`
@@ -257,7 +241,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
          allItems={items}
       />
       
-      {/* 7. フッター (スケジュールタブ、またはデスクトップでのみ表示) */}
+      {/* 7. フッター */}
       <footer className={`mt-32 pb-12 px-4 ${activeTab === 'schedule' ? 'block' : 'hidden md:block'}`}>
         <div className="max-w-xl mx-auto bg-gradient-to-br from-[#00c2e8] to-blue-600 rounded-[2rem] p-8 text-center text-white shadow-xl shadow-cyan-200/50 mb-12 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
