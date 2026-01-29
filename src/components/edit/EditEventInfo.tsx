@@ -22,12 +22,10 @@ export default function EditEventInfo({ event, onUpdate, setStatus }: Props) {
     venue_name: ""
   });
 
-  // クライアントサイドでのマウント確認 (Portal用)
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 編集モード開始
   function startEdit() {
     setFormData({
       title: event.title || "",
@@ -37,7 +35,6 @@ export default function EditEventInfo({ event, onUpdate, setStatus }: Props) {
     setIsEditing(true);
   }
 
-  // 保存処理
   async function save() {
     if (!formData.title.trim() || !formData.date) return;
     
@@ -65,7 +62,7 @@ export default function EditEventInfo({ event, onUpdate, setStatus }: Props) {
 
   return (
     <>
-      {/* === 表示用カード (常に表示) === */}
+      {/* === 表示用カード === */}
       <section className="bg-white rounded-[1.5rem] p-6 shadow-sm border border-slate-50 transition-all">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-slate-400">
@@ -99,19 +96,17 @@ export default function EditEventInfo({ event, onUpdate, setStatus }: Props) {
         </div>
       </section>
 
-      {/* === 編集用モーダル (Portalで最前面に表示) === */}
+      {/* === 編集用モーダル === */}
       {isEditing && mounted && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
-          {/* 背景 (クリックで閉じる) */}
           <div 
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" 
             onClick={() => setIsEditing(false)}
           ></div>
           
-          {/* モーダル本体 */}
           <div className="relative w-full max-w-sm bg-white rounded-[2rem] p-6 shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh] overflow-y-auto">
             
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 shrink-0">
               <h3 className="text-lg font-black text-slate-800">基本情報の編集</h3>
               <button 
                 onClick={() => setIsEditing(false)}
@@ -128,35 +123,35 @@ export default function EditEventInfo({ event, onUpdate, setStatus }: Props) {
                   type="text" 
                   value={formData.title} 
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-base font-bold text-slate-800 outline-none focus:ring-2 focus:ring-cyan-100 focus:border-cyan-300 transition-all placeholder:text-slate-300"
+                  className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-base font-bold text-slate-800 outline-none focus:ring-2 focus:ring-cyan-100 focus:border-cyan-300 transition-all placeholder:text-slate-300 min-w-0"
                   placeholder="例: 第5回 定期演奏会"
                 />
               </div>
               
-              <div className="grid grid-cols-1 gap-4">
-                <div>
+              <div className="flex flex-col gap-4">
+                <div className="w-full min-w-0">
                   <label className="text-xs font-bold text-slate-400 block mb-1.5 ml-1">開催日</label>
                   <input 
                     type="date" 
                     value={formData.date} 
                     onChange={(e) => setFormData({...formData, date: e.target.value})}
-                    className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-cyan-100 focus:border-cyan-300 transition-all"
+                    className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-cyan-100 focus:border-cyan-300 transition-all appearance-none min-w-0"
                   />
                 </div>
-                <div>
+                <div className="w-full min-w-0">
                   <label className="text-xs font-bold text-slate-400 block mb-1.5 ml-1">場所</label>
                   <input 
                     type="text" 
                     value={formData.venue_name} 
                     onChange={(e) => setFormData({...formData, venue_name: e.target.value})}
-                    className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-cyan-100 focus:border-cyan-300 transition-all placeholder:text-slate-300"
+                    className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-cyan-100 focus:border-cyan-300 transition-all placeholder:text-slate-300 min-w-0"
                     placeholder="例: 市民ホール 大ホール"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="mt-8">
+            <div className="mt-8 shrink-0">
               <button 
                 onClick={save}
                 disabled={loading || !formData.title || !formData.date}
