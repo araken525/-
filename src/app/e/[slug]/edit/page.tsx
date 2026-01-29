@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { 
   Lock, Unlock, ArrowUpRight, LogOut, Edit3, 
   Sparkles, ArrowRight, Plus, 
-  ListOrdered, Settings2
+  ListOrdered, Settings2, LayoutDashboard
 } from "lucide-react";
 
 // 分割したコンポーネントをインポート
@@ -13,7 +13,7 @@ import EditMaterials from "@/components/edit/EditMaterials";
 import EditEmergencyContacts from "@/components/edit/EditEmergencyContacts";
 import EditScheduleList from "@/components/edit/EditScheduleList";
 import EditItemSheet from "@/components/edit/EditItemSheet";
-import EditEventInfo from "@/components/edit/EditEventInfo"; // ★追加
+import EditEventInfo from "@/components/edit/EditEventInfo";
 
 export default function EditPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -53,14 +53,12 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
   async function loadAllData() {
     if (!event?.id) return;
 
-    // イベント情報自体の再取得 (タイトルなどが変わった場合のため)
     const { data: eData } = await supabase.from("events").select("*").eq("id", event.id).single();
     if (eData) {
       setEvent(eData);
       if (eData.emergency_contacts) setContacts(eData.emergency_contacts);
     }
     
-    // スケジュール
     const { data: sData } = await supabase.from("schedule_items").select("*").eq("event_id", event.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
     setItems(sData ?? []);
     
@@ -79,7 +77,6 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
       setRecentAssignees(Array.from(assignees));
     }
 
-    // 資料
     const { data: mData } = await supabase.from("event_materials").select("*").eq("event_id", event.id).order("sort_order", { ascending: true });
     setMaterials(mData ?? []);
   }
@@ -125,17 +122,29 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
 
   // --- Render: Edit Mode ---
   return (
-    <main className="min-h-screen bg-[#f7f9fb] pb-32 font-sans selection:bg-[#00c2e8] selection:text-white relative">
+    <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white relative">
       
-      {/* 1. ヘッダー (固定) */}
-      <header className="fixed top-0 inset-x-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 h-14 flex items-center justify-between shadow-sm">
-         <div className="flex items-center gap-2 font-black text-slate-800 truncate">
-            <Edit3 className="w-4 h-4 text-[#00c2e8]" />
-            <span className="truncate">{event?.title || slug} の編集</span>
+      {/* 1. ヘッダー (Glassmorphism UI) */}
+      <header className="fixed top-0 inset-x-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 h-16 flex items-center justify-between px-4 sm:px-6 transition-all">
+         <div className="flex items-center gap-2 max-w-[60%]">
+            <div className="w-8 h-8 rounded-full bg-cyan-50 flex items-center justify-center shrink-0">
+               <Edit3 className="w-4 h-4 text-[#00c2e8]" />
+            </div>
+            <div className="flex flex-col min-w-0">
+               <span className="text-[10px] font-bold text-slate-400 leading-none mb-0.5">EDITING</span>
+               <h1 className="text-sm font-black text-slate-800 truncate leading-none">{event?.title || slug}</h1>
+            </div>
          </div>
-         <div className="flex gap-2 shrink-0">
-            <a href={`/e/${slug}`} target="_blank" className="w-9 h-9 flex items-center justify-center bg-slate-50 rounded-full text-slate-400 hover:text-[#00c2e8] transition-all"><ArrowUpRight className="w-4 h-4"/></a>
-            <button onClick={resetLock} className="w-9 h-9 flex items-center justify-center bg-slate-50 rounded-full text-slate-400 hover:text-red-500 transition-all"><LogOut className="w-4 h-4"/></button>
+         
+         <div className="flex items-center bg-slate-100/80 rounded-full p-1 border border-slate-200/50">
+            <a href={`/e/${slug}`} target="_blank" className="h-8 px-3 rounded-full flex items-center gap-1.5 text-[10px] font-bold text-slate-500 hover:bg-white hover:text-[#00c2e8] hover:shadow-sm transition-all">
+               <ArrowUpRight className="w-3.5 h-3.5"/>
+               <span className="hidden sm:inline">確認</span>
+            </a>
+            <div className="w-px h-4 bg-slate-300 mx-0.5"></div>
+            <button onClick={resetLock} className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-white hover:text-red-500 hover:shadow-sm transition-all">
+               <LogOut className="w-3.5 h-3.5"/>
+            </button>
          </div>
       </header>
 
@@ -146,37 +155,38 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
         </div>
       )}
 
-      {/* 3. モバイル用タブスイッチャー (md以上では非表示) */}
-      <div className="md:hidden fixed top-14 inset-x-0 z-20 bg-[#f7f9fb]/95 backdrop-blur-sm px-4 py-2 border-b border-slate-200/50">
-         <div className="bg-slate-200/50 p-1 rounded-xl flex relative">
-            {/* アクティブなタブの背景 (アニメーション用) */}
+      {/* 3. モバイル用タブスイッチャー (フローティングスタイル) */}
+      <div className="md:hidden fixed top-16 inset-x-0 z-30 pt-4 pb-2 px-6 bg-gradient-to-b from-[#f7f9fb] via-[#f7f9fb]/90 to-transparent">
+         <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-200/60 flex relative h-12">
+            {/* アクティブなタブの背景 (スライディングアニメーション) */}
             <div 
-              className={`absolute inset-y-1 w-[calc(50%-4px)] bg-white rounded-lg shadow-sm transition-all duration-300 ease-out ${activeTab === 'schedule' ? 'left-1' : 'left-[calc(50%+4px)]'}`}
+              className={`absolute inset-y-1 w-[calc(50%-4px)] bg-slate-800 rounded-xl shadow-md transition-all duration-300 ease-out ${activeTab === 'schedule' ? 'left-1' : 'left-[calc(50%+4px)]'}`}
             ></div>
 
             <button 
                onClick={() => setActiveTab('schedule')} 
-               className={`flex-1 relative z-10 py-1.5 text-xs font-black flex items-center justify-center gap-1.5 transition-colors duration-300 ${activeTab === 'schedule' ? 'text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+               className={`flex-1 relative z-10 text-xs font-black flex items-center justify-center gap-2 transition-colors duration-300 ${activeTab === 'schedule' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`}
             >
-               <ListOrdered className="w-3.5 h-3.5" /> スケジュール
+               <ListOrdered className="w-4 h-4" /> スケジュール
             </button>
             <button 
                onClick={() => setActiveTab('settings')} 
-               className={`flex-1 relative z-10 py-1.5 text-xs font-black flex items-center justify-center gap-1.5 transition-colors duration-300 ${activeTab === 'settings' ? 'text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+               className={`flex-1 relative z-10 text-xs font-black flex items-center justify-center gap-2 transition-colors duration-300 ${activeTab === 'settings' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`}
             >
-               <Settings2 className="w-3.5 h-3.5" /> 設定・資料
+               <Settings2 className="w-4 h-4" /> 設定・資料
             </button>
          </div>
       </div>
 
       {/* 4. メインコンテンツエリア */}
-      <div className="pt-32 md:pt-24 px-4 w-full max-w-lg md:max-w-6xl mx-auto">
+      {/* モバイルではタブ分の余白(pt-36)が必要、PCではヘッダー分(pt-24) */}
+      <div className="pt-36 md:pt-24 px-4 w-full max-w-lg md:max-w-6xl mx-auto pb-32">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
           
           {/* === 左カラム: 設定・資料・連絡先 === */}
           <div className={`md:col-span-4 md:sticky md:top-24 space-y-6 ${activeTab === 'settings' ? 'block animate-in fade-in slide-in-from-left-4 duration-300' : 'hidden md:block'}`}>
             
-            {/* ★ イベント基本情報の編集コンポーネント */}
+            {/* 基本情報編集 */}
             {event && (
               <EditEventInfo 
                 event={event} 
@@ -223,7 +233,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
            ${activeTab === 'schedule' ? 'scale-100 opacity-100' : 'scale-0 opacity-0 md:scale-100 md:opacity-100'}
          `}
       >
-        <Plus className="w-8 h-8" />
+        <Plus className="w-7 h-7" />
       </button>
 
       {/* 6. 編集シート */}
@@ -242,7 +252,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
       />
       
       {/* 7. フッター */}
-      <footer className={`mt-32 pb-12 px-4 ${activeTab === 'schedule' ? 'block' : 'hidden md:block'}`}>
+      <footer className={`pb-12 px-4 ${activeTab === 'schedule' ? 'block' : 'hidden md:block'}`}>
         <div className="max-w-xl mx-auto bg-gradient-to-br from-[#00c2e8] to-blue-600 rounded-[2rem] p-8 text-center text-white shadow-xl shadow-cyan-200/50 mb-12 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
           <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2 pointer-events-none"></div>
