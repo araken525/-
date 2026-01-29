@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-// ▼ Userアイコンを追加
 import { Clock, MapPin, ChevronDown, ChevronUp, Link2, Youtube, Video, FileText, Image as ImageIcon, User } from "lucide-react";
 
 type ScheduleItemCardProps = {
@@ -9,10 +8,10 @@ type ScheduleItemCardProps = {
   now: boolean;
   emoji: string;
   duration: string | null;
-  badgeColor: string; // ※今回は個別に判定するため使いませんが、互換性のため残します
   startHhmm: string;
   endHhmm: string | null;
   materials: any[];
+  badgeColor?: string; // 互換性のため残す
 };
 
 function getMaterialIcon(url: string) {
@@ -53,12 +52,12 @@ export default function ScheduleItemCard({
     return ids.includes(String(m.id));
   });
 
-  // ★修正: タグを配列化
+  // タグを配列化 (any回避のため明示的にキャストはしないが、map側で型を指定する)
   const targets = (!it.target || it.target === "all" || it.target === "全員")
     ? ["全員"]
     : it.target.split(",").map((t: string) => t.trim());
 
-  // ★追加: 担当者を配列化
+  // 担当者を配列化
   const assignees = it.assignee
     ? it.assignee.split(",").map((a: string) => a.trim())
     : [];
@@ -95,10 +94,9 @@ export default function ScheduleItemCard({
               </h3>
             </div>
             
-            {/* ★修正: タグと担当者を独立したバッジとして表示 */}
             <div className="flex flex-wrap gap-1.5">
-              {/* 対象パートタグ */}
-              {targets.map((tag, i) => {
+              {/* ★修正: ここで (tag: string, i: number) と型を明記してエラーを回避 */}
+              {targets.map((tag: string, i: number) => {
                 const isAll = tag === "全員";
                 const colorClass = isAll ? "bg-slate-100 text-slate-500" : "bg-cyan-50 text-[#00c2e8]";
                 return (
@@ -108,8 +106,8 @@ export default function ScheduleItemCard({
                 );
               })}
 
-              {/* 担当者タグ (インディゴ系で区別) */}
-              {assignees.map((name, i) => (
+              {/* ★修正: こちらも (name: string, i: number) と型を明記 */}
+              {assignees.map((name: string, i: number) => (
                 <span key={`assignee-${i}`} className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-50 text-indigo-500 border border-indigo-100/50">
                   <User className="w-2.5 h-2.5" />
                   {name}
