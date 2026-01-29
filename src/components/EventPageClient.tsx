@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react"; // useEffectを追加
-import { createPortal } from "react-dom"; // createPortalを追加
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { User, Users, ChevronDown, ChevronUp, Link2, Youtube, Video, FileText, Image as ImageIcon, Phone, X } from "lucide-react"; // AlertCircleを削除
+import { User, Users, ChevronDown, ChevronUp, Link2, Youtube, Video, FileText, Image as ImageIcon, Phone, AlertCircle } from "lucide-react"; // AlertCircleを復活
 
 /* === ヘルパー: 資料アイコンとスタイル === */
 function getMaterialInfo(url: string) {
@@ -21,7 +21,7 @@ function getMaterialInfo(url: string) {
   return { icon: Link2, ...style };
 }
 
-/* === 1. スタッフフィルター (分離・ポップオーバー) === */
+/* === 1. スタッフフィルター === */
 export function StaffFilter({ assignees, slug }: { assignees: string[], slug: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const searchParams = useSearchParams();
@@ -95,7 +95,7 @@ export function StaffFilter({ assignees, slug }: { assignees: string[], slug: st
   );
 }
 
-/* === 2. 資料アコーディオン (折りたたみ) === */
+/* === 2. 資料アコーディオン === */
 export function MaterialsAccordion({ materials }: { materials: any[] }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -149,7 +149,7 @@ export function MaterialsAccordion({ materials }: { materials: any[] }) {
   );
 }
 
-/* === 3. 当日の連絡先ボタン (Portal対応 & デザイン変更) === */
+/* === 3. 緊急連絡先ボタン (Portal対応・赤色に戻す) === */
 export function EmergencyAction({ contacts }: { contacts: { name: string, tel: string, role: string }[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -162,26 +162,25 @@ export function EmergencyAction({ contacts }: { contacts: { name: string, tel: s
 
   return (
     <>
-      {/* ボタン: 青色に変更 */}
+      {/* ボタン: 赤色・AlertCircleに戻す */}
       <button 
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5 bg-[#00c2e8] text-white px-3 py-1.5 rounded-full text-[10px] font-black hover:bg-cyan-400 active:scale-95 transition-all shadow-sm shadow-cyan-200"
+        className="flex items-center gap-1.5 bg-red-50 text-red-500 px-3 py-1.5 rounded-full text-[10px] font-black hover:bg-red-100 active:scale-95 transition-all border border-red-100"
       >
-        <Phone className="w-3.5 h-3.5 fill-white/20" />
-        当日の連絡先
+        <AlertCircle className="w-3.5 h-3.5" />
+        緊急連絡先
       </button>
 
-      {/* ポップアップ: Portalでbody直下に描画 */}
+      {/* ポップアップ: Portalで最前面表示 */}
       {isOpen && mounted && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsOpen(false)}></div>
           <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
              <div className="text-center mb-6">
-                {/* アイコン: 青色に変更 */}
-                <div className="w-16 h-16 bg-cyan-50 text-[#00c2e8] rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Phone className="w-8 h-8" />
                 </div>
-                <h3 className="text-xl font-black text-slate-800">当日の連絡先</h3>
+                <h3 className="text-xl font-black text-slate-800">緊急連絡先</h3>
                 <p className="text-xs text-slate-400 mt-1">タップして発信できます</p>
              </div>
              
@@ -190,14 +189,13 @@ export function EmergencyAction({ contacts }: { contacts: { name: string, tel: s
                  <a 
                    key={i} 
                    href={`tel:${c.tel}`}
-                   className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-cyan-50 hover:border-cyan-100 transition-colors group"
+                   className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-red-50 hover:border-red-100 transition-colors group"
                  >
                     <div>
                        <div className="text-xs font-bold text-slate-400 mb-0.5">{c.role}</div>
-                       {/* 文字色: ホバー時に青に変更 */}
-                       <div className="text-lg font-black text-slate-800 group-hover:text-[#00c2e8]">{c.name}</div>
+                       <div className="text-lg font-black text-slate-800 group-hover:text-red-600">{c.name}</div>
                     </div>
-                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-slate-300 group-hover:text-[#00c2e8]">
+                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-slate-300 group-hover:text-red-500">
                        <Phone className="w-5 h-5" />
                     </div>
                  </a>
@@ -212,7 +210,7 @@ export function EmergencyAction({ contacts }: { contacts: { name: string, tel: s
              </button>
           </div>
         </div>,
-        document.body // bodyタグの直下に描画する
+        document.body
       )}
     </>
   );
