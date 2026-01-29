@@ -2,7 +2,8 @@
 
 import { useState, use, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Lock, Unlock, ArrowUpRight, LogOut, Edit3, Calendar, MapPin, Sparkles, ArrowRight } from "lucide-react";
+// ▼ Plus を追加しました
+import { Lock, Unlock, ArrowUpRight, LogOut, Edit3, Calendar, MapPin, Sparkles, ArrowRight, Plus } from "lucide-react";
 // 分割したコンポーネントをインポート
 import EditMaterials from "@/components/edit/EditMaterials";
 import EditEmergencyContacts from "@/components/edit/EditEmergencyContacts";

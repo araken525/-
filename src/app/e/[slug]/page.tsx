@@ -5,9 +5,9 @@ import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RefreshBadge from "@/components/RefreshBadge";
 import RealtimeListener from "@/components/RealtimeListener";
-import { StaffFilter, MaterialsAccordion, EmergencyAction } from "@/components/EventPageClient"; // ★新コンポーネント
+import { StaffFilter, MaterialsAccordion, EmergencyAction } from "@/components/EventPageClient";
 import Link from "next/link";
-import { MapPin, Calendar, Clock, Filter, X, Sparkles, ArrowRight } from "lucide-react";
+import { MapPin, Calendar, Clock, Filter, X, Sparkles, ArrowRight, User } from "lucide-react";
 
 /* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
@@ -52,6 +52,14 @@ function detectEmoji(title: string) {
 function getTargetColor(t: string) {
   if (!t || t === "all" || t === "全員") return "bg-slate-100 text-slate-500";
   return "bg-cyan-50 text-[#00c2e8]";
+}
+
+function getMaterialInfo(url: string) {
+  // ※EventPageClient側で定義しているのでここでは不要ですが、
+  // もしSSR側でアイコン判定するなら必要。今回はClient Componentに任せているので削除しても良いですが、
+  // もし残すならYoutube等のimportが必要です。
+  // 今回はpage.tsx内では使っていないので削除してOKです。
+  return {}; 
 }
 
 function groupByStartTime(items: any[]) {
@@ -117,12 +125,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { data: materials } = await supabase.from("event_materials").select("*").eq("event_id", event.id).order("sort_order", { ascending: true });
   const hasMaterials = materials && materials.length > 0;
 
-  /* --- 緊急連絡先データ (後でDB実装時にここを置き換えてください) --- */
-  // 例: const emergencyContacts = await supabase...
-  const emergencyContacts: { name: string, tel: string, role: string }[] = [
-    // { name: "田中 (舞台)", tel: "090-0000-0000", role: "舞台・進行" }, 
-    // { name: "佐藤 (受付)", tel: "080-0000-0000", role: "受付周り" },
-  ]; 
+  // ★修正: データベースから取得した緊急連絡先を使用する
+  const emergencyContacts = event.emergency_contacts || [];
 
   // タグ収集 & 担当者収集
   const tagsSet = new Set<string>();
@@ -197,7 +201,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               {getDayNumber(event.date)}
            </div>
            
-           {/* ★緊急連絡先ボタン (右上に配置) */}
+           {/* 緊急連絡先ボタン (右上に配置) */}
            <div className="absolute top-6 right-6 z-20">
               <EmergencyAction contacts={emergencyContacts} />
            </div>
@@ -256,7 +260,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             })}
           </div>
 
-          {/* ★スタッフフィルター (右端に分離) */}
+          {/* スタッフフィルター (右端に分離) */}
           {dynamicAssignees.length > 0 && (
              <StaffFilter assignees={dynamicAssignees} slug={slug} />
           )}
@@ -270,7 +274,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           )}
         </section>
 
-        {/* ★資料アコーディオン */}
+        {/* 資料アコーディオン */}
         {hasMaterials && (
           <MaterialsAccordion materials={materials} />
         )}
