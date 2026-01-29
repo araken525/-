@@ -41,13 +41,13 @@ export default function EditItemSheet({
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isMaterialsOpen, setIsMaterialsOpen] = useState(false);
   const [isTagEditMode, setIsTagEditMode] = useState(false);
-  const [isAssigneeEditMode, setIsAssigneeEditMode] = useState(false); // 担当者用の編集モード追加
+  const [isAssigneeEditMode, setIsAssigneeEditMode] = useState(false);
   
   // 入力用一時ステート
   const [newTagInput, setNewTagInput] = useState("");
   const [newAssigneeInput, setNewAssigneeInput] = useState("");
 
-  // アクションメニュー用ステート (編集・削除のポップアップ用)
+  // アクションメニュー用ステート
   const [actionMenu, setActionMenu] = useState<{ type: 'tag' | 'assignee', name: string } | null>(null);
 
   // --- 初期化 ---
@@ -83,6 +83,7 @@ export default function EditItemSheet({
     }
   }, [isOpen, editingItem]);
 
+  // 絵文字自動推測
   useEffect(() => {
     if (!editingItem && formData.title) {
       const detected = detectEmoji(formData.title);
@@ -92,6 +93,7 @@ export default function EditItemSheet({
     }
   }, [formData.title]);
 
+  // 外側クリックで閉じる
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (sheetRef.current && !sheetRef.current.contains(event.target as Node)) onClose();
@@ -103,15 +105,12 @@ export default function EditItemSheet({
 
   // --- タグ・担当者 操作ロジック ---
 
-  // タグクリック時の挙動
   function handleTagClick(tag: string) {
     if (isTagEditMode) {
       if (tag === "全員") return alert("「全員」タグは編集・削除できません");
-      // 編集メニューを開く
       setActionMenu({ type: 'tag', name: tag });
       return;
     }
-    // 通常の選択切り替え
     if (tag === "全員") {
       setFormData({ ...formData, target: "全員" });
       return;
@@ -127,14 +126,11 @@ export default function EditItemSheet({
     setFormData({ ...formData, target: newTarget });
   }
 
-  // 担当者クリック時の挙動
   function handleAssigneeClick(name: string) {
     if (isAssigneeEditMode) {
-      // 編集メニューを開く
       setActionMenu({ type: 'assignee', name: name });
       return;
     }
-    // 通常の選択切り替え
     let current = formData.assignee ? formData.assignee.split(",").map(t => t.trim()).filter(Boolean) : [];
     if (current.includes(name)) {
       current = current.filter(t => t !== name);
@@ -144,7 +140,7 @@ export default function EditItemSheet({
     setFormData({ ...formData, assignee: current.join(",") });
   }
 
-  // --- グローバル変更・削除ロジック (核心部分) ---
+  // --- グローバル変更・削除ロジック ---
 
   async function executeRename(newName: string) {
     if (!actionMenu || !newName || newName === actionMenu.name) return;
@@ -152,10 +148,8 @@ export default function EditItemSheet({
     const isTag = type === 'tag';
     
     if (!confirm(`「${oldName}」を「${newName}」に変更しますか？\nこれを使用している全てのスケジュールの表記が書き換わります。`)) return;
-
     setStatus(`${isTag ? "タグ" : "担当者"}名を変更中...`);
 
-    // 影響を受けるアイテムを探す
     const targetsToUpdate = allItems.filter(it => {
        const list = isTag 
          ? (it.target ? it.target.split(",").map((t: string) => t.trim()) : [])
@@ -163,19 +157,16 @@ export default function EditItemSheet({
        return list.includes(oldName);
     });
 
-    // DB更新
     for (const item of targetsToUpdate) {
        const currentList = isTag 
          ? item.target.split(",").map((t: string) => t.trim()) 
          : (item.assignee ? item.assignee.split(",").map((t: string) => t.trim()) : []);
        
        const newList = currentList.map((t: string) => t === oldName ? newName : t).join(",");
-       
        const updatePayload = isTag ? { target: newList } : { assignee: newList };
        await supabase.from("schedule_items").update(updatePayload).eq("id", item.id);
     }
 
-    // 今開いているフォーム上の表示も更新
     if (isTag) {
       if (formData.target.includes(oldName)) {
          const currentFormTags = formData.target.split(",").map(t => t.trim());
@@ -192,7 +183,7 @@ export default function EditItemSheet({
 
     setStatus("変更完了");
     setActionMenu(null);
-    onReload(); // 親データをリロード
+    onReload();
     setTimeout(() => setStatus(""), 2000);
   }
 
@@ -201,11 +192,9 @@ export default function EditItemSheet({
     const { type, name: targetName } = actionMenu;
     const isTag = type === 'tag';
 
-    if (!confirm(`本当に「${targetName}」を削除しますか？\n\n【注意】\nこの${isTag ? "タグ" : "担当者"}が設定されている全てのスケジュールから、この項目だけが削除されます。（スケジュール自体は消えません）`)) return;
-
+    if (!confirm(`本当に「${targetName}」を削除しますか？\n\n【注意】\nこの${isTag ? "タグ" : "担当者"}が設定されている全てのスケジュールから、この項目だけが削除されます。`)) return;
     setStatus(`${isTag ? "タグ" : "担当者"}を削除中...`);
 
-    // 影響を受けるアイテムを探す
     const targetsToUpdate = allItems.filter(it => {
        const list = isTag 
          ? (it.target ? it.target.split(",").map((t: string) => t.trim()) : [])
@@ -213,16 +202,13 @@ export default function EditItemSheet({
        return list.includes(targetName);
     });
 
-    // DB更新 (該当の単語だけ抜き取る)
     for (const item of targetsToUpdate) {
        let currentList = isTag 
          ? item.target.split(",").map((t: string) => t.trim()) 
          : (item.assignee ? item.assignee.split(",").map((t: string) => t.trim()) : []);
        
-       // 削除対象を除外
        currentList = currentList.filter((t: string) => t !== targetName);
 
-       // タグの場合、空になったら "全員" に戻すか、空にするか。ここでは空なら "全員" に戻す安全策をとる
        let newListStr = currentList.join(",");
        if (isTag && currentList.length === 0) {
           newListStr = "全員"; 
@@ -232,7 +218,6 @@ export default function EditItemSheet({
        await supabase.from("schedule_items").update(updatePayload).eq("id", item.id);
     }
 
-    // 今開いているフォーム上の表示も更新
     if (isTag) {
       let currentFormTags = formData.target.split(",").map(t => t.trim());
       if (currentFormTags.includes(targetName)) {
@@ -254,8 +239,6 @@ export default function EditItemSheet({
     setTimeout(() => setStatus(""), 2000);
   }
 
-  // --- その他のロジック ---
-
   function toggleMaterialLink(matId: number) {
     const idStr = String(matId);
     let currentIds = [...formData.materialIds];
@@ -272,7 +255,6 @@ export default function EditItemSheet({
     if (!formData.title.trim()) return setStatus("タイトル必須");
     
     setStatus(editingItem ? "更新中..." : "追加中...");
-
     const payload = {
       event_id: eventId, 
       start_time: formData.startTime + ":00", 
@@ -298,7 +280,6 @@ export default function EditItemSheet({
     setTimeout(() => setStatus(""), 2000);
   }
 
-  // 表示リスト作成
   const currentSelectedTags = formData.target ? formData.target.split(",").map(t => t.trim()).filter(Boolean) : [];
   const displayTags = Array.from(new Set([...recentTags, ...currentSelectedTags])).filter(t => t !== "全員");
 
@@ -309,13 +290,11 @@ export default function EditItemSheet({
   // --- UI構成 ---
   return (
     <div className={`fixed inset-0 z-50 flex items-end justify-center pointer-events-none ${isOpen ? "visible" : "invisible"}`}>
-       {/* 背景 */}
        <div 
          className={`absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0"}`} 
          onClick={onClose}
        ></div>
        
-       {/* シート本体 */}
        <div 
          ref={sheetRef} 
          className={`
@@ -324,12 +303,10 @@ export default function EditItemSheet({
            ${isOpen ? "translate-y-0" : "translate-y-full"}
          `}
        >
-          {/* ハンドル */}
           <div className="shrink-0 h-8 flex items-center justify-center cursor-pointer" onClick={onClose}>
              <div className="w-10 h-1.5 bg-slate-300 rounded-full opacity-60"></div>
           </div>
           
-          {/* コンテンツエリア */}
           <div className="flex-1 overflow-y-auto px-5 pb-32 pt-2 space-y-6 no-scrollbar">
              
              {/* 1. ヘッダー情報 */}
@@ -349,34 +326,42 @@ export default function EditItemSheet({
                 </div>
 
                 <div className="flex items-center gap-2">
-                   <div className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all">
-                      <label className="text-[10px] font-bold text-slate-400 block text-center mb-1">開始</label>
+                   {/* 開始 (labelに変更し、文字にpointer-events-none付与) */}
+                   <label className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all cursor-pointer">
+                      <span className="text-[10px] font-bold text-slate-400 block text-center mb-1 pointer-events-none">開始</span>
                       <input 
                         type="time" 
                         value={formData.startTime} 
                         onChange={(e)=>setFormData({...formData, startTime:e.target.value})} 
-                        className="w-full bg-transparent text-2xl font-black text-center outline-none text-slate-800 appearance-none font-mono tracking-tight relative z-10"
+                        className="w-full bg-transparent text-2xl font-black text-center outline-none text-slate-800 appearance-none font-mono tracking-tight relative z-10 cursor-pointer"
                       />
-                   </div>
+                   </label>
+                   
                    <ArrowRight className="w-5 h-5 text-slate-300" />
-                   <div className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all">
-                      <label className="text-[10px] font-bold text-slate-400 block text-center mb-1">終了</label>
+                   
+                   {/* 終了 (labelに変更し、クリアボタンの挙動修正) */}
+                   <label className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all cursor-pointer">
+                      <span className="text-[10px] font-bold text-slate-400 block text-center mb-1 pointer-events-none">終了</span>
                       <input 
                         type="time" 
                         value={formData.endTime} 
                         onChange={(e)=>setFormData({...formData, endTime:e.target.value})} 
-                        className={`w-full bg-transparent text-2xl font-black text-center outline-none appearance-none font-mono tracking-tight relative z-10 ${!formData.endTime ? 'text-slate-300' : 'text-slate-800'}`}
+                        className={`w-full bg-transparent text-2xl font-black text-center outline-none appearance-none font-mono tracking-tight relative z-10 cursor-pointer ${!formData.endTime ? 'text-slate-300' : 'text-slate-800'}`}
                       />
                       {formData.endTime && (
-                        <button onClick={() => setFormData({...formData, endTime: ""})} className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm z-20"><X className="w-3.5 h-3.5"/></button>
+                        <button 
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFormData({...formData, endTime: ""}); }} 
+                          className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm z-20"
+                        >
+                          <X className="w-3.5 h-3.5 pointer-events-none"/>
+                        </button>
                       )}
-                   </div>
+                   </label>
                 </div>
              </div>
 
              {/* 2. 詳細設定カード */}
              <div className="bg-white rounded-[1.5rem] shadow-sm border border-slate-100 overflow-hidden">
-                {/* 場所 */}
                 <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-50">
                    <div className="w-8 h-8 rounded-full bg-cyan-50 text-[#00c2e8] flex items-center justify-center shrink-0">
                       <MapPin className="w-4 h-4"/>
@@ -384,7 +369,6 @@ export default function EditItemSheet({
                    <input type="text" value={formData.location} onChange={(e)=>setFormData({...formData, location:e.target.value})} placeholder="場所 (例: 大ホール)" className="flex-1 bg-transparent text-sm font-bold outline-none text-slate-700 placeholder:text-slate-300 min-w-0"/>
                 </div>
 
-                {/* メモ */}
                 <div className="flex items-start gap-3 px-5 py-4 border-b border-slate-50">
                    <div className="w-8 h-8 rounded-full bg-yellow-50 text-yellow-500 flex items-center justify-center shrink-0 mt-0.5">
                       <StickyNote className="w-4 h-4"/>
@@ -401,7 +385,7 @@ export default function EditItemSheet({
                    ></textarea>
                 </div>
 
-                {/* タグ (編集機能強化) */}
+                {/* タグ */}
                 <div className="px-5 py-4 border-b border-slate-50">
                    <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-slate-400 flex items-center gap-1"><Tag className="w-3 h-3"/> 対象タグ</span>
@@ -440,14 +424,21 @@ export default function EditItemSheet({
                       <div className="flex gap-2">
                          <div className="flex-1 h-12 bg-slate-50 rounded-xl flex items-center px-3 border border-slate-100 focus-within:ring-2 focus-within:ring-cyan-100 transition-all">
                             <Plus className="w-4 h-4 text-slate-300 mr-2 shrink-0" />
-                            <input type="text" value={newTagInput} onChange={(e)=>setNewTagInput(e.target.value)} placeholder="新しいタグ..." className="flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-slate-300 min-w-0"/>
+                            <input 
+                              type="text" 
+                              value={newTagInput} 
+                              onChange={(e)=>setNewTagInput(e.target.value)} 
+                              onKeyDown={(e) => { if (e.key === 'Enter' && newTagInput.trim()) { handleTagClick(newTagInput.trim()); setNewTagInput(""); } }}
+                              placeholder="新しいタグ..." 
+                              className="flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-slate-300 min-w-0"
+                            />
                          </div>
                          <button onClick={() => {if(newTagInput.trim()){ handleTagClick(newTagInput.trim()); setNewTagInput("") }}} disabled={!newTagInput.trim()} className="h-12 px-4 bg-slate-800 text-white rounded-xl text-xs font-bold disabled:opacity-30 active:scale-95 transition-all shrink-0">追加</button>
                       </div>
                    )}
                 </div>
 
-                {/* 担当者 (編集機能強化) */}
+                {/* 担当者 */}
                 <div className="px-5 py-4">
                    <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-slate-400 flex items-center gap-1"><Users className="w-3 h-3"/> 担当スタッフ</span>
@@ -484,7 +475,14 @@ export default function EditItemSheet({
                      <div className="flex gap-2">
                         <div className="flex-1 h-12 bg-slate-50 rounded-xl flex items-center px-3 border border-slate-100 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
                            <Plus className="w-4 h-4 text-slate-300 mr-2 shrink-0" />
-                           <input type="text" value={newAssigneeInput} onChange={(e)=>setNewAssigneeInput(e.target.value)} placeholder="担当者名 (例: 田中)" className="flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-slate-300 min-w-0"/>
+                           <input 
+                             type="text" 
+                             value={newAssigneeInput} 
+                             onChange={(e)=>setNewAssigneeInput(e.target.value)} 
+                             onKeyDown={(e) => { if (e.key === 'Enter' && newAssigneeInput.trim()) { handleAssigneeClick(newAssigneeInput.trim()); setNewAssigneeInput(""); } }}
+                             placeholder="担当者名 (例: 田中)" 
+                             className="flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-slate-300 min-w-0"
+                           />
                         </div>
                         <button onClick={() => {if(newAssigneeInput.trim()){ handleAssigneeClick(newAssigneeInput.trim()); setNewAssigneeInput("") }}} disabled={!newAssigneeInput.trim()} className="h-12 px-4 bg-indigo-500 text-white rounded-xl text-xs font-bold disabled:opacity-30 active:scale-95 transition-all shrink-0">追加</button>
                      </div>
@@ -557,7 +555,7 @@ export default function EditItemSheet({
              </button>
           </div>
 
-          {/* === アクションメニュー (編集・削除) === */}
+          {/* === アクションメニュー === */}
           {actionMenu && (
             <div className="absolute inset-0 z-50 flex items-end justify-center pointer-events-auto">
               <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setActionMenu(null)}></div>
@@ -569,33 +567,21 @@ export default function EditItemSheet({
                     </h3>
                     <button onClick={() => setActionMenu(null)} className="p-2 bg-slate-100 rounded-full text-slate-500"><X className="w-4 h-4"/></button>
                  </div>
-                 
                  <div className="p-4 bg-slate-50 rounded-xl text-xs text-slate-500 flex gap-2 leading-relaxed">
                     <AlertTriangle className="w-4 h-4 shrink-0 text-orange-400" />
                     ここで変更・削除を行うと、過去のスケジュールも含めて、この項目を使用している全ての箇所に反映されます。
                  </div>
-
                  <div className="grid grid-cols-1 gap-3">
-                    <button 
-                      onClick={() => {
-                        const newName = prompt("新しい名前を入力してください", actionMenu.name);
-                        if(newName) executeRename(newName);
-                      }}
-                      className="h-14 bg-white border-2 border-slate-100 rounded-xl font-bold text-slate-700 flex items-center justify-center gap-2 hover:bg-slate-50 transition-all active:scale-[0.98]"
-                    >
+                    <button onClick={() => { const newName = prompt("新しい名前を入力してください", actionMenu.name); if(newName) executeRename(newName); }} className="h-14 bg-white border-2 border-slate-100 rounded-xl font-bold text-slate-700 flex items-center justify-center gap-2 hover:bg-slate-50 transition-all active:scale-[0.98]">
                        <Pencil className="w-5 h-5 text-slate-400"/> 名前を変更する
                     </button>
-                    <button 
-                      onClick={executeDelete}
-                      className="h-14 bg-red-50 text-red-500 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all active:scale-[0.98]"
-                    >
+                    <button onClick={executeDelete} className="h-14 bg-red-50 text-red-500 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all active:scale-[0.98]">
                        <Trash2 className="w-5 h-5"/> この項目を全ての予定から削除
                     </button>
                  </div>
               </div>
             </div>
           )}
-
        </div>
     </div>
   );
