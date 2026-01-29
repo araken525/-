@@ -1,21 +1,20 @@
 "use client";
 
 import { useState } from "react";
-// ▼ アイコンを追加
-import { Clock, MapPin, ChevronDown, ChevronUp, Link2, Youtube, Video, FileText, Image as ImageIcon } from "lucide-react";
+// ▼ Userアイコンを追加
+import { Clock, MapPin, ChevronDown, ChevronUp, Link2, Youtube, Video, FileText, Image as ImageIcon, User } from "lucide-react";
 
 type ScheduleItemCardProps = {
   it: any;
   now: boolean;
   emoji: string;
   duration: string | null;
-  badgeColor: string;
+  badgeColor: string; // ※今回は個別に判定するため使いませんが、互換性のため残します
   startHhmm: string;
   endHhmm: string | null;
   materials: any[];
 };
 
-// ★修正: アイコンは変えるが、色は「青(#00c2e8)」で統一する
 function getMaterialIcon(url: string) {
   const u = url.toLowerCase();
   if (u.includes("youtube") || u.includes("youtu.be")) {
@@ -38,7 +37,6 @@ export default function ScheduleItemCard({
   now,
   emoji,
   duration,
-  badgeColor,
   startHhmm,
   endHhmm,
   materials,
@@ -54,6 +52,16 @@ export default function ScheduleItemCard({
     const ids = it.material_ids.split(",");
     return ids.includes(String(m.id));
   });
+
+  // ★修正: タグを配列化
+  const targets = (!it.target || it.target === "all" || it.target === "全員")
+    ? ["全員"]
+    : it.target.split(",").map((t: string) => t.trim());
+
+  // ★追加: 担当者を配列化
+  const assignees = it.assignee
+    ? it.assignee.split(",").map((a: string) => a.trim())
+    : [];
 
   return (
     <div
@@ -81,14 +89,33 @@ export default function ScheduleItemCard({
 
         <div className="flex-1 min-w-0 flex flex-col h-full">
           <div className="mb-2">
-            <div className="flex flex-wrap items-start gap-2 mb-1">
+            <div className="flex flex-wrap items-start gap-2 mb-1.5">
               <h3 className={`text-xl font-black leading-tight tracking-tight ${now ? "text-[#00c2e8]" : "text-slate-900"}`}>
                 {it.title}
               </h3>
             </div>
-            <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-black ${badgeColor}`}>
-              {it.target && it.target !== "all" ? it.target.replace(/,/g, "・") : "全員"}
-            </span>
+            
+            {/* ★修正: タグと担当者を独立したバッジとして表示 */}
+            <div className="flex flex-wrap gap-1.5">
+              {/* 対象パートタグ */}
+              {targets.map((tag, i) => {
+                const isAll = tag === "全員";
+                const colorClass = isAll ? "bg-slate-100 text-slate-500" : "bg-cyan-50 text-[#00c2e8]";
+                return (
+                  <span key={`target-${i}`} className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-black ${colorClass}`}>
+                    {tag}
+                  </span>
+                );
+              })}
+
+              {/* 担当者タグ (インディゴ系で区別) */}
+              {assignees.map((name, i) => (
+                <span key={`assignee-${i}`} className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-50 text-indigo-500 border border-indigo-100/50">
+                  <User className="w-2.5 h-2.5" />
+                  {name}
+                </span>
+              ))}
+            </div>
           </div>
 
           {endHhmm && (
@@ -126,7 +153,6 @@ export default function ScheduleItemCard({
             </div>
           )}
 
-          {/* ★修正: 全てテーマカラー(青)で統一 */}
           {linkedMaterials.length > 0 && (
             <div className="flex flex-col gap-1 mb-4 mt-1">
               {linkedMaterials.map((m) => {

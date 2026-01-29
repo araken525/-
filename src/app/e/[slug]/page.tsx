@@ -4,10 +4,11 @@ import { supabase } from "@/lib/supabaseClient";
 import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RefreshBadge from "@/components/RefreshBadge";
+import RealtimeListener from "@/components/RealtimeListener"; // ★追加: リアルタイム監視
 import Link from "next/link";
-import { MapPin, Calendar, Clock, Filter, X, Link2, FileText, Youtube, Video, Image as ImageIcon, Sparkles, ArrowRight } from "lucide-react";
+import { MapPin, Calendar, Clock, Filter, X, Link2, FileText, Youtube, Video, Image as ImageIcon, Sparkles, ArrowRight, User } from "lucide-react";
 
-/* === ヘルパー関数 (ロジック変更なし) === */
+/* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
 
 function getDayNumber(dateStr: string) {
@@ -32,7 +33,6 @@ function getDuration(start: string, end?: string | null) {
   const h = Math.floor(diffMin / 60);
   const m = diffMin % 60;
   
-  // 0時間の時は分だけ表示 (編集画面と合わせる)
   if (h === 0) return `${m}分`;
   return m === 0 ? `${h}時間` : `${h}時間${m}分`;
 }
@@ -53,28 +53,17 @@ function getTargetColor(t: string) {
   return "bg-cyan-50 text-[#00c2e8]";
 }
 
-// ★修正: ホバーをPC限定(sm:)にし、色は青で統一
 function getMaterialInfo(url: string) {
   const u = url.toLowerCase();
-  
-  // 共通スタイル: ホバーはsm以上のみ、色は青
   const style = { 
     color: "text-[#00c2e8]", 
     bg: "bg-cyan-50 sm:hover:bg-[#00c2e8] sm:hover:text-white transition-colors" 
   };
 
-  if (u.includes("youtube") || u.includes("youtu.be")) {
-    return { icon: Youtube, ...style, label: "YouTube" };
-  }
-  if (u.endsWith(".mp4") || u.endsWith(".mov") || u.includes("vimeo")) {
-    return { icon: Video, ...style, label: "Video" };
-  }
-  if (u.endsWith(".pdf")) {
-    return { icon: FileText, ...style, label: "PDF" };
-  }
-  if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
-    return { icon: ImageIcon, ...style, label: "Image" };
-  }
+  if (u.includes("youtube") || u.includes("youtu.be")) return { icon: Youtube, ...style, label: "YouTube" };
+  if (u.endsWith(".mp4") || u.endsWith(".mov") || u.includes("vimeo")) return { icon: Video, ...style, label: "Video" };
+  if (u.endsWith(".pdf")) return { icon: FileText, ...style, label: "PDF" };
+  if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) return { icon: ImageIcon, ...style, label: "Image" };
   return { icon: Link2, ...style, label: "Link" };
 }
 
@@ -141,8 +130,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { data: materials } = await supabase.from("event_materials").select("*").eq("event_id", event.id).order("sort_order", { ascending: true });
   const hasMaterials = materials && materials.length > 0;
 
+  // タグ収集 & 担当者収集
   const tagsSet = new Set<string>();
+  const assigneesSet = new Set<string>(); // ★追加: 担当者セット
+
   allItems.forEach(item => {
+    // パート収集
     if (!item.target || item.target === "all" || item.target === "全員") {
       tagsSet.add("全員");
     } else {
@@ -152,25 +145,47 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         else if (tag !== "") tagsSet.add(tag);
       });
     }
+    // ★担当者収集
+    if (item.assignee) {
+      item.assignee.split(",").forEach((a: string) => assigneesSet.add(a.trim()));
+    }
   });
   
+  // タブの生成
   const otherTabs = Array.from(tagsSet).filter(t => t !== "全員").sort();
   const dynamicTabs = tagsSet.has("全員") ? ["全員", ...otherTabs] : otherTabs;
+  
+  // ★担当者タブの生成
+  const dynamicAssignees = Array.from(assigneesSet).sort();
 
+  // フィルタリング (タグ OR 担当者)
   const filtered = allItems.filter(it => {
+    // 1. 何も選択されていなければ全表示
     if (selectedTags.length === 0) return true;
+
     const itTargets = (!it.target || it.target === "all" || it.target === "全員") 
       ? ["全員"] 
       : it.target.split(",").map((t: string) => {
           const trimmed = t.trim();
           return (trimmed === "all") ? "全員" : trimmed;
         });
+
+    // 2. 「全員」対象の予定は常に表示
     if (itTargets.includes("全員")) return true;
-    return itTargets.some((tag: string) => selectedTags.includes(tag));
+
+    // 3. タグの一致チェック
+    const isTagMatch = itTargets.some((tag: string) => selectedTags.includes(tag));
+
+    // 4. ★担当者の一致チェック
+    const itAssignees = it.assignee ? it.assignee.split(",").map((a: string) => a.trim()) : [];
+    const isAssigneeMatch = itAssignees.some((assignee: string) => selectedTags.includes(assignee));
+
+    return isTagMatch || isAssigneeMatch;
   });
 
   const groups = groupByStartTime(filtered);
 
+  // 更新日時の計算
   const candidates: Date[] = [];
   const evUpd = toDate((event as any).updated_at);
   if (evUpd) candidates.push(evUpd);
@@ -183,6 +198,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   return (
     <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white pb-20">
       <EventHeader title={event.title} slug={slug} />
+      
+      {/* ★追加: リアルタイム更新の監視係 */}
+      <RealtimeListener eventId={event.id} />
 
       <div className="pt-24 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-8">
         
@@ -215,6 +233,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               <Filter className="w-4 h-4 text-slate-300 mr-1" />
               <span className="text-xs font-black text-slate-300">表示切替</span>
             </div>
+            
+            {/* すべて表示 */}
             <Link
               href={`/e/${slug}`}
               scroll={false}
@@ -225,6 +245,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             >
               すべて
             </Link>
+
+            {/* パートタグ */}
             {dynamicTabs.map((tag) => {
               const isActive = selectedTags.includes(tag);
               const nextUrl = toggleTag(selectedTags, tag);
@@ -243,6 +265,32 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 </Link>
               );
             })}
+
+            {/* ★担当者タグ (区切り線を入れて表示) */}
+            {dynamicAssignees.length > 0 && (
+               <div className="w-px h-6 bg-slate-200 shrink-0 mx-1"></div>
+            )}
+            
+            {dynamicAssignees.map((assignee) => {
+              const isActive = selectedTags.includes(assignee);
+              const nextUrl = toggleTag(selectedTags, assignee);
+              const href = nextUrl ? `/e/${slug}?t=${encodeURIComponent(nextUrl)}` : `/e/${slug}`;
+              return (
+                <Link
+                  key={assignee}
+                  href={href}
+                  scroll={false}
+                  className={`
+                    shrink-0 px-3 py-2 rounded-xl text-xs font-black transition-colors select-none active:scale-95 flex items-center gap-1.5
+                    ${isActive ? "bg-indigo-500 text-white" : "bg-indigo-50 text-indigo-400"}
+                  `}
+                >
+                  <User className="w-3 h-3" />
+                  {assignee}
+                </Link>
+              );
+            })}
+
             {selectedTags.length > 0 && (
               <div className="pl-2 border-l border-slate-100 shrink-0">
                 <Link href={`/e/${slug}`} scroll={false} className="flex items-center text-xs font-bold text-slate-400 bg-slate-50 px-3 py-2 rounded-xl active:scale-95 active:bg-slate-100 transition-all">
@@ -253,7 +301,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           </div>
         </section>
 
-        {/* 資料リンク集エリア (ホバー演出をPC限定に) */}
+        {/* 資料リンク集エリア */}
         {hasMaterials && (
           <section className="space-y-3">
              <div className="pl-2 flex items-center gap-2">
@@ -263,7 +311,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                {materials.map((m) => {
                  const { icon: Icon, color, bg, label } = getMaterialInfo(m.url);
-                 
                  return (
                    <a 
                      key={m.id} 
@@ -354,7 +401,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
       {lastUpdated && <RefreshBadge dateText={relativeJa(lastUpdated)} />}
 
-      {/* フッター (ホバーをPC限定に) */}
+      {/* フッター */}
       <footer className="mt-32 pb-12 px-4">
         <div className="max-w-xl mx-auto bg-gradient-to-br from-[#00c2e8] to-blue-600 rounded-[2rem] p-8 text-center text-white shadow-xl shadow-cyan-200/50 mb-12 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
