@@ -5,14 +5,20 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { User, Users, ChevronDown, ChevronUp, Link2, Youtube, Video, FileText, Image as ImageIcon, Phone, AlertCircle, X } from "lucide-react";
 
-/* === ヘルパー: 資料アイコン === */
-function getMaterialIcon(url: string) {
+/* === ヘルパー: 資料アイコンとスタイル === */
+// ★修正: アイコンだけでなく色情報も返すように修正
+function getMaterialInfo(url: string) {
   const u = url.toLowerCase();
-  if (u.includes("youtube") || u.includes("youtu.be")) return Youtube;
-  if (u.endsWith(".mp4") || u.endsWith(".mov") || u.includes("vimeo")) return Video;
-  if (u.endsWith(".pdf")) return FileText;
-  if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) return ImageIcon;
-  return Link2;
+  const style = { 
+    color: "text-[#00c2e8]", 
+    bg: "bg-cyan-50 sm:hover:bg-[#00c2e8] sm:hover:text-white transition-colors" 
+  };
+
+  if (u.includes("youtube") || u.includes("youtu.be")) return { icon: Youtube, ...style };
+  if (u.endsWith(".mp4") || u.endsWith(".mov") || u.includes("vimeo")) return { icon: Video, ...style };
+  if (u.endsWith(".pdf")) return { icon: FileText, ...style };
+  if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) return { icon: ImageIcon, ...style };
+  return { icon: Link2, ...style };
 }
 
 /* === 1. スタッフフィルター (分離・ポップオーバー) === */
@@ -121,7 +127,8 @@ export function MaterialsAccordion({ materials }: { materials: any[] }) {
           <div className="p-4 pt-0 grid grid-cols-1 sm:grid-cols-2 gap-3">
              <div className="h-2 col-span-full"></div> {/* スペーサー */}
              {materials.map((m) => {
-               const { icon: Icon, color, bg } = getMaterialIcon(m.url);
+               // ★ここで getMaterialInfo を使うように修正
+               const { icon: Icon, color, bg } = getMaterialInfo(m.url);
                return (
                  <a 
                    key={m.id} 
