@@ -5,9 +5,9 @@ import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RefreshBadge from "@/components/RefreshBadge";
 import RealtimeListener from "@/components/RealtimeListener";
-import { StaffFilter, MaterialsAccordion, EmergencyAction } from "@/components/EventPageClient";
+import { StaffFilter, MaterialsAccordion } from "@/components/EventPageClient"; // ★ EmergencyAction を削除
 import Link from "next/link";
-import { MapPin, Calendar, Clock, Filter, X, Sparkles, ArrowRight, User } from "lucide-react";
+import { MapPin, Calendar, Clock, Filter, X, Sparkles, ArrowRight } from "lucide-react";
 
 /* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
@@ -52,14 +52,6 @@ function detectEmoji(title: string) {
 function getTargetColor(t: string) {
   if (!t || t === "all" || t === "全員") return "bg-slate-100 text-slate-500";
   return "bg-cyan-50 text-[#00c2e8]";
-}
-
-function getMaterialInfo(url: string) {
-  // ※EventPageClient側で定義しているのでここでは不要ですが、
-  // もしSSR側でアイコン判定するなら必要。今回はClient Componentに任せているので削除しても良いですが、
-  // もし残すならYoutube等のimportが必要です。
-  // 今回はpage.tsx内では使っていないので削除してOKです。
-  return {}; 
 }
 
 function groupByStartTime(items: any[]) {
@@ -125,15 +117,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { data: materials } = await supabase.from("event_materials").select("*").eq("event_id", event.id).order("sort_order", { ascending: true });
   const hasMaterials = materials && materials.length > 0;
 
-  // ★修正: データベースから取得した緊急連絡先を使用する
   const emergencyContacts = event.emergency_contacts || [];
 
-  // タグ収集 & 担当者収集
   const tagsSet = new Set<string>();
   const assigneesSet = new Set<string>();
 
   allItems.forEach(item => {
-    // パート収集
     if (!item.target || item.target === "all" || item.target === "全員") {
       tagsSet.add("全員");
     } else {
@@ -143,7 +132,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         else if (tag !== "") tagsSet.add(tag);
       });
     }
-    // 担当者収集
     if (item.assignee) {
       item.assignee.split(",").forEach((a: string) => assigneesSet.add(a.trim()));
     }
@@ -154,7 +142,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   
   const dynamicAssignees = Array.from(assigneesSet).sort();
 
-  // フィルタリング
   const filtered = allItems.filter(it => {
     if (selectedTags.length === 0) return true;
 
@@ -187,7 +174,12 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
   return (
     <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white pb-20">
-      <EventHeader title={event.title} slug={slug} />
+      {/* ★修正: ヘッダーに連絡先データを渡す */}
+      <EventHeader 
+        title={event.title} 
+        slug={slug} 
+        emergencyContacts={emergencyContacts}
+      />
       
       <RealtimeListener eventId={event.id} />
 
@@ -201,10 +193,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               {getDayNumber(event.date)}
            </div>
            
-           {/* 緊急連絡先ボタン (右上に配置) */}
-           <div className="absolute top-6 right-6 z-20">
-              <EmergencyAction contacts={emergencyContacts} />
-           </div>
+           {/* ★以前ここにあった <EmergencyAction /> は削除済み */}
 
            <div className="relative z-10 text-left mt-2">
              <div className="inline-flex items-center gap-1.5 bg-white/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-cyan-700 mb-3 shadow-sm">
@@ -260,7 +249,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
             })}
           </div>
 
-          {/* スタッフフィルター (右端に分離) */}
+          {/* スタッフフィルター */}
           {dynamicAssignees.length > 0 && (
              <StaffFilter assignees={dynamicAssignees} slug={slug} />
           )}
