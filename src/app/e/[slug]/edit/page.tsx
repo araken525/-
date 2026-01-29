@@ -5,10 +5,9 @@ import { supabase } from "@/lib/supabaseClient";
 import { 
   Lock, Unlock, ArrowUpRight, LogOut, Edit3, 
   Sparkles, ArrowRight, Plus, 
-  ListOrdered, Settings2, LayoutDashboard
+  ListOrdered, Settings2
 } from "lucide-react";
 
-// 分割したコンポーネントをインポート
 import EditMaterials from "@/components/edit/EditMaterials";
 import EditEmergencyContacts from "@/components/edit/EditEmergencyContacts";
 import EditScheduleList from "@/components/edit/EditScheduleList";
@@ -28,14 +27,11 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
   const [materials, setMaterials] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
 
-  // 編集シート制御
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  // タブ制御 (mobile only)
   const [activeTab, setActiveTab] = useState<'schedule' | 'settings'>('schedule');
 
-  // 入力候補
   const [recentTags, setRecentTags] = useState<string[]>(["全員"]);
   const [recentAssignees, setRecentAssignees] = useState<string[]>([]);
 
@@ -124,7 +120,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
   return (
     <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white relative">
       
-      {/* 1. ヘッダー (Glassmorphism UI) */}
+      {/* 1. ヘッダー (Glassmorphism) */}
       <header className="fixed top-0 inset-x-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 h-16 flex items-center justify-between px-4 sm:px-6 transition-all">
          <div className="flex items-center gap-2 max-w-[60%]">
             <div className="w-8 h-8 rounded-full bg-cyan-50 flex items-center justify-center shrink-0">
@@ -155,38 +151,35 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
         </div>
       )}
 
-      {/* 3. モバイル用タブスイッチャー (フローティングスタイル) */}
-      <div className="md:hidden fixed top-16 inset-x-0 z-30 pt-4 pb-2 px-6 bg-gradient-to-b from-[#f7f9fb] via-[#f7f9fb]/90 to-transparent">
-         <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-200/60 flex relative h-12">
-            {/* アクティブなタブの背景 (スライディングアニメーション) */}
+      {/* 3. モバイル用タブスイッチャー (修正版: iOSスタイル) */}
+      <div className="md:hidden fixed top-16 inset-x-0 z-30 pt-3 pb-3 px-4 bg-[#f7f9fb]/90 backdrop-blur-md border-b border-slate-200/50">
+         <div className="bg-slate-200/50 p-1 rounded-xl flex relative h-10">
+            {/* アクティブなタブの背景 (白く浮き上がるスタイルに変更) */}
             <div 
-              className={`absolute inset-y-1 w-[calc(50%-4px)] bg-slate-800 rounded-xl shadow-md transition-all duration-300 ease-out ${activeTab === 'schedule' ? 'left-1' : 'left-[calc(50%+4px)]'}`}
+              className={`absolute inset-y-1 w-[calc(50%-4px)] bg-white rounded-lg shadow-sm border border-slate-200/50 transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${activeTab === 'schedule' ? 'left-1' : 'left-[calc(50%+4px)]'}`}
             ></div>
 
             <button 
                onClick={() => setActiveTab('schedule')} 
-               className={`flex-1 relative z-10 text-xs font-black flex items-center justify-center gap-2 transition-colors duration-300 ${activeTab === 'schedule' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`}
+               className={`flex-1 relative z-10 text-xs font-black flex items-center justify-center gap-1.5 transition-colors duration-300 ${activeTab === 'schedule' ? 'text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
             >
-               <ListOrdered className="w-4 h-4" /> スケジュール
+               <ListOrdered className="w-3.5 h-3.5" /> スケジュール
             </button>
             <button 
                onClick={() => setActiveTab('settings')} 
-               className={`flex-1 relative z-10 text-xs font-black flex items-center justify-center gap-2 transition-colors duration-300 ${activeTab === 'settings' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`}
+               className={`flex-1 relative z-10 text-xs font-black flex items-center justify-center gap-1.5 transition-colors duration-300 ${activeTab === 'settings' ? 'text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
             >
-               <Settings2 className="w-4 h-4" /> 設定・資料
+               <Settings2 className="w-3.5 h-3.5" /> 設定・資料
             </button>
          </div>
       </div>
 
-      {/* 4. メインコンテンツエリア */}
-      {/* モバイルではタブ分の余白(pt-36)が必要、PCではヘッダー分(pt-24) */}
-      <div className="pt-36 md:pt-24 px-4 w-full max-w-lg md:max-w-6xl mx-auto pb-32">
+      {/* 4. メインコンテンツエリア (タブ分の余白調整: pt-36 -> pt-32程度) */}
+      <div className="pt-32 md:pt-24 px-4 w-full max-w-lg md:max-w-6xl mx-auto pb-32">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
           
-          {/* === 左カラム: 設定・資料・連絡先 === */}
+          {/* 左カラム */}
           <div className={`md:col-span-4 md:sticky md:top-24 space-y-6 ${activeTab === 'settings' ? 'block animate-in fade-in slide-in-from-left-4 duration-300' : 'hidden md:block'}`}>
-            
-            {/* 基本情報編集 */}
             {event && (
               <EditEventInfo 
                 event={event} 
@@ -194,16 +187,12 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
                 setStatus={setStatus} 
               />
             )}
-
-            {/* 資料管理 */}
             <EditMaterials 
                eventId={event?.id} 
                materials={materials} 
                onUpdate={loadAllData} 
                setStatus={setStatus} 
             />
-
-            {/* 緊急連絡先管理 */}
             <EditEmergencyContacts 
                eventId={event?.id} 
                contacts={contacts} 
@@ -212,7 +201,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
             />
           </div>
 
-          {/* === 右カラム: スケジュール一覧 === */}
+          {/* 右カラム */}
           <div className={`md:col-span-8 ${activeTab === 'schedule' ? 'block animate-in fade-in slide-in-from-right-4 duration-300' : 'hidden md:block'}`}>
              <EditScheduleList 
                items={items} 
