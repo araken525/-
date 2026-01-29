@@ -4,7 +4,8 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { 
   Clock, MapPin, Edit3, Trash2, Paperclip, 
-  User, MoreHorizontal, Calendar, Tag, AlertCircle 
+  User, MoreHorizontal, Calendar, Tag, AlertCircle, 
+  StickyNote, Hourglass
 } from "lucide-react";
 import { hhmm, detectEmoji, getDuration, getTargetColor } from "@/lib/editUtils";
 
@@ -17,7 +18,6 @@ type Props = {
 };
 
 export default function EditScheduleList({ items, materials, onEdit, onDelete, setStatus }: Props) {
-  // どのアイテムのメニューが開いているかを管理
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   async function removeItem(id: string) {
@@ -25,13 +25,12 @@ export default function EditScheduleList({ items, materials, onEdit, onDelete, s
     const { error } = await supabase.from("schedule_items").delete().eq("id", id);
     if (error) return setStatus("エラー: " + error.message);
     
-    setOpenMenuId(null); // メニューを閉じる
+    setOpenMenuId(null);
     onDelete(); 
     setStatus("削除しました"); 
     setTimeout(() => setStatus(""), 2000);
   }
 
-  // メニューの開閉（親のクリックイベントを止める）
   function toggleMenu(e: React.MouseEvent, id: string) {
     e.stopPropagation();
     setOpenMenuId(openMenuId === id ? null : id);
@@ -43,7 +42,6 @@ export default function EditScheduleList({ items, materials, onEdit, onDelete, s
          <span className="text-xs font-bold text-slate-400">スケジュール ({items.length}件)</span>
       </div>
       
-      {/* メニューが開いている時に他をタップしたら閉じるための透明な背景 */}
       {openMenuId && (
         <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)}></div>
       )}
@@ -52,17 +50,14 @@ export default function EditScheduleList({ items, materials, onEdit, onDelete, s
          const emoji = it.emoji || detectEmoji(it.title);
          const duration = getDuration(it.start_time, it.end_time);
          
-         // タグの配列化
          const tags = it.target && it.target !== "all" 
             ? it.target.split(",").map((t: string) => t.trim()) 
             : ["全員"];
          
-         // 担当者の配列化
          const assignees = it.assignee 
             ? it.assignee.split(",").map((a: string) => a.trim()) 
             : [];
          
-         // 資料紐付けチェック
          const currentMaterialIds = it.material_ids ? it.material_ids.split(",") : [];
          const validCount = currentMaterialIds.filter((id: string) => materials.some(m => String(m.id) === id)).length;
          
@@ -70,67 +65,76 @@ export default function EditScheduleList({ items, materials, onEdit, onDelete, s
           <div 
             key={it.id} 
             onClick={() => onEdit(it)}
-            className="relative bg-white rounded-[1.5rem] p-5 flex gap-4 items-start shadow-sm border border-slate-100 active:scale-[0.98] active:bg-slate-50 transition-all cursor-pointer group"
+            // ★修正: active:scaleなどを削除し、静的なカードに変更
+            className="relative bg-white rounded-[1.5rem] p-5 flex gap-4 items-start shadow-sm border border-slate-100"
           >
-            {/* 左側: 時間と絵文字 */}
+            {/* 左側: 開始時間と絵文字 */}
             <div className="flex flex-col items-center shrink-0 space-y-3 pt-1 w-14">
                <div className="text-lg font-black text-slate-800 leading-none tracking-tight">{hhmm(it.start_time)}</div>
                <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-3xl shadow-inner border border-slate-100">{emoji}</div>
-               {it.end_time && (
-                 <div className="text-[10px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded-md whitespace-nowrap">
-                    ~{hhmm(it.end_time)}
-                 </div>
-               )}
             </div>
 
-            {/* 右側: メイン情報 */}
-            <div className="flex-1 min-w-0 py-1">
-              {/* タイトル */}
-              <h3 className="text-lg font-black leading-tight text-slate-900 mb-2 pr-8">{it.title}</h3>
+            {/* 右側: 情報エリア (上から順に配置) */}
+            <div className="flex-1 min-w-0 py-0.5 space-y-2">
+              
+              {/* 1. タイトル */}
+              <h3 className="text-lg font-black leading-tight text-slate-900 pr-8">{it.title}</h3>
 
-              {/* チップエリア (タグ・スタッフ) */}
-              <div className="flex flex-wrap items-center gap-1.5 mb-3">
-                 {/* タグチップ */}
+              {/* 2. 終了時刻 (アイコンのみ・囲いなし) */}
+              {it.end_time && (
+                 <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+                    <Clock className="w-3.5 h-3.5 text-[#00c2e8]"/>
+                    <span>~{hhmm(it.end_time)} まで</span>
+                 </div>
+              )}
+
+              {/* 3. タグ (バッジ表示) */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
                  {tags.map((tag: string) => {
-                    const colorClass = getTargetColor(tag); // 色分け関数を利用
+                    const colorClass = getTargetColor(tag);
                     return (
                       <span key={tag} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black ${colorClass}`}>
                         <Tag className="w-3 h-3 opacity-50"/> {tag}
                       </span>
                     );
                  })}
-                 
-                 {/* スタッフチップ */}
-                 {assignees.map((a: string) => (
-                    <span key={a} className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-500 px-2.5 py-1 rounded-lg text-[10px] font-black border border-indigo-100">
-                       <User className="w-3 h-3"/> {a}
-                    </span>
-                 ))}
               </div>
 
-              {/* メモ */}
+              {/* 4. メモ (アイコンのみ・囲いなし・省略あり) */}
               {it.note && (
-                <div className="text-xs text-slate-500 leading-relaxed font-medium mb-3 bg-slate-50 p-2 rounded-lg border border-slate-100 line-clamp-2">
-                  {it.note}
+                <div className="flex items-start gap-1.5 text-xs text-slate-500 leading-relaxed font-medium pt-1">
+                  <StickyNote className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"/>
+                  <span className="line-clamp-2">{it.note}</span>
                 </div>
               )}
               
-              {/* フッター情報 (場所・時間・資料) */}
-              <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-slate-400">
+              {/* 5. 担当スタッフ (バッジ表示) */}
+              {assignees.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                   {assignees.map((a: string) => (
+                      <span key={a} className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-500 px-2.5 py-1 rounded-lg text-[10px] font-black border border-indigo-100">
+                         <User className="w-3 h-3"/> {a}
+                      </span>
+                   ))}
+                </div>
+              )}
+
+              {/* 6. フッター情報 (場所・添付・時間 / アイコンのみ・囲いなし) */}
+              <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold text-slate-400 pt-2 mt-1 border-t border-slate-50">
                  {it.location && (
-                   <div className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md">
-                     <MapPin className="w-3 h-3 text-slate-300"/>{it.location}
-                   </div>
-                 )}
-                 {duration && (
-                   <div className="bg-slate-50 px-2 py-1 rounded-md">
-                     ⏳ {duration}
+                   <div className="flex items-center gap-1">
+                     <MapPin className="w-3.5 h-3.5 text-slate-300"/>{it.location}
                    </div>
                  )}
                  {validCount > 0 && (
-                    <div className="flex items-center gap-1 text-[#00c2e8] bg-cyan-50 px-2 py-1 rounded-md border border-cyan-100">
-                      <Paperclip className="w-3 h-3"/>{validCount}
+                    <div className="flex items-center gap-1 text-[#00c2e8]">
+                      <Paperclip className="w-3.5 h-3.5"/>{validCount}件
                     </div>
+                 )}
+                 {duration && (
+                   <div className="flex items-center gap-1">
+                     <Hourglass className="w-3.5 h-3.5 text-slate-300"/> {duration}
+                   </div>
                  )}
               </div>
             </div>
@@ -144,9 +148,8 @@ export default function EditScheduleList({ items, materials, onEdit, onDelete, s
                   <MoreHorizontal className="w-5 h-5"/>
                </button>
 
-               {/* 削除メニュー (条件付き表示) */}
                {openMenuId === it.id && (
-                 <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-slate-100 p-1 min-w-[140px] animate-in fade-in zoom-in-95 duration-200">
+                 <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-slate-100 p-1 min-w-[140px] animate-in fade-in zoom-in-95 duration-200 z-30">
                     <button 
                       onClick={(e) => { e.stopPropagation(); onEdit(it); setOpenMenuId(null); }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors text-left"
