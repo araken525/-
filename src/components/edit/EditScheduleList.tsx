@@ -4,7 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { 
   Clock, MapPin, Edit3, Trash2, Paperclip, 
-  User, MoreHorizontal, Calendar, Tag, AlertCircle, 
+  User, MoreHorizontal, Calendar, Tag, 
   StickyNote, Hourglass
 } from "lucide-react";
 import { hhmm, detectEmoji, getDuration, getTargetColor } from "@/lib/editUtils";
@@ -65,7 +65,6 @@ export default function EditScheduleList({ items, materials, onEdit, onDelete, s
           <div 
             key={it.id} 
             onClick={() => onEdit(it)}
-            // ★修正: active:scaleなどを削除し、静的なカードに変更
             className="relative bg-white rounded-[1.5rem] p-5 flex gap-4 items-start shadow-sm border border-slate-100"
           >
             {/* 左側: 開始時間と絵文字 */}
@@ -80,15 +79,15 @@ export default function EditScheduleList({ items, materials, onEdit, onDelete, s
               {/* 1. タイトル */}
               <h3 className="text-lg font-black leading-tight text-slate-900 pr-8">{it.title}</h3>
 
-              {/* 2. 終了時刻 (アイコンのみ・囲いなし) */}
+              {/* 2. 終了時刻 (アイコンもグレーに変更) */}
               {it.end_time && (
                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
-                    <Clock className="w-3.5 h-3.5 text-[#00c2e8]"/>
+                    <Clock className="w-3.5 h-3.5 text-slate-400"/>
                     <span>~{hhmm(it.end_time)} まで</span>
                  </div>
               )}
 
-              {/* 3. タグ (バッジ表示) */}
+              {/* 3. タグ (ここだけ色付きバッジ) */}
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
                  {tags.map((tag: string) => {
                     const colorClass = getTargetColor(tag);
@@ -100,7 +99,7 @@ export default function EditScheduleList({ items, materials, onEdit, onDelete, s
                  })}
               </div>
 
-              {/* 4. メモ (アイコンのみ・囲いなし・省略あり) */}
+              {/* 4. メモ (アイコンのみ) */}
               {it.note && (
                 <div className="flex items-start gap-1.5 text-xs text-slate-500 leading-relaxed font-medium pt-1">
                   <StickyNote className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"/>
@@ -108,18 +107,17 @@ export default function EditScheduleList({ items, materials, onEdit, onDelete, s
                 </div>
               )}
               
-              {/* 5. 担当スタッフ (バッジ表示) */}
+              {/* 5. 担当スタッフ (修正: アイコン1つ + テキスト羅列 + グレー) */}
               {assignees.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                   {assignees.map((a: string) => (
-                      <span key={a} className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-500 px-2.5 py-1 rounded-lg text-[10px] font-black border border-indigo-100">
-                         <User className="w-3 h-3"/> {a}
-                      </span>
-                   ))}
+                <div className="flex items-start gap-1.5 pt-1 text-xs text-slate-500 font-medium">
+                   <User className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"/>
+                   <span className="leading-relaxed">
+                     {assignees.join(", ")}
+                   </span>
                 </div>
               )}
 
-              {/* 6. フッター情報 (場所・添付・時間 / アイコンのみ・囲いなし) */}
+              {/* 6. フッター情報 (場所・添付・時間 / アイコンのみ) */}
               <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold text-slate-400 pt-2 mt-1 border-t border-slate-50">
                  {it.location && (
                    <div className="flex items-center gap-1">
