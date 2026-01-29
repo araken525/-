@@ -6,7 +6,7 @@ import {
   X, Clock, ArrowRight, Check, Edit3, Users, MapPin, 
   AlignLeft, Paperclip, Settings, ChevronUp, ChevronDown, 
   ArrowUp, Minus, ArrowDown, RefreshCw, Save, XCircle, 
-  ChevronRight, StickyNote, Tag
+  ChevronRight, StickyNote, Tag, Plus
 } from "lucide-react";
 import { detectEmoji, hhmm, getMaterialInfo, EMOJI_PRESETS } from "@/lib/editUtils";
 
@@ -39,7 +39,7 @@ export default function EditItemSheet({
 
   // UI制御フラグ
   const [isSortOpen, setIsSortOpen] = useState(false);
-  const [isMaterialsOpen, setIsMaterialsOpen] = useState(false); // 資料の開閉
+  const [isMaterialsOpen, setIsMaterialsOpen] = useState(false);
   const [isTagEditMode, setIsTagEditMode] = useState(false);
   
   // 入力用一時ステート
@@ -62,7 +62,6 @@ export default function EditItemSheet({
           sortOrder: editingItem.sort_order ?? 0,
           materialIds: editingItem.material_ids ? editingItem.material_ids.split(",") : []
         });
-        // 編集時は資料紐付けがあれば開いておく等の配慮も可（今回は閉じておく）
       } else {
         setFormData({ 
           startTime: "10:00", endTime: "", title: "", location: "", note: "", 
@@ -205,7 +204,7 @@ export default function EditItemSheet({
   // --- UI構成 ---
   return (
     <div className={`fixed inset-0 z-50 flex items-end justify-center pointer-events-none ${isOpen ? "visible" : "invisible"}`}>
-       {/* 背景 (Backdrop) */}
+       {/* 背景 */}
        <div 
          className={`absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0"}`} 
          onClick={onClose}
@@ -220,24 +219,24 @@ export default function EditItemSheet({
            ${isOpen ? "translate-y-0" : "translate-y-full"}
          `}
        >
-          {/* ドラッグハンドル */}
+          {/* ハンドル */}
           <div className="shrink-0 h-8 flex items-center justify-center cursor-pointer" onClick={onClose}>
              <div className="w-10 h-1.5 bg-slate-300 rounded-full opacity-60"></div>
           </div>
           
-          {/* スクロールエリア (コンテンツ) */}
+          {/* コンテンツエリア */}
           <div className="flex-1 overflow-y-auto px-5 pb-32 pt-2 space-y-6 no-scrollbar">
              
-             {/* 1. ヘッダー情報 (絵文字・タイトル・時間) */}
+             {/* 1. ヘッダー情報 */}
              <div className="space-y-4">
                 {/* タイトル行 */}
                 <div className="flex items-start gap-3">
                    <div className="w-16 h-16 shrink-0 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 relative overflow-hidden">
                       <input type="text" value={formData.emoji} onChange={(e)=>setFormData({...formData, emoji:e.target.value})} className="w-full h-full bg-transparent text-center text-4xl outline-none p-0 appearance-none z-10"/>
                    </div>
-                   <div className="flex-1">
+                   {/* ★修正: min-w-0を追加して横幅はみ出しを防止 */}
+                   <div className="flex-1 min-w-0">
                       <input type="text" value={formData.title} onChange={(e)=>setFormData({...formData, title:e.target.value})} placeholder="タイトルを入力..." className="w-full bg-transparent text-xl font-black placeholder:text-slate-300 outline-none border-b-2 border-slate-200 focus:border-[#00c2e8] transition-colors py-2 text-slate-800 rounded-none"/>
-                      {/* 絵文字プリセット (横スクロール) */}
                       <div className="flex gap-2 overflow-x-auto no-scrollbar py-2 mask-linear">
                          {EMOJI_PRESETS.map((emoji) => (
                             <button key={emoji} onClick={() => setFormData({...formData, emoji})} className="shrink-0 text-lg opacity-60 hover:opacity-100 transition-opacity hover:scale-110">{emoji}</button>
@@ -246,17 +245,13 @@ export default function EditItemSheet({
                    </div>
                 </div>
 
-                {/* 時刻設定 (デジタル時計風ブロック) */}
+                {/* 時刻設定 */}
                 <div className="flex items-center gap-2">
-                   {/* 開始 */}
                    <div className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all">
                       <label className="text-[10px] font-bold text-slate-400 block text-center mb-1">開始</label>
                       <input type="time" value={formData.startTime} onChange={(e)=>setFormData({...formData, startTime:e.target.value})} className="w-full bg-transparent text-2xl font-black text-center outline-none text-slate-800 appearance-none font-mono tracking-tight"/>
                    </div>
-                   
                    <ArrowRight className="w-5 h-5 text-slate-300" />
-                   
-                   {/* 終了 */}
                    <div className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all">
                       <label className="text-[10px] font-bold text-slate-400 block text-center mb-1">終了</label>
                       <input type="time" value={formData.endTime} onChange={(e)=>setFormData({...formData, endTime:e.target.value})} className={`w-full bg-transparent text-2xl font-black text-center outline-none appearance-none font-mono tracking-tight ${!formData.endTime ? 'text-slate-300' : 'text-slate-800'}`}/>
@@ -267,7 +262,7 @@ export default function EditItemSheet({
                 </div>
              </div>
 
-             {/* 2. 詳細設定カード (場所・メモ・タグ・人) */}
+             {/* 2. 詳細設定カード */}
              <div className="bg-white rounded-[1.5rem] shadow-sm border border-slate-100 overflow-hidden">
                 
                 {/* 場所 */}
@@ -275,7 +270,7 @@ export default function EditItemSheet({
                    <div className="w-8 h-8 rounded-full bg-cyan-50 text-[#00c2e8] flex items-center justify-center shrink-0">
                       <MapPin className="w-4 h-4"/>
                    </div>
-                   <input type="text" value={formData.location} onChange={(e)=>setFormData({...formData, location:e.target.value})} placeholder="場所 (例: 大ホール)" className="flex-1 bg-transparent text-sm font-bold outline-none text-slate-700 placeholder:text-slate-300"/>
+                   <input type="text" value={formData.location} onChange={(e)=>setFormData({...formData, location:e.target.value})} placeholder="場所 (例: 大ホール)" className="flex-1 bg-transparent text-sm font-bold outline-none text-slate-700 placeholder:text-slate-300 min-w-0"/>
                 </div>
 
                 {/* メモ */}
@@ -291,17 +286,17 @@ export default function EditItemSheet({
                        e.target.style.height = `${e.target.scrollHeight}px`; 
                      }} 
                      placeholder="メモ・備考" 
-                     className="flex-1 bg-transparent text-sm font-medium outline-none resize-none min-h-[3rem] text-slate-700 placeholder:text-slate-300 leading-relaxed"
+                     className="flex-1 bg-transparent text-sm font-medium outline-none resize-none min-h-[3rem] text-slate-700 placeholder:text-slate-300 leading-relaxed min-w-0"
                    ></textarea>
                 </div>
 
-                {/* タグ (横スクロール) */}
+                {/* タグ (タグエリア改修) */}
                 <div className="px-5 py-4 border-b border-slate-50">
                    <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-slate-400 flex items-center gap-1"><Tag className="w-3 h-3"/> 対象タグ</span>
                       <button onClick={() => setIsTagEditMode(!isTagEditMode)} className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${isTagEditMode ? "bg-red-100 text-red-500" : "bg-slate-100 text-slate-400"}`}>{isTagEditMode ? "完了" : "編集"}</button>
                    </div>
-                   <div className="flex flex-wrap gap-2">
+                   <div className="flex flex-wrap gap-2 mb-3">
                       <button onClick={() => toggleTag("全員")} className={`h-8 px-3 rounded-full font-bold text-xs flex items-center gap-1 transition-all ${(formData.target === "全員" || !formData.target) ? "bg-[#00c2e8] text-white" : "bg-slate-50 text-slate-500"} ${isTagEditMode ? "opacity-30 pointer-events-none" : ""}`}>
                          {(formData.target === "全員" || !formData.target) && <Check className="w-3 h-3"/>} 全員
                       </button>
@@ -314,21 +309,38 @@ export default function EditItemSheet({
                             </button>
                          )
                       })}
-                      {!isTagEditMode && (
-                        <div className="flex items-center bg-slate-50 rounded-full pl-3 pr-1 h-8 border border-slate-100">
-                           <input type="text" value={newTagInput} onChange={(e)=>setNewTagInput(e.target.value)} placeholder="タグ追加..." className="bg-transparent w-20 text-xs font-bold outline-none"/>
-                           <button onClick={() => {if(newTagInput.trim()){ toggleTag(newTagInput.trim()); setNewTagInput("") }}} disabled={!newTagInput.trim()} className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-slate-500 disabled:opacity-30"><ArrowUp className="w-3 h-3"/></button>
-                        </div>
-                      )}
                    </div>
+                   
+                   {/* ★修正: 追加エリアを独立させて大きく */}
+                   {!isTagEditMode && (
+                      <div className="flex gap-2">
+                         <div className="flex-1 h-12 bg-slate-50 rounded-xl flex items-center px-3 border border-slate-100 focus-within:ring-2 focus-within:ring-cyan-100 transition-all">
+                            <Plus className="w-4 h-4 text-slate-300 mr-2 shrink-0" />
+                            <input 
+                              type="text" 
+                              value={newTagInput} 
+                              onChange={(e)=>setNewTagInput(e.target.value)} 
+                              placeholder="新しいタグ..." 
+                              className="flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-slate-300 min-w-0"
+                            />
+                         </div>
+                         <button 
+                           onClick={() => {if(newTagInput.trim()){ toggleTag(newTagInput.trim()); setNewTagInput("") }}} 
+                           disabled={!newTagInput.trim()} 
+                           className="h-12 px-4 bg-slate-800 text-white rounded-xl text-xs font-bold disabled:opacity-30 active:scale-95 transition-all shrink-0"
+                         >
+                            追加
+                         </button>
+                      </div>
+                   )}
                 </div>
 
-                {/* 担当者 (横スクロール) */}
+                {/* 担当者 (担当者エリア改修) */}
                 <div className="px-5 py-4">
                    <div className="flex items-center gap-2 mb-2 text-xs font-bold text-slate-400">
                       <Users className="w-3 h-3"/> 担当スタッフ
                    </div>
-                   <div className="flex flex-wrap gap-2">
+                   <div className="flex flex-wrap gap-2 mb-3">
                       {recentAssignees.map(a => {
                          const isActive = formData.assignee?.split(",").map(x=>x.trim()).includes(a);
                          return (
@@ -337,18 +349,34 @@ export default function EditItemSheet({
                             </button>
                          )
                       })}
-                      <div className="flex items-center bg-slate-50 rounded-lg pl-3 pr-1 h-8 border border-slate-100">
-                           <input type="text" value={newAssigneeInput} onChange={(e)=>setNewAssigneeInput(e.target.value)} placeholder="担当者追加..." className="bg-transparent w-20 text-xs font-bold outline-none"/>
-                           <button onClick={() => {if(newAssigneeInput.trim()){ toggleAssignee(newAssigneeInput.trim()); setNewAssigneeInput("") }}} disabled={!newAssigneeInput.trim()} className="w-6 h-6 bg-indigo-100 rounded-md flex items-center justify-center text-indigo-500 disabled:opacity-30"><ArrowUp className="w-3 h-3"/></button>
+                      {recentAssignees.length === 0 && <span className="text-[10px] text-slate-300 py-1">履歴なし</span>}
+                   </div>
+
+                   {/* ★修正: 追加エリアを独立させて大きく */}
+                   <div className="flex gap-2">
+                      <div className="flex-1 h-12 bg-slate-50 rounded-xl flex items-center px-3 border border-slate-100 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
+                         <Plus className="w-4 h-4 text-slate-300 mr-2 shrink-0" />
+                         <input 
+                           type="text" 
+                           value={newAssigneeInput} 
+                           onChange={(e)=>setNewAssigneeInput(e.target.value)} 
+                           placeholder="担当者名 (例: 田中)" 
+                           className="flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-slate-300 min-w-0"
+                         />
                       </div>
+                      <button 
+                        onClick={() => {if(newAssigneeInput.trim()){ toggleAssignee(newAssigneeInput.trim()); setNewAssigneeInput("") }}} 
+                        disabled={!newAssigneeInput.trim()} 
+                        className="h-12 px-4 bg-indigo-500 text-white rounded-xl text-xs font-bold disabled:opacity-30 active:scale-95 transition-all shrink-0"
+                      >
+                         追加
+                      </button>
                    </div>
                 </div>
              </div>
              
-             {/* 3. オプション (アコーディオン) */}
+             {/* 3. オプション */}
              <div className="space-y-3">
-                
-                {/* 資料紐付け */}
                 {materials.length > 0 && (
                   <div className="bg-white rounded-[1.5rem] shadow-sm border border-slate-100 overflow-hidden">
                     <button onClick={() => setIsMaterialsOpen(!isMaterialsOpen)} className="w-full flex items-center justify-between p-5 bg-white hover:bg-slate-50 transition-colors">
@@ -380,7 +408,6 @@ export default function EditItemSheet({
                   </div>
                 )}
 
-                {/* 高度な設定 (並び順) */}
                 <div className="bg-white rounded-[1.5rem] shadow-sm border border-slate-100 overflow-hidden">
                    <button onClick={() => setIsSortOpen(!isSortOpen)} className="w-full flex items-center justify-between p-5 bg-white hover:bg-slate-50 transition-colors">
                        <div className="flex items-center gap-2 text-slate-600 font-bold text-sm">
@@ -403,7 +430,7 @@ export default function EditItemSheet({
              </div>
           </div>
 
-          {/* Sticky Footer (固定保存ボタン) */}
+          {/* Sticky Footer */}
           <div className="absolute bottom-0 inset-x-0 p-4 bg-white/80 backdrop-blur-md border-t border-slate-100 z-10 rounded-b-[2rem]">
              <button 
                onClick={saveItem} 
