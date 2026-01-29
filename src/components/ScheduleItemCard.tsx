@@ -4,7 +4,7 @@ import { useState } from "react";
 import { 
   Clock, MapPin, ChevronDown, ChevronUp, Link2, 
   Youtube, Video, FileText, Image as ImageIcon, 
-  User, Hourglass, StickyNote, Paperclip 
+  User, Hourglass, StickyNote 
 } from "lucide-react";
 
 type ScheduleItemCardProps = {
@@ -101,7 +101,6 @@ export default function ScheduleItemCard({
           <div className="flex flex-wrap gap-1.5 pt-1">
             {targets.map((tag: string, i: number) => {
               const isAll = tag === "全員";
-              // "全員"以外はシアン色、"全員"はグレー
               const colorClass = isAll ? "bg-slate-100 text-slate-500" : "bg-cyan-50 text-[#00c2e8]";
               return (
                 <span key={`target-${i}`} className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-black ${colorClass}`}>
@@ -135,7 +134,30 @@ export default function ScheduleItemCard({
             </div>
           )}
 
-          {/* 5. 担当スタッフ (グレー・アイコン・カンマ区切り) */}
+          {/* 5. 添付ファイル (メモの下に移動) */}
+          {linkedMaterials.length > 0 && (
+            <div className="flex flex-col gap-1.5 pt-1 pl-5">
+              {linkedMaterials.map((m) => {
+                const Icon = getMaterialIcon(m.url);
+                return (
+                  <a
+                    key={m.id}
+                    href={m.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-1.5 w-fit"
+                  >
+                    <Icon className="w-3.5 h-3.5 shrink-0 text-[#00c2e8]" />
+                    <span className="text-xs font-bold text-[#00c2e8] group-hover:opacity-70 transition-opacity truncate max-w-[200px] border-b border-transparent group-hover:border-[#00c2e8]">
+                      {m.title}
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+          )}
+
+          {/* 6. 担当スタッフ (グレー・アイコン・カンマ区切り) */}
           {assignees.length > 0 && (
             <div className="flex items-start gap-1.5 pt-1 text-xs text-slate-500 font-medium">
               <User className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
@@ -145,32 +167,15 @@ export default function ScheduleItemCard({
             </div>
           )}
 
-          {/* 6. フッター情報 (場所・添付・時間) */}
+          {/* 7. フッター情報 (場所・時間) */}
           <div className="flex flex-wrap items-center gap-4 pt-3 mt-2 border-t border-slate-50 text-xs font-bold text-slate-400">
             {/* 場所 */}
             {it.location && (
-              <div className="flex items-center gap-1 text-slate-500 max-w-[40%] truncate">
+              <div className="flex items-center gap-1 text-slate-500 max-w-[60%] truncate">
                 <MapPin className="w-3.5 h-3.5 text-slate-300 shrink-0" />
                 <span className="truncate">{it.location}</span>
               </div>
             )}
-
-            {/* 添付ファイル (リンク) */}
-            {linkedMaterials.length > 0 && linkedMaterials.map((m) => {
-               const Icon = getMaterialIcon(m.url);
-               return (
-                 <a 
-                   key={m.id} 
-                   href={m.url} 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   className="flex items-center gap-1 text-[#00c2e8] hover:opacity-70 transition-opacity max-w-[30%] truncate"
-                 >
-                   <Icon className="w-3.5 h-3.5 shrink-0"/>
-                   <span className="truncate">{m.title}</span>
-                 </a>
-               );
-            })}
 
             {/* 所要時間 */}
             {duration && (
