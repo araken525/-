@@ -120,7 +120,7 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
   return (
     <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white relative">
       
-      {/* 1. ヘッダー (Glassmorphism) */}
+      {/* 1. ヘッダー (Glassmorphism & 可愛いアイコン) */}
       <header className="fixed top-0 inset-x-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 h-16 flex items-center justify-between px-4 sm:px-6 transition-all">
          <div className="flex items-center gap-2 max-w-[60%]">
             <div className="w-8 h-8 rounded-full bg-cyan-50 flex items-center justify-center shrink-0">
@@ -132,14 +132,13 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
             </div>
          </div>
          
-         <div className="flex items-center bg-slate-100/80 rounded-full p-1 border border-slate-200/50">
-            <a href={`/e/${slug}`} target="_blank" className="h-8 px-3 rounded-full flex items-center gap-1.5 text-[10px] font-bold text-slate-500 hover:bg-white hover:text-[#00c2e8] hover:shadow-sm transition-all">
-               <ArrowUpRight className="w-3.5 h-3.5"/>
-               <span className="hidden sm:inline">確認</span>
+         {/* 右上のアイコンを可愛く、丸く独立させる */}
+         <div className="flex items-center gap-3">
+            <a href={`/e/${slug}`} target="_blank" className="w-9 h-9 rounded-full bg-cyan-50/50 flex items-center justify-center text-cyan-400 hover:bg-cyan-100 hover:text-cyan-500 transition-all shadow-sm" title="公開ページを確認">
+               <ArrowUpRight className="w-5 h-5"/>
             </a>
-            <div className="w-px h-4 bg-slate-300 mx-0.5"></div>
-            <button onClick={resetLock} className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-white hover:text-red-500 hover:shadow-sm transition-all">
-               <LogOut className="w-3.5 h-3.5"/>
+            <button onClick={resetLock} className="w-9 h-9 rounded-full bg-red-50/50 flex items-center justify-center text-red-400 hover:bg-red-100 hover:text-red-500 transition-all shadow-sm" title="ログアウト">
+               <LogOut className="w-4 h-4 translate-x-0.5"/>
             </button>
          </div>
       </header>
@@ -151,12 +150,13 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
         </div>
       )}
 
-      {/* 3. モバイル用タブスイッチャー (フローティング・カプセル型・白ベース) */}
+      {/* 3. モバイル用タブスイッチャー (はみ出し修正・影を薄く) */}
       <div className="md:hidden fixed top-20 inset-x-0 z-30 flex justify-center pointer-events-none px-4">
-         <div className="pointer-events-auto bg-slate-200/80 backdrop-blur-md p-1 rounded-full shadow-lg border border-white/50 flex relative h-12 w-full max-w-[320px]">
-            {/* アクティブなタブの背景 (白・影付き・はみ出し修正済み) */}
+         {/* コンテナの影を薄い内影に変更 */}
+         <div className="pointer-events-auto bg-slate-100/80 backdrop-blur-md p-1 rounded-full border border-white/50 flex relative h-11 w-full max-w-[300px] shadow-inner">
+            {/* アクティブなタブの背景 (幅計算を修正し、影を極薄のボーダーに変更) */}
             <div 
-              className={`absolute inset-y-1 w-[calc(50%-4px)] bg-white rounded-full shadow-sm transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${activeTab === 'schedule' ? 'left-1' : 'left-[calc(50%+2px)]'}`}
+              className={`absolute inset-y-1 w-[calc(50%-8px)] bg-white rounded-full border-2 border-slate-50 shadow-[0_2px_4px_rgba(0,0,0,0.02)] transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${activeTab === 'schedule' ? 'left-1' : 'left-[calc(50%+4px)]'}`}
             ></div>
 
             <button 
