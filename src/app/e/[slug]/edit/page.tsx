@@ -151,31 +151,31 @@ export default function EditPage({ params }: { params: Promise<{ slug: string }>
         </div>
       )}
 
-      {/* 3. モバイル用タブスイッチャー (修正版: iOSスタイル) */}
-      <div className="md:hidden fixed top-16 inset-x-0 z-30 pt-3 pb-3 px-4 bg-[#f7f9fb]/90 backdrop-blur-md border-b border-slate-200/50">
-         <div className="bg-slate-200/50 p-1 rounded-xl flex relative h-10">
-            {/* アクティブなタブの背景 (白く浮き上がるスタイルに変更) */}
+      {/* 3. モバイル用タブスイッチャー (フローティング・カプセル型・白ベース) */}
+      <div className="md:hidden fixed top-20 inset-x-0 z-30 flex justify-center pointer-events-none px-4">
+         <div className="pointer-events-auto bg-slate-200/80 backdrop-blur-md p-1 rounded-full shadow-lg border border-white/50 flex relative h-12 w-full max-w-[320px]">
+            {/* アクティブなタブの背景 (白・影付き・はみ出し修正済み) */}
             <div 
-              className={`absolute inset-y-1 w-[calc(50%-4px)] bg-white rounded-lg shadow-sm border border-slate-200/50 transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${activeTab === 'schedule' ? 'left-1' : 'left-[calc(50%+4px)]'}`}
+              className={`absolute inset-y-1 w-[calc(50%-4px)] bg-white rounded-full shadow-sm transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${activeTab === 'schedule' ? 'left-1' : 'left-[calc(50%+2px)]'}`}
             ></div>
 
             <button 
                onClick={() => setActiveTab('schedule')} 
-               className={`flex-1 relative z-10 text-xs font-black flex items-center justify-center gap-1.5 transition-colors duration-300 ${activeTab === 'schedule' ? 'text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+               className={`flex-1 relative z-10 text-xs font-black flex items-center justify-center gap-1.5 transition-colors duration-300 ${activeTab === 'schedule' ? 'text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
             >
-               <ListOrdered className="w-3.5 h-3.5" /> スケジュール
+               <ListOrdered className="w-4 h-4" /> スケジュール
             </button>
             <button 
                onClick={() => setActiveTab('settings')} 
-               className={`flex-1 relative z-10 text-xs font-black flex items-center justify-center gap-1.5 transition-colors duration-300 ${activeTab === 'settings' ? 'text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+               className={`flex-1 relative z-10 text-xs font-black flex items-center justify-center gap-1.5 transition-colors duration-300 ${activeTab === 'settings' ? 'text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
             >
-               <Settings2 className="w-3.5 h-3.5" /> 設定・資料
+               <Settings2 className="w-4 h-4" /> 設定・資料
             </button>
          </div>
       </div>
 
-      {/* 4. メインコンテンツエリア (タブ分の余白調整: pt-36 -> pt-32程度) */}
-      <div className="pt-32 md:pt-24 px-4 w-full max-w-lg md:max-w-6xl mx-auto pb-32">
+      {/* 4. メインコンテンツエリア (余白調整) */}
+      <div className="pt-36 md:pt-24 px-4 w-full max-w-lg md:max-w-6xl mx-auto pb-32">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
           
           {/* 左カラム */}
