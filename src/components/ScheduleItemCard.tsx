@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, MapPin, ChevronDown, ChevronUp, Link2, Youtube, Video, FileText, Image as ImageIcon, User } from "lucide-react";
+// ▼ Hourglass (砂時計) を追加
+import { Clock, MapPin, ChevronDown, ChevronUp, Link2, Youtube, Video, FileText, Image as ImageIcon, User, Hourglass } from "lucide-react";
 
 type ScheduleItemCardProps = {
   it: any;
@@ -11,7 +12,7 @@ type ScheduleItemCardProps = {
   startHhmm: string;
   endHhmm: string | null;
   materials: any[];
-  badgeColor?: string; // 互換性のため残す
+  badgeColor?: string;
 };
 
 function getMaterialIcon(url: string) {
@@ -42,22 +43,20 @@ export default function ScheduleItemCard({
 }: ScheduleItemCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // ★修正: 「もっと見る」が出る条件を緩和 (60文字 または 2行以上)
   const hasLongNote =
-    it.note && (it.note.length > 80 || it.note.split("\n").length > 3);
+    it.note && (it.note.length > 60 || it.note.split("\n").length > 2);
 
-  // 紐付いている資料を抽出
   const linkedMaterials = materials.filter((m) => {
     if (!it.material_ids) return false;
     const ids = it.material_ids.split(",");
     return ids.includes(String(m.id));
   });
 
-  // タグを配列化 (any回避のため明示的にキャストはしないが、map側で型を指定する)
   const targets = (!it.target || it.target === "all" || it.target === "全員")
     ? ["全員"]
     : it.target.split(",").map((t: string) => t.trim());
 
-  // 担当者を配列化
   const assignees = it.assignee
     ? it.assignee.split(",").map((a: string) => a.trim())
     : [];
@@ -87,6 +86,7 @@ export default function ScheduleItemCard({
         </div>
 
         <div className="flex-1 min-w-0 flex flex-col h-full">
+          {/* ヘッダー: タイトルと対象タグ */}
           <div className="mb-2">
             <div className="flex flex-wrap items-start gap-2 mb-1.5">
               <h3 className={`text-xl font-black leading-tight tracking-tight ${now ? "text-[#00c2e8]" : "text-slate-900"}`}>
@@ -95,7 +95,6 @@ export default function ScheduleItemCard({
             </div>
             
             <div className="flex flex-wrap gap-1.5">
-              {/* ★修正: ここで (tag: string, i: number) と型を明記してエラーを回避 */}
               {targets.map((tag: string, i: number) => {
                 const isAll = tag === "全員";
                 const colorClass = isAll ? "bg-slate-100 text-slate-500" : "bg-cyan-50 text-[#00c2e8]";
@@ -105,17 +104,11 @@ export default function ScheduleItemCard({
                   </span>
                 );
               })}
-
-              {/* ★修正: こちらも (name: string, i: number) と型を明記 */}
-              {assignees.map((name: string, i: number) => (
-                <span key={`assignee-${i}`} className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-50 text-indigo-500 border border-indigo-100/50">
-                  <User className="w-2.5 h-2.5" />
-                  {name}
-                </span>
-              ))}
+              {/* ※担当者はここから削除しました */}
             </div>
           </div>
 
+          {/* 終了時間 */}
           {endHhmm && (
             <div className="flex items-center text-sm font-bold text-[#00c2e8] mb-3">
               <Clock className="w-4 h-4 mr-1.5" />
@@ -123,6 +116,7 @@ export default function ScheduleItemCard({
             </div>
           )}
 
+          {/* メモ */}
           {it.note && (
             <div className="mb-4">
               <div
@@ -151,6 +145,7 @@ export default function ScheduleItemCard({
             </div>
           )}
 
+          {/* 添付ファイル (下線を削除) */}
           {linkedMaterials.length > 0 && (
             <div className="flex flex-col gap-1 mb-4 mt-1">
               {linkedMaterials.map((m) => {
@@ -164,7 +159,8 @@ export default function ScheduleItemCard({
                     className="group flex items-center gap-2 w-fit"
                   >
                     <Icon className="w-3.5 h-3.5 shrink-0 text-[#00c2e8]" />
-                    <span className="text-xs font-bold text-[#00c2e8] border-b border-transparent group-hover:border-[#00c2e8] transition-all truncate max-w-[200px]">
+                    {/* ★修正: border-bを削除し、hover時の色変化のみに */}
+                    <span className="text-xs font-bold text-[#00c2e8] group-hover:opacity-70 transition-opacity truncate max-w-[200px]">
                       {m.title}
                     </span>
                   </a>
@@ -173,6 +169,19 @@ export default function ScheduleItemCard({
             </div>
           )}
 
+          {/* ★修正: 担当スタッフをここに移動 (グレー) */}
+          {assignees.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {assignees.map((name: string, i: number) => (
+                <div key={`assignee-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-500">
+                  <User className="w-3 h-3 text-slate-400" />
+                  {name}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* フッター情報 */}
           <div className="flex items-center gap-3 pt-3 border-t border-slate-50 mt-auto">
             {it.location ? (
               <div className="flex items-center text-xs font-bold text-slate-500 truncate max-w-[70%]">
@@ -183,9 +192,11 @@ export default function ScheduleItemCard({
             
             {it.location && <div className="w-px h-3 bg-slate-200 shrink-0"></div>}
 
+            {/* ★修正: ⏳絵文字をHourglassアイコンに変更 */}
             {duration && (
-              <div className="text-xs font-bold text-slate-400 shrink-0">
-                ⏳ {duration}
+              <div className="flex items-center text-xs font-bold text-slate-400 shrink-0">
+                <Hourglass className="w-3.5 h-3.5 mr-1 text-slate-300" />
+                {duration}
               </div>
             )}
           </div>
