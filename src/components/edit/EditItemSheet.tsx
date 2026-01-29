@@ -4,9 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { 
   X, Clock, ArrowRight, Check, Edit3, Users, MapPin, 
-  AlignLeft, Paperclip, Settings, ChevronUp, ChevronDown, 
+  StickyNote, Tag, Plus, Settings, ChevronUp, ChevronDown, 
   ArrowUp, Minus, ArrowDown, RefreshCw, Save, XCircle, 
-  ChevronRight, StickyNote, Tag, Plus
+  Paperclip, Trash2, Pencil, MoreHorizontal, AlertTriangle
 } from "lucide-react";
 import { detectEmoji, hhmm, getMaterialInfo, EMOJI_PRESETS } from "@/lib/editUtils";
 
@@ -41,10 +41,14 @@ export default function EditItemSheet({
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isMaterialsOpen, setIsMaterialsOpen] = useState(false);
   const [isTagEditMode, setIsTagEditMode] = useState(false);
+  const [isAssigneeEditMode, setIsAssigneeEditMode] = useState(false); // 担当者用の編集モード追加
   
   // 入力用一時ステート
   const [newTagInput, setNewTagInput] = useState("");
   const [newAssigneeInput, setNewAssigneeInput] = useState("");
+
+  // アクションメニュー用ステート (編集・削除のポップアップ用)
+  const [actionMenu, setActionMenu] = useState<{ type: 'tag' | 'assignee', name: string } | null>(null);
 
   // --- 初期化 ---
   useEffect(() => {
@@ -74,10 +78,11 @@ export default function EditItemSheet({
       setIsSortOpen(false);
       setIsMaterialsOpen(false);
       setIsTagEditMode(false);
+      setIsAssigneeEditMode(false);
+      setActionMenu(null);
     }
   }, [isOpen, editingItem]);
 
-  // 絵文字自動推測
   useEffect(() => {
     if (!editingItem && formData.title) {
       const detected = detectEmoji(formData.title);
@@ -87,7 +92,6 @@ export default function EditItemSheet({
     }
   }, [formData.title]);
 
-  // 外側クリックで閉じる
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (sheetRef.current && !sheetRef.current.contains(event.target as Node)) onClose();
@@ -96,18 +100,18 @@ export default function EditItemSheet({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onClose]);
 
-  // --- ロジック ---
 
-  function toggleTag(tag: string) {
+  // --- タグ・担当者 操作ロジック ---
+
+  // タグクリック時の挙動
+  function handleTagClick(tag: string) {
     if (isTagEditMode) {
-      if(tag === "全員") return;
-      const newName = prompt(`「${tag}」の名前を変更しますか？\n(過去のデータも全て書き換わります)`, tag);
-      if(newName && newName !== tag) {
-        renameTagGlobally(tag, newName);
-      }
+      if (tag === "全員") return alert("「全員」タグは編集・削除できません");
+      // 編集メニューを開く
+      setActionMenu({ type: 'tag', name: tag });
       return;
     }
-
+    // 通常の選択切り替え
     if (tag === "全員") {
       setFormData({ ...formData, target: "全員" });
       return;
@@ -123,33 +127,14 @@ export default function EditItemSheet({
     setFormData({ ...formData, target: newTarget });
   }
 
-  async function renameTagGlobally(oldName: string, newName: string) {
-    if (!confirm(`本当に「${oldName}」を「${newName}」に変更しますか？\nこれは全てのスケジュールに反映されます。`)) return;
-    setStatus("タグ名を変更中...");
-    
-    const targetsToUpdate = allItems.filter(it => {
-       const tags = it.target ? it.target.split(",").map((t: string) => t.trim()) : [];
-       return tags.includes(oldName);
-    });
-
-    for (const item of targetsToUpdate) {
-       const oldTags = item.target.split(",").map((t: string) => t.trim());
-       const newTags = oldTags.map((t: string) => t === oldName ? newName : t).join(",");
-       await supabase.from("schedule_items").update({ target: newTags }).eq("id", item.id);
+  // 担当者クリック時の挙動
+  function handleAssigneeClick(name: string) {
+    if (isAssigneeEditMode) {
+      // 編集メニューを開く
+      setActionMenu({ type: 'assignee', name: name });
+      return;
     }
-
-    if(formData.target.includes(oldName)) {
-       const currentFormTags = formData.target.split(",").map(t => t.trim());
-       const newFormTags = currentFormTags.map(t => t === oldName ? newName : t).join(",");
-       setFormData(prev => ({ ...prev, target: newFormTags }));
-    }
-
-    setStatus("変更完了");
-    onReload();
-    setTimeout(() => setStatus(""), 2000);
-  }
-
-  function toggleAssignee(name: string) {
+    // 通常の選択切り替え
     let current = formData.assignee ? formData.assignee.split(",").map(t => t.trim()).filter(Boolean) : [];
     if (current.includes(name)) {
       current = current.filter(t => t !== name);
@@ -158,6 +143,118 @@ export default function EditItemSheet({
     }
     setFormData({ ...formData, assignee: current.join(",") });
   }
+
+  // --- グローバル変更・削除ロジック (核心部分) ---
+
+  async function executeRename(newName: string) {
+    if (!actionMenu || !newName || newName === actionMenu.name) return;
+    const { type, name: oldName } = actionMenu;
+    const isTag = type === 'tag';
+    
+    if (!confirm(`「${oldName}」を「${newName}」に変更しますか？\nこれを使用している全てのスケジュールの表記が書き換わります。`)) return;
+
+    setStatus(`${isTag ? "タグ" : "担当者"}名を変更中...`);
+
+    // 影響を受けるアイテムを探す
+    const targetsToUpdate = allItems.filter(it => {
+       const list = isTag 
+         ? (it.target ? it.target.split(",").map((t: string) => t.trim()) : [])
+         : (it.assignee ? it.assignee.split(",").map((t: string) => t.trim()) : []);
+       return list.includes(oldName);
+    });
+
+    // DB更新
+    for (const item of targetsToUpdate) {
+       const currentList = isTag 
+         ? item.target.split(",").map((t: string) => t.trim()) 
+         : (item.assignee ? item.assignee.split(",").map((t: string) => t.trim()) : []);
+       
+       const newList = currentList.map((t: string) => t === oldName ? newName : t).join(",");
+       
+       const updatePayload = isTag ? { target: newList } : { assignee: newList };
+       await supabase.from("schedule_items").update(updatePayload).eq("id", item.id);
+    }
+
+    // 今開いているフォーム上の表示も更新
+    if (isTag) {
+      if (formData.target.includes(oldName)) {
+         const currentFormTags = formData.target.split(",").map(t => t.trim());
+         const newFormTags = currentFormTags.map(t => t === oldName ? newName : t).join(",");
+         setFormData(prev => ({ ...prev, target: newFormTags }));
+      }
+    } else {
+      if (formData.assignee.includes(oldName)) {
+         const currentFormAss = formData.assignee.split(",").map(t => t.trim());
+         const newFormAss = currentFormAss.map(t => t === oldName ? newName : t).join(",");
+         setFormData(prev => ({ ...prev, assignee: newFormAss }));
+      }
+    }
+
+    setStatus("変更完了");
+    setActionMenu(null);
+    onReload(); // 親データをリロード
+    setTimeout(() => setStatus(""), 2000);
+  }
+
+  async function executeDelete() {
+    if (!actionMenu) return;
+    const { type, name: targetName } = actionMenu;
+    const isTag = type === 'tag';
+
+    if (!confirm(`本当に「${targetName}」を削除しますか？\n\n【注意】\nこの${isTag ? "タグ" : "担当者"}が設定されている全てのスケジュールから、この項目だけが削除されます。（スケジュール自体は消えません）`)) return;
+
+    setStatus(`${isTag ? "タグ" : "担当者"}を削除中...`);
+
+    // 影響を受けるアイテムを探す
+    const targetsToUpdate = allItems.filter(it => {
+       const list = isTag 
+         ? (it.target ? it.target.split(",").map((t: string) => t.trim()) : [])
+         : (it.assignee ? it.assignee.split(",").map((t: string) => t.trim()) : []);
+       return list.includes(targetName);
+    });
+
+    // DB更新 (該当の単語だけ抜き取る)
+    for (const item of targetsToUpdate) {
+       let currentList = isTag 
+         ? item.target.split(",").map((t: string) => t.trim()) 
+         : (item.assignee ? item.assignee.split(",").map((t: string) => t.trim()) : []);
+       
+       // 削除対象を除外
+       currentList = currentList.filter((t: string) => t !== targetName);
+
+       // タグの場合、空になったら "全員" に戻すか、空にするか。ここでは空なら "全員" に戻す安全策をとる
+       let newListStr = currentList.join(",");
+       if (isTag && currentList.length === 0) {
+          newListStr = "全員"; 
+       }
+
+       const updatePayload = isTag ? { target: newListStr } : { assignee: newListStr };
+       await supabase.from("schedule_items").update(updatePayload).eq("id", item.id);
+    }
+
+    // 今開いているフォーム上の表示も更新
+    if (isTag) {
+      let currentFormTags = formData.target.split(",").map(t => t.trim());
+      if (currentFormTags.includes(targetName)) {
+         currentFormTags = currentFormTags.filter(t => t !== targetName);
+         if (currentFormTags.length === 0) currentFormTags = ["全員"];
+         setFormData(prev => ({ ...prev, target: currentFormTags.join(",") }));
+      }
+    } else {
+      let currentFormAss = formData.assignee ? formData.assignee.split(",").map(t => t.trim()) : [];
+      if (currentFormAss.includes(targetName)) {
+         currentFormAss = currentFormAss.filter(t => t !== targetName);
+         setFormData(prev => ({ ...prev, assignee: currentFormAss.join(",") }));
+      }
+    }
+
+    setStatus("削除完了");
+    setActionMenu(null);
+    onReload();
+    setTimeout(() => setStatus(""), 2000);
+  }
+
+  // --- その他のロジック ---
 
   function toggleMaterialLink(matId: number) {
     const idStr = String(matId);
@@ -201,14 +298,13 @@ export default function EditItemSheet({
     setTimeout(() => setStatus(""), 2000);
   }
 
-  // ★ 修正: 表示するタグリストを作成（履歴 + 現在選択中）
+  // 表示リスト作成
   const currentSelectedTags = formData.target ? formData.target.split(",").map(t => t.trim()).filter(Boolean) : [];
-  // Setを使って重複排除しながらマージ
   const displayTags = Array.from(new Set([...recentTags, ...currentSelectedTags])).filter(t => t !== "全員");
 
-  // ★ 修正: 表示する担当者リストを作成（履歴 + 現在選択中）
   const currentAssignees = formData.assignee ? formData.assignee.split(",").map(t => t.trim()).filter(Boolean) : [];
   const displayAssignees = Array.from(new Set([...recentAssignees, ...currentAssignees]));
+
 
   // --- UI構成 ---
   return (
@@ -238,7 +334,6 @@ export default function EditItemSheet({
              
              {/* 1. ヘッダー情報 */}
              <div className="space-y-4">
-                {/* タイトル行 */}
                 <div className="flex items-start gap-3">
                    <div className="w-16 h-16 shrink-0 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 relative overflow-hidden">
                       <input type="text" value={formData.emoji} onChange={(e)=>setFormData({...formData, emoji:e.target.value})} className="w-full h-full bg-transparent text-center text-4xl outline-none p-0 appearance-none z-10"/>
@@ -253,9 +348,7 @@ export default function EditItemSheet({
                    </div>
                 </div>
 
-                {/* 時刻設定 (修正版: z-index調整) */}
                 <div className="flex items-center gap-2">
-                   {/* 開始 */}
                    <div className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all">
                       <label className="text-[10px] font-bold text-slate-400 block text-center mb-1">開始</label>
                       <input 
@@ -266,7 +359,6 @@ export default function EditItemSheet({
                       />
                    </div>
                    <ArrowRight className="w-5 h-5 text-slate-300" />
-                   {/* 終了 */}
                    <div className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all">
                       <label className="text-[10px] font-bold text-slate-400 block text-center mb-1">終了</label>
                       <input 
@@ -276,12 +368,7 @@ export default function EditItemSheet({
                         className={`w-full bg-transparent text-2xl font-black text-center outline-none appearance-none font-mono tracking-tight relative z-10 ${!formData.endTime ? 'text-slate-300' : 'text-slate-800'}`}
                       />
                       {formData.endTime && (
-                        <button 
-                          onClick={() => setFormData({...formData, endTime: ""})} 
-                          className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm z-20"
-                        >
-                          <X className="w-3.5 h-3.5"/>
-                        </button>
+                        <button onClick={() => setFormData({...formData, endTime: ""})} className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm z-20"><X className="w-3.5 h-3.5"/></button>
                       )}
                    </div>
                 </div>
@@ -289,7 +376,6 @@ export default function EditItemSheet({
 
              {/* 2. 詳細設定カード */}
              <div className="bg-white rounded-[1.5rem] shadow-sm border border-slate-100 overflow-hidden">
-                
                 {/* 場所 */}
                 <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-50">
                    <div className="w-8 h-8 rounded-full bg-cyan-50 text-[#00c2e8] flex items-center justify-center shrink-0">
@@ -315,23 +401,36 @@ export default function EditItemSheet({
                    ></textarea>
                 </div>
 
-                {/* タグ */}
+                {/* タグ (編集機能強化) */}
                 <div className="px-5 py-4 border-b border-slate-50">
                    <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-slate-400 flex items-center gap-1"><Tag className="w-3 h-3"/> 対象タグ</span>
-                      <button onClick={() => setIsTagEditMode(!isTagEditMode)} className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${isTagEditMode ? "bg-red-100 text-red-500" : "bg-slate-100 text-slate-400"}`}>{isTagEditMode ? "完了" : "編集"}</button>
+                      <button onClick={() => { setIsTagEditMode(!isTagEditMode); setActionMenu(null); }} className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 ${isTagEditMode ? "bg-red-100 text-red-500" : "bg-slate-100 text-slate-400"}`}>
+                        {isTagEditMode ? <><Check className="w-3 h-3"/>完了</> : <><Settings className="w-3 h-3"/>編集</>}
+                      </button>
                    </div>
                    <div className="flex flex-wrap gap-2 mb-3">
-                      <button onClick={() => toggleTag("全員")} className={`h-8 px-3 rounded-full font-bold text-xs flex items-center gap-1 transition-all ${(formData.target === "全員" || !formData.target) ? "bg-[#00c2e8] text-white" : "bg-slate-50 text-slate-500"} ${isTagEditMode ? "opacity-30 pointer-events-none" : ""}`}>
+                      <button onClick={() => handleTagClick("全員")} className={`h-8 px-3 rounded-full font-bold text-xs flex items-center gap-1 transition-all ${(formData.target === "全員" || !formData.target) ? "bg-[#00c2e8] text-white" : "bg-slate-50 text-slate-500"} ${isTagEditMode ? "opacity-30 pointer-events-none" : ""}`}>
                          {(formData.target === "全員" || !formData.target) && <Check className="w-3 h-3"/>} 全員
                       </button>
-                      {/* ★修正: displayTagsを使用 */}
                       {displayTags.map(t => {
                          const isActive = currentSelectedTags.includes(t);
                          return (
-                            <button key={t} onClick={() => toggleTag(t)} className={`h-8 px-3 rounded-full font-bold text-xs flex items-center gap-1 relative transition-all ${isTagEditMode ? "bg-red-50 text-red-500 border border-red-100 pr-7" : isActive ? "bg-cyan-50 text-[#00c2e8] border border-cyan-200" : "bg-slate-50 text-slate-500 border border-transparent"}`}>
-                               {!isTagEditMode && isActive && <Check className="w-3 h-3"/>} {t}
-                               {isTagEditMode && <XCircle className="w-3.5 h-3.5 absolute right-2 text-red-400"/>}
+                            <button 
+                              key={t} 
+                              onClick={() => handleTagClick(t)} 
+                              className={`
+                                h-8 px-3 rounded-full font-bold text-xs flex items-center gap-1 relative transition-all 
+                                ${isTagEditMode 
+                                  ? "bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200" 
+                                  : isActive ? "bg-cyan-50 text-[#00c2e8] border border-cyan-200" : "bg-slate-50 text-slate-500 border border-transparent"}
+                              `}
+                            >
+                               {isTagEditMode 
+                                 ? <Settings className="w-3 h-3 text-slate-400" /> 
+                                 : (isActive && <Check className="w-3 h-3"/>)
+                               }
+                               {t}
                             </button>
                          )
                       })}
@@ -341,62 +440,55 @@ export default function EditItemSheet({
                       <div className="flex gap-2">
                          <div className="flex-1 h-12 bg-slate-50 rounded-xl flex items-center px-3 border border-slate-100 focus-within:ring-2 focus-within:ring-cyan-100 transition-all">
                             <Plus className="w-4 h-4 text-slate-300 mr-2 shrink-0" />
-                            <input 
-                              type="text" 
-                              value={newTagInput} 
-                              onChange={(e)=>setNewTagInput(e.target.value)} 
-                              placeholder="新しいタグ..." 
-                              className="flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-slate-300 min-w-0"
-                            />
+                            <input type="text" value={newTagInput} onChange={(e)=>setNewTagInput(e.target.value)} placeholder="新しいタグ..." className="flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-slate-300 min-w-0"/>
                          </div>
-                         <button 
-                           onClick={() => {if(newTagInput.trim()){ toggleTag(newTagInput.trim()); setNewTagInput("") }}} 
-                           disabled={!newTagInput.trim()} 
-                           className="h-12 px-4 bg-slate-800 text-white rounded-xl text-xs font-bold disabled:opacity-30 active:scale-95 transition-all shrink-0"
-                         >
-                            追加
-                         </button>
+                         <button onClick={() => {if(newTagInput.trim()){ handleTagClick(newTagInput.trim()); setNewTagInput("") }}} disabled={!newTagInput.trim()} className="h-12 px-4 bg-slate-800 text-white rounded-xl text-xs font-bold disabled:opacity-30 active:scale-95 transition-all shrink-0">追加</button>
                       </div>
                    )}
                 </div>
 
-                {/* 担当者 */}
+                {/* 担当者 (編集機能強化) */}
                 <div className="px-5 py-4">
-                   <div className="flex items-center gap-2 mb-2 text-xs font-bold text-slate-400">
-                      <Users className="w-3 h-3"/> 担当スタッフ
+                   <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-slate-400 flex items-center gap-1"><Users className="w-3 h-3"/> 担当スタッフ</span>
+                      <button onClick={() => { setIsAssigneeEditMode(!isAssigneeEditMode); setActionMenu(null); }} className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 ${isAssigneeEditMode ? "bg-red-100 text-red-500" : "bg-slate-100 text-slate-400"}`}>
+                        {isAssigneeEditMode ? <><Check className="w-3 h-3"/>完了</> : <><Settings className="w-3 h-3"/>編集</>}
+                      </button>
                    </div>
                    <div className="flex flex-wrap gap-2 mb-3">
-                      {/* ★修正: displayAssigneesを使用 */}
                       {displayAssignees.map(a => {
                          const isActive = currentAssignees.includes(a);
                          return (
-                            <button key={a} onClick={() => toggleAssignee(a)} className={`h-8 px-3 rounded-lg font-bold text-xs flex items-center gap-1 border transition-all ${isActive ? "bg-indigo-50 border-indigo-200 text-indigo-500" : "bg-white border-slate-200 text-slate-500"}`}>
-                               {isActive && <Check className="w-3 h-3"/>}{a}
+                            <button 
+                              key={a} 
+                              onClick={() => handleAssigneeClick(a)} 
+                              className={`
+                                h-8 px-3 rounded-lg font-bold text-xs flex items-center gap-1 border transition-all 
+                                ${isAssigneeEditMode 
+                                  ? "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200" 
+                                  : isActive ? "bg-indigo-50 border-indigo-200 text-indigo-500" : "bg-white border-slate-200 text-slate-500"}
+                              `}
+                            >
+                               {isAssigneeEditMode 
+                                 ? <Settings className="w-3 h-3 text-slate-400" />
+                                 : (isActive && <Check className="w-3 h-3"/>)
+                               }
+                               {a}
                             </button>
                          )
                       })}
                       {displayAssignees.length === 0 && <span className="text-[10px] text-slate-300 py-1">履歴なし</span>}
                    </div>
 
-                   <div className="flex gap-2">
-                      <div className="flex-1 h-12 bg-slate-50 rounded-xl flex items-center px-3 border border-slate-100 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
-                         <Plus className="w-4 h-4 text-slate-300 mr-2 shrink-0" />
-                         <input 
-                           type="text" 
-                           value={newAssigneeInput} 
-                           onChange={(e)=>setNewAssigneeInput(e.target.value)} 
-                           placeholder="担当者名 (例: 田中)" 
-                           className="flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-slate-300 min-w-0"
-                         />
-                      </div>
-                      <button 
-                        onClick={() => {if(newAssigneeInput.trim()){ toggleAssignee(newAssigneeInput.trim()); setNewAssigneeInput("") }}} 
-                        disabled={!newAssigneeInput.trim()} 
-                        className="h-12 px-4 bg-indigo-500 text-white rounded-xl text-xs font-bold disabled:opacity-30 active:scale-95 transition-all shrink-0"
-                      >
-                         追加
-                      </button>
-                   </div>
+                   {!isAssigneeEditMode && (
+                     <div className="flex gap-2">
+                        <div className="flex-1 h-12 bg-slate-50 rounded-xl flex items-center px-3 border border-slate-100 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
+                           <Plus className="w-4 h-4 text-slate-300 mr-2 shrink-0" />
+                           <input type="text" value={newAssigneeInput} onChange={(e)=>setNewAssigneeInput(e.target.value)} placeholder="担当者名 (例: 田中)" className="flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-slate-300 min-w-0"/>
+                        </div>
+                        <button onClick={() => {if(newAssigneeInput.trim()){ handleAssigneeClick(newAssigneeInput.trim()); setNewAssigneeInput("") }}} disabled={!newAssigneeInput.trim()} className="h-12 px-4 bg-indigo-500 text-white rounded-xl text-xs font-bold disabled:opacity-30 active:scale-95 transition-all shrink-0">追加</button>
+                     </div>
+                   )}
                 </div>
              </div>
              
@@ -464,6 +556,46 @@ export default function EditItemSheet({
                 {editingItem ? <><RefreshCw className="w-5 h-5"/> 変更を保存</> : <><Save className="w-5 h-5"/> リストに追加</>}
              </button>
           </div>
+
+          {/* === アクションメニュー (編集・削除) === */}
+          {actionMenu && (
+            <div className="absolute inset-0 z-50 flex items-end justify-center pointer-events-auto">
+              <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setActionMenu(null)}></div>
+              <div className="relative w-full bg-white rounded-t-2xl p-6 pb-8 space-y-4 animate-in slide-in-from-bottom-10 duration-200 shadow-2xl">
+                 <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-slate-400"/>
+                      {actionMenu.type === 'tag' ? "タグ" : "担当者"}の編集: <span className="text-[#00c2e8]">{actionMenu.name}</span>
+                    </h3>
+                    <button onClick={() => setActionMenu(null)} className="p-2 bg-slate-100 rounded-full text-slate-500"><X className="w-4 h-4"/></button>
+                 </div>
+                 
+                 <div className="p-4 bg-slate-50 rounded-xl text-xs text-slate-500 flex gap-2 leading-relaxed">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-orange-400" />
+                    ここで変更・削除を行うと、過去のスケジュールも含めて、この項目を使用している全ての箇所に反映されます。
+                 </div>
+
+                 <div className="grid grid-cols-1 gap-3">
+                    <button 
+                      onClick={() => {
+                        const newName = prompt("新しい名前を入力してください", actionMenu.name);
+                        if(newName) executeRename(newName);
+                      }}
+                      className="h-14 bg-white border-2 border-slate-100 rounded-xl font-bold text-slate-700 flex items-center justify-center gap-2 hover:bg-slate-50 transition-all active:scale-[0.98]"
+                    >
+                       <Pencil className="w-5 h-5 text-slate-400"/> 名前を変更する
+                    </button>
+                    <button 
+                      onClick={executeDelete}
+                      className="h-14 bg-red-50 text-red-500 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all active:scale-[0.98]"
+                    >
+                       <Trash2 className="w-5 h-5"/> この項目を全ての予定から削除
+                    </button>
+                 </div>
+              </div>
+            </div>
+          )}
+
        </div>
     </div>
   );
