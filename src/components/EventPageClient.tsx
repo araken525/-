@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react"; // useEffectを追加
+import { createPortal } from "react-dom"; // createPortalを追加
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { User, Users, ChevronDown, ChevronUp, Link2, Youtube, Video, FileText, Image as ImageIcon, Phone, AlertCircle, X } from "lucide-react";
+import { User, Users, ChevronDown, ChevronUp, Link2, Youtube, Video, FileText, Image as ImageIcon, Phone, X } from "lucide-react"; // AlertCircleを削除
 
 /* === ヘルパー: 資料アイコンとスタイル === */
-// ★修正: アイコンだけでなく色情報も返すように修正
 function getMaterialInfo(url: string) {
   const u = url.toLowerCase();
   const style = { 
@@ -26,10 +26,8 @@ export function StaffFilter({ assignees, slug }: { assignees: string[], slug: st
   const [isOpen, setIsOpen] = useState(false);
   const searchParams = useSearchParams();
   
-  // 現在のタグを取得
   const currentTags = searchParams.get("t")?.split(",") || [];
 
-  // URL生成ロジック
   const createToggleUrl = (name: string) => {
     const newTags = currentTags.includes(name)
       ? currentTags.filter(t => t !== name)
@@ -44,7 +42,6 @@ export function StaffFilter({ assignees, slug }: { assignees: string[], slug: st
 
   return (
     <div className="relative shrink-0 flex items-center">
-      {/* 区切り線 */}
       <div className="w-px h-6 bg-slate-200 mx-2"></div>
 
       <button
@@ -62,7 +59,6 @@ export function StaffFilter({ assignees, slug }: { assignees: string[], slug: st
         )}
       </button>
 
-      {/* ポップアップメニュー */}
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
@@ -76,7 +72,7 @@ export function StaffFilter({ assignees, slug }: { assignees: string[], slug: st
                     key={name}
                     href={createToggleUrl(name)}
                     scroll={false}
-                    onClick={() => setIsOpen(false)} // 選択したら閉じる
+                    onClick={() => setIsOpen(false)}
                     className={`
                       px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-colors
                       ${isActive ? "bg-indigo-50 text-indigo-600" : "hover:bg-slate-50 text-slate-600"}
@@ -119,15 +115,13 @@ export function MaterialsAccordion({ materials }: { materials: any[] }) {
         {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400"/> : <ChevronDown className="w-4 h-4 text-slate-400"/>}
       </button>
 
-      {/* 開閉エリア */}
       <div 
         className={`grid transition-all duration-300 ease-in-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
       >
         <div className="overflow-hidden">
           <div className="p-4 pt-0 grid grid-cols-1 sm:grid-cols-2 gap-3">
-             <div className="h-2 col-span-full"></div> {/* スペーサー */}
+             <div className="h-2 col-span-full"></div>
              {materials.map((m) => {
-               // ★ここで getMaterialInfo を使うように修正
                const { icon: Icon, color, bg } = getMaterialInfo(m.url);
                return (
                  <a 
@@ -155,31 +149,39 @@ export function MaterialsAccordion({ materials }: { materials: any[] }) {
   );
 }
 
-/* === 3. 緊急連絡先ボタン (モーダル) === */
+/* === 3. 当日の連絡先ボタン (Portal対応 & デザイン変更) === */
 export function EmergencyAction({ contacts }: { contacts: { name: string, tel: string, role: string }[] }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (!contacts || contacts.length === 0) return null;
 
   return (
     <>
+      {/* ボタン: 青色に変更 */}
       <button 
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-1.5 bg-red-50 text-red-500 px-3 py-1.5 rounded-full text-[10px] font-black hover:bg-red-100 active:scale-95 transition-all border border-red-100"
+        className="flex items-center gap-1.5 bg-[#00c2e8] text-white px-3 py-1.5 rounded-full text-[10px] font-black hover:bg-cyan-400 active:scale-95 transition-all shadow-sm shadow-cyan-200"
       >
-        <AlertCircle className="w-3.5 h-3.5" />
-        緊急連絡先
+        <Phone className="w-3.5 h-3.5 fill-white/20" />
+        当日の連絡先
       </button>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+      {/* ポップアップ: Portalでbody直下に描画 */}
+      {isOpen && mounted && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsOpen(false)}></div>
           <div className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                {/* アイコン: 青色に変更 */}
+                <div className="w-16 h-16 bg-cyan-50 text-[#00c2e8] rounded-full flex items-center justify-center mx-auto mb-4">
                   <Phone className="w-8 h-8" />
                 </div>
-                <h3 className="text-xl font-black text-slate-800">緊急連絡先</h3>
+                <h3 className="text-xl font-black text-slate-800">当日の連絡先</h3>
                 <p className="text-xs text-slate-400 mt-1">タップして発信できます</p>
              </div>
              
@@ -188,13 +190,14 @@ export function EmergencyAction({ contacts }: { contacts: { name: string, tel: s
                  <a 
                    key={i} 
                    href={`tel:${c.tel}`}
-                   className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-red-50 hover:border-red-100 transition-colors group"
+                   className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-cyan-50 hover:border-cyan-100 transition-colors group"
                  >
                     <div>
                        <div className="text-xs font-bold text-slate-400 mb-0.5">{c.role}</div>
-                       <div className="text-lg font-black text-slate-800 group-hover:text-red-600">{c.name}</div>
+                       {/* 文字色: ホバー時に青に変更 */}
+                       <div className="text-lg font-black text-slate-800 group-hover:text-[#00c2e8]">{c.name}</div>
                     </div>
-                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-slate-300 group-hover:text-red-500">
+                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-slate-300 group-hover:text-[#00c2e8]">
                        <Phone className="w-5 h-5" />
                     </div>
                  </a>
@@ -208,7 +211,8 @@ export function EmergencyAction({ contacts }: { contacts: { name: string, tel: s
                閉じる
              </button>
           </div>
-        </div>
+        </div>,
+        document.body // bodyタグの直下に描画する
       )}
     </>
   );
