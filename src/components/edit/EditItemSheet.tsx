@@ -201,6 +201,15 @@ export default function EditItemSheet({
     setTimeout(() => setStatus(""), 2000);
   }
 
+  // ★ 修正: 表示するタグリストを作成（履歴 + 現在選択中）
+  const currentSelectedTags = formData.target ? formData.target.split(",").map(t => t.trim()).filter(Boolean) : [];
+  // Setを使って重複排除しながらマージ
+  const displayTags = Array.from(new Set([...recentTags, ...currentSelectedTags])).filter(t => t !== "全員");
+
+  // ★ 修正: 表示する担当者リストを作成（履歴 + 現在選択中）
+  const currentAssignees = formData.assignee ? formData.assignee.split(",").map(t => t.trim()).filter(Boolean) : [];
+  const displayAssignees = Array.from(new Set([...recentAssignees, ...currentAssignees]));
+
   // --- UI構成 ---
   return (
     <div className={`fixed inset-0 z-50 flex items-end justify-center pointer-events-none ${isOpen ? "visible" : "invisible"}`}>
@@ -234,7 +243,6 @@ export default function EditItemSheet({
                    <div className="w-16 h-16 shrink-0 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 relative overflow-hidden">
                       <input type="text" value={formData.emoji} onChange={(e)=>setFormData({...formData, emoji:e.target.value})} className="w-full h-full bg-transparent text-center text-4xl outline-none p-0 appearance-none z-10"/>
                    </div>
-                   {/* ★修正: min-w-0を追加して横幅はみ出しを防止 */}
                    <div className="flex-1 min-w-0">
                       <input type="text" value={formData.title} onChange={(e)=>setFormData({...formData, title:e.target.value})} placeholder="タイトルを入力..." className="w-full bg-transparent text-xl font-black placeholder:text-slate-300 outline-none border-b-2 border-slate-200 focus:border-[#00c2e8] transition-colors py-2 text-slate-800 rounded-none"/>
                       <div className="flex gap-2 overflow-x-auto no-scrollbar py-2 mask-linear">
@@ -245,18 +253,35 @@ export default function EditItemSheet({
                    </div>
                 </div>
 
-                {/* 時刻設定 */}
+                {/* 時刻設定 (修正版: z-index調整) */}
                 <div className="flex items-center gap-2">
+                   {/* 開始 */}
                    <div className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all">
                       <label className="text-[10px] font-bold text-slate-400 block text-center mb-1">開始</label>
-                      <input type="time" value={formData.startTime} onChange={(e)=>setFormData({...formData, startTime:e.target.value})} className="w-full bg-transparent text-2xl font-black text-center outline-none text-slate-800 appearance-none font-mono tracking-tight"/>
+                      <input 
+                        type="time" 
+                        value={formData.startTime} 
+                        onChange={(e)=>setFormData({...formData, startTime:e.target.value})} 
+                        className="w-full bg-transparent text-2xl font-black text-center outline-none text-slate-800 appearance-none font-mono tracking-tight relative z-10"
+                      />
                    </div>
                    <ArrowRight className="w-5 h-5 text-slate-300" />
+                   {/* 終了 */}
                    <div className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all">
                       <label className="text-[10px] font-bold text-slate-400 block text-center mb-1">終了</label>
-                      <input type="time" value={formData.endTime} onChange={(e)=>setFormData({...formData, endTime:e.target.value})} className={`w-full bg-transparent text-2xl font-black text-center outline-none appearance-none font-mono tracking-tight ${!formData.endTime ? 'text-slate-300' : 'text-slate-800'}`}/>
+                      <input 
+                        type="time" 
+                        value={formData.endTime} 
+                        onChange={(e)=>setFormData({...formData, endTime:e.target.value})} 
+                        className={`w-full bg-transparent text-2xl font-black text-center outline-none appearance-none font-mono tracking-tight relative z-10 ${!formData.endTime ? 'text-slate-300' : 'text-slate-800'}`}
+                      />
                       {formData.endTime && (
-                        <button onClick={() => setFormData({...formData, endTime: ""})} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm"><X className="w-3 h-3"/></button>
+                        <button 
+                          onClick={() => setFormData({...formData, endTime: ""})} 
+                          className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm z-20"
+                        >
+                          <X className="w-3.5 h-3.5"/>
+                        </button>
                       )}
                    </div>
                 </div>
@@ -290,7 +315,7 @@ export default function EditItemSheet({
                    ></textarea>
                 </div>
 
-                {/* タグ (タグエリア改修) */}
+                {/* タグ */}
                 <div className="px-5 py-4 border-b border-slate-50">
                    <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-slate-400 flex items-center gap-1"><Tag className="w-3 h-3"/> 対象タグ</span>
@@ -300,8 +325,9 @@ export default function EditItemSheet({
                       <button onClick={() => toggleTag("全員")} className={`h-8 px-3 rounded-full font-bold text-xs flex items-center gap-1 transition-all ${(formData.target === "全員" || !formData.target) ? "bg-[#00c2e8] text-white" : "bg-slate-50 text-slate-500"} ${isTagEditMode ? "opacity-30 pointer-events-none" : ""}`}>
                          {(formData.target === "全員" || !formData.target) && <Check className="w-3 h-3"/>} 全員
                       </button>
-                      {recentTags.filter(t => t !== "全員").map(t => {
-                         const isActive = formData.target?.split(",").map(x=>x.trim()).includes(t);
+                      {/* ★修正: displayTagsを使用 */}
+                      {displayTags.map(t => {
+                         const isActive = currentSelectedTags.includes(t);
                          return (
                             <button key={t} onClick={() => toggleTag(t)} className={`h-8 px-3 rounded-full font-bold text-xs flex items-center gap-1 relative transition-all ${isTagEditMode ? "bg-red-50 text-red-500 border border-red-100 pr-7" : isActive ? "bg-cyan-50 text-[#00c2e8] border border-cyan-200" : "bg-slate-50 text-slate-500 border border-transparent"}`}>
                                {!isTagEditMode && isActive && <Check className="w-3 h-3"/>} {t}
@@ -311,7 +337,6 @@ export default function EditItemSheet({
                       })}
                    </div>
                    
-                   {/* ★修正: 追加エリアを独立させて大きく */}
                    {!isTagEditMode && (
                       <div className="flex gap-2">
                          <div className="flex-1 h-12 bg-slate-50 rounded-xl flex items-center px-3 border border-slate-100 focus-within:ring-2 focus-within:ring-cyan-100 transition-all">
@@ -335,24 +360,24 @@ export default function EditItemSheet({
                    )}
                 </div>
 
-                {/* 担当者 (担当者エリア改修) */}
+                {/* 担当者 */}
                 <div className="px-5 py-4">
                    <div className="flex items-center gap-2 mb-2 text-xs font-bold text-slate-400">
                       <Users className="w-3 h-3"/> 担当スタッフ
                    </div>
                    <div className="flex flex-wrap gap-2 mb-3">
-                      {recentAssignees.map(a => {
-                         const isActive = formData.assignee?.split(",").map(x=>x.trim()).includes(a);
+                      {/* ★修正: displayAssigneesを使用 */}
+                      {displayAssignees.map(a => {
+                         const isActive = currentAssignees.includes(a);
                          return (
                             <button key={a} onClick={() => toggleAssignee(a)} className={`h-8 px-3 rounded-lg font-bold text-xs flex items-center gap-1 border transition-all ${isActive ? "bg-indigo-50 border-indigo-200 text-indigo-500" : "bg-white border-slate-200 text-slate-500"}`}>
                                {isActive && <Check className="w-3 h-3"/>}{a}
                             </button>
                          )
                       })}
-                      {recentAssignees.length === 0 && <span className="text-[10px] text-slate-300 py-1">履歴なし</span>}
+                      {displayAssignees.length === 0 && <span className="text-[10px] text-slate-300 py-1">履歴なし</span>}
                    </div>
 
-                   {/* ★修正: 追加エリアを独立させて大きく */}
                    <div className="flex gap-2">
                       <div className="flex-1 h-12 bg-slate-50 rounded-xl flex items-center px-3 border border-slate-100 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
                          <Plus className="w-4 h-4 text-slate-300 mr-2 shrink-0" />
