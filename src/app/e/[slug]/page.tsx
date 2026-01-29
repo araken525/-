@@ -4,9 +4,10 @@ import { supabase } from "@/lib/supabaseClient";
 import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RefreshBadge from "@/components/RefreshBadge";
-import RealtimeListener from "@/components/RealtimeListener"; // ★追加: リアルタイム監視
+import RealtimeListener from "@/components/RealtimeListener";
+import { StaffFilter, MaterialsAccordion, EmergencyAction } from "@/components/EventPageClient"; // ★新コンポーネント
 import Link from "next/link";
-import { MapPin, Calendar, Clock, Filter, X, Link2, FileText, Youtube, Video, Image as ImageIcon, Sparkles, ArrowRight, User } from "lucide-react";
+import { MapPin, Calendar, Clock, Filter, X, Sparkles, ArrowRight } from "lucide-react";
 
 /* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
@@ -51,20 +52,6 @@ function detectEmoji(title: string) {
 function getTargetColor(t: string) {
   if (!t || t === "all" || t === "全員") return "bg-slate-100 text-slate-500";
   return "bg-cyan-50 text-[#00c2e8]";
-}
-
-function getMaterialInfo(url: string) {
-  const u = url.toLowerCase();
-  const style = { 
-    color: "text-[#00c2e8]", 
-    bg: "bg-cyan-50 sm:hover:bg-[#00c2e8] sm:hover:text-white transition-colors" 
-  };
-
-  if (u.includes("youtube") || u.includes("youtu.be")) return { icon: Youtube, ...style, label: "YouTube" };
-  if (u.endsWith(".mp4") || u.endsWith(".mov") || u.includes("vimeo")) return { icon: Video, ...style, label: "Video" };
-  if (u.endsWith(".pdf")) return { icon: FileText, ...style, label: "PDF" };
-  if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) return { icon: ImageIcon, ...style, label: "Image" };
-  return { icon: Link2, ...style, label: "Link" };
 }
 
 function groupByStartTime(items: any[]) {
@@ -130,9 +117,16 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { data: materials } = await supabase.from("event_materials").select("*").eq("event_id", event.id).order("sort_order", { ascending: true });
   const hasMaterials = materials && materials.length > 0;
 
+  /* --- 緊急連絡先データ (後でDB実装時にここを置き換えてください) --- */
+  // 例: const emergencyContacts = await supabase...
+  const emergencyContacts: { name: string, tel: string, role: string }[] = [
+    // { name: "田中 (舞台)", tel: "090-0000-0000", role: "舞台・進行" }, 
+    // { name: "佐藤 (受付)", tel: "080-0000-0000", role: "受付周り" },
+  ]; 
+
   // タグ収集 & 担当者収集
   const tagsSet = new Set<string>();
-  const assigneesSet = new Set<string>(); // ★追加: 担当者セット
+  const assigneesSet = new Set<string>();
 
   allItems.forEach(item => {
     // パート収集
@@ -145,22 +139,19 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         else if (tag !== "") tagsSet.add(tag);
       });
     }
-    // ★担当者収集
+    // 担当者収集
     if (item.assignee) {
       item.assignee.split(",").forEach((a: string) => assigneesSet.add(a.trim()));
     }
   });
   
-  // タブの生成
   const otherTabs = Array.from(tagsSet).filter(t => t !== "全員").sort();
   const dynamicTabs = tagsSet.has("全員") ? ["全員", ...otherTabs] : otherTabs;
   
-  // ★担当者タブの生成
   const dynamicAssignees = Array.from(assigneesSet).sort();
 
-  // フィルタリング (タグ OR 担当者)
+  // フィルタリング
   const filtered = allItems.filter(it => {
-    // 1. 何も選択されていなければ全表示
     if (selectedTags.length === 0) return true;
 
     const itTargets = (!it.target || it.target === "all" || it.target === "全員") 
@@ -170,13 +161,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           return (trimmed === "all") ? "全員" : trimmed;
         });
 
-    // 2. 「全員」対象の予定は常に表示
     if (itTargets.includes("全員")) return true;
 
-    // 3. タグの一致チェック
     const isTagMatch = itTargets.some((tag: string) => selectedTags.includes(tag));
-
-    // 4. ★担当者の一致チェック
     const itAssignees = it.assignee ? it.assignee.split(",").map((a: string) => a.trim()) : [];
     const isAssigneeMatch = itAssignees.some((assignee: string) => selectedTags.includes(assignee));
 
@@ -185,7 +172,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
   const groups = groupByStartTime(filtered);
 
-  // 更新日時の計算
   const candidates: Date[] = [];
   const evUpd = toDate((event as any).updated_at);
   if (evUpd) candidates.push(evUpd);
@@ -199,10 +185,9 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white pb-20">
       <EventHeader title={event.title} slug={slug} />
       
-      {/* ★追加: リアルタイム更新の監視係 */}
       <RealtimeListener eventId={event.id} />
 
-      <div className="pt-24 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-8">
+      <div className="pt-24 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-6">
         
         {/* イベント情報カード */}
         <section className="relative bg-white rounded-[2rem] p-8 overflow-hidden shadow-sm h-full min-h-[160px]">
@@ -211,7 +196,13 @@ export default async function Page({ params, searchParams }: { params: Promise<{
            <div className="absolute -bottom-10 -right-4 text-[120px] font-black text-white/40 select-none leading-none z-0 tracking-tighter -rotate-6 mix-blend-overlay">
               {getDayNumber(event.date)}
            </div>
-           <div className="relative z-10 text-left">
+           
+           {/* ★緊急連絡先ボタン (右上に配置) */}
+           <div className="absolute top-6 right-6 z-20">
+              <EmergencyAction contacts={emergencyContacts} />
+           </div>
+
+           <div className="relative z-10 text-left mt-2">
              <div className="inline-flex items-center gap-1.5 bg-white/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-cyan-700 mb-3 shadow-sm">
                 <Calendar className="w-3.5 h-3.5" />
                 {getJaDate(event.date)}
@@ -234,7 +225,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               <span className="text-xs font-black text-slate-300">表示切替</span>
             </div>
             
-            {/* すべて表示 */}
             <Link
               href={`/e/${slug}`}
               scroll={false}
@@ -246,7 +236,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               すべて
             </Link>
 
-            {/* パートタグ */}
             {dynamicTabs.map((tag) => {
               const isActive = selectedTags.includes(tag);
               const nextUrl = toggleTag(selectedTags, tag);
@@ -265,74 +254,25 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                 </Link>
               );
             })}
+          </div>
 
-            {/* ★担当者タグ (区切り線を入れて表示) */}
-            {dynamicAssignees.length > 0 && (
-               <div className="w-px h-6 bg-slate-200 shrink-0 mx-1"></div>
-            )}
-            
-            {dynamicAssignees.map((assignee) => {
-              const isActive = selectedTags.includes(assignee);
-              const nextUrl = toggleTag(selectedTags, assignee);
-              const href = nextUrl ? `/e/${slug}?t=${encodeURIComponent(nextUrl)}` : `/e/${slug}`;
-              return (
-                <Link
-                  key={assignee}
-                  href={href}
-                  scroll={false}
-                  className={`
-                    shrink-0 px-3 py-2 rounded-xl text-xs font-black transition-colors select-none active:scale-95 flex items-center gap-1.5
-                    ${isActive ? "bg-indigo-500 text-white" : "bg-indigo-50 text-indigo-400"}
-                  `}
-                >
-                  <User className="w-3 h-3" />
-                  {assignee}
-                </Link>
-              );
-            })}
+          {/* ★スタッフフィルター (右端に分離) */}
+          {dynamicAssignees.length > 0 && (
+             <StaffFilter assignees={dynamicAssignees} slug={slug} />
+          )}
 
-            {selectedTags.length > 0 && (
-              <div className="pl-2 border-l border-slate-100 shrink-0">
+          {selectedTags.length > 0 && (
+              <div className="pl-2 ml-2 border-l border-slate-100 shrink-0">
                 <Link href={`/e/${slug}`} scroll={false} className="flex items-center text-xs font-bold text-slate-400 bg-slate-50 px-3 py-2 rounded-xl active:scale-95 active:bg-slate-100 transition-all">
                    <X className="w-3.5 h-3.5 mr-1" /> クリア
                 </Link>
               </div>
-            )}
-          </div>
+          )}
         </section>
 
-        {/* 資料リンク集エリア */}
+        {/* ★資料アコーディオン */}
         {hasMaterials && (
-          <section className="space-y-3">
-             <div className="pl-2 flex items-center gap-2">
-                <Link2 className="w-4 h-4 text-slate-300" />
-                <h2 className="text-xs font-black text-slate-400 uppercase tracking-wider">配布資料・リンク</h2>
-             </div>
-             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-               {materials.map((m) => {
-                 const { icon: Icon, color, bg, label } = getMaterialInfo(m.url);
-                 return (
-                   <a 
-                     key={m.id} 
-                     href={m.url} 
-                     target="_blank" 
-                     rel="noopener noreferrer"
-                     className="flex items-center gap-3 bg-white p-4 rounded-2xl shadow-sm border border-transparent sm:hover:border-cyan-100 sm:hover:shadow-md active:scale-95 transition-all group"
-                   >
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${bg}`}>
-                         <Icon className={`w-5 h-5 transition-colors ${color} group-hover:text-white`} />
-                      </div>
-                      <div className="min-w-0">
-                         <div className="text-xs font-bold text-slate-400 mb-0.5">{label}</div>
-                         <div className="text-sm font-black text-slate-800 truncate leading-tight sm:group-hover:text-[#00c2e8] transition-colors">
-                           {m.title}
-                         </div>
-                      </div>
-                   </a>
-                 );
-               })}
-             </div>
-          </section>
+          <MaterialsAccordion materials={materials} />
         )}
 
         {/* タイムライン */}
@@ -365,8 +305,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                     const now = isNow(it.start_time, it.end_time);
                     const emoji = it.emoji || detectEmoji(it.title);
                     const duration = getDuration(it.start_time, it.end_time);
-                    const primaryTag = it.target ? it.target.split(",")[0] : "全員";
-                    const badgeColor = getTargetColor(primaryTag);
                     const startHhmm = hhmm(it.start_time);
                     const endHhmm = it.end_time ? hhmm(it.end_time) : null;
 
@@ -377,7 +315,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
                         now={now}
                         emoji={emoji}
                         duration={duration}
-                        badgeColor={badgeColor}
                         startHhmm={startHhmm}
                         endHhmm={endHhmm}
                         materials={materials ?? []}
