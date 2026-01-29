@@ -2,23 +2,26 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { X, Clock, ArrowRight, Check, Edit3, Users, MapPin, AlignLeft, Paperclip, Settings, ChevronUp, ChevronDown, ArrowUp, Minus, ArrowDown, RefreshCw, Save, XCircle } from "lucide-react";
+import { 
+  X, Clock, ArrowRight, Check, Edit3, Users, MapPin, 
+  AlignLeft, Paperclip, Settings, ChevronUp, ChevronDown, 
+  ArrowUp, Minus, ArrowDown, RefreshCw, Save, XCircle, 
+  ChevronRight, StickyNote, Tag
+} from "lucide-react";
 import { detectEmoji, hhmm, getMaterialInfo, EMOJI_PRESETS } from "@/lib/editUtils";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  editingItem: any; // 編集中のアイテム（なければnull）
+  editingItem: any;
   eventId: string;
   materials: any[];
-  onSaved: () => void; // 保存完了時のコールバック
+  onSaved: () => void;
   setStatus: (s: string) => void;
-  // 親から渡される入力候補
   recentTags: string[];
   recentAssignees: string[];
-  // 親のリストを更新するためのコールバック（リネーム用）
   onReload: () => void;
-  allItems: any[]; // リネーム用
+  allItems: any[];
 };
 
 export default function EditItemSheet({ 
@@ -27,18 +30,23 @@ export default function EditItemSheet({
 }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
 
+  // フォームデータ
   const [formData, setFormData] = useState({
     startTime: "10:00", endTime: "", title: "", location: "", note: "", 
     target: "全員", assignee: "",
     emoji: "🎵", sortOrder: 0, materialIds: [] as string[]
   });
 
+  // UI制御フラグ
   const [isSortOpen, setIsSortOpen] = useState(false);
+  const [isMaterialsOpen, setIsMaterialsOpen] = useState(false); // 資料の開閉
   const [isTagEditMode, setIsTagEditMode] = useState(false);
+  
+  // 入力用一時ステート
   const [newTagInput, setNewTagInput] = useState("");
   const [newAssigneeInput, setNewAssigneeInput] = useState("");
 
-  // シートが開いた時 or 編集アイテムが変わった時の初期化
+  // --- 初期化 ---
   useEffect(() => {
     if (isOpen) {
       if (editingItem) {
@@ -54,8 +62,8 @@ export default function EditItemSheet({
           sortOrder: editingItem.sort_order ?? 0,
           materialIds: editingItem.material_ids ? editingItem.material_ids.split(",") : []
         });
+        // 編集時は資料紐付けがあれば開いておく等の配慮も可（今回は閉じておく）
       } else {
-        // 新規作成
         setFormData({ 
           startTime: "10:00", endTime: "", title: "", location: "", note: "", 
           target: "全員", assignee: "",
@@ -65,11 +73,12 @@ export default function EditItemSheet({
       setNewTagInput("");
       setNewAssigneeInput("");
       setIsSortOpen(false);
+      setIsMaterialsOpen(false);
       setIsTagEditMode(false);
     }
   }, [isOpen, editingItem]);
 
-  // 絵文字の自動推測
+  // 絵文字自動推測
   useEffect(() => {
     if (!editingItem && formData.title) {
       const detected = detectEmoji(formData.title);
@@ -88,7 +97,7 @@ export default function EditItemSheet({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onClose]);
 
-  // --- 各種操作ロジック ---
+  // --- ロジック ---
 
   function toggleTag(tag: string) {
     if (isTagEditMode) {
@@ -130,7 +139,6 @@ export default function EditItemSheet({
        await supabase.from("schedule_items").update({ target: newTags }).eq("id", item.id);
     }
 
-    // フォーム上の表示も更新
     if(formData.target.includes(oldName)) {
        const currentFormTags = formData.target.split(",").map(t => t.trim());
        const newFormTags = currentFormTags.map(t => t === oldName ? newName : t).join(",");
@@ -166,6 +174,9 @@ export default function EditItemSheet({
   async function saveItem() {
     if (!eventId) return setStatus("イベント不明");
     if (!formData.title.trim()) return setStatus("タイトル必須");
+    
+    setStatus(editingItem ? "更新中..." : "追加中...");
+
     const payload = {
       event_id: eventId, 
       start_time: formData.startTime + ":00", 
@@ -180,7 +191,6 @@ export default function EditItemSheet({
       material_ids: formData.materialIds.length > 0 ? formData.materialIds.join(",") : null
     };
     
-    setStatus(editingItem ? "更新中..." : "追加中...");
     const res = editingItem
       ? await supabase.from("schedule_items").update(payload).eq("id", editingItem.id)
       : await supabase.from("schedule_items").insert(payload);
@@ -188,177 +198,217 @@ export default function EditItemSheet({
     if (res.error) return setStatus("エラー: " + res.error.message);
     
     setStatus(editingItem ? "更新しました" : "追加しました");
-    onSaved(); // 親に通知して閉じる
+    onSaved();
     setTimeout(() => setStatus(""), 2000);
   }
 
-  // --- 表示 ---
+  // --- UI構成 ---
   return (
     <div className={`fixed inset-0 z-50 flex items-end justify-center pointer-events-none ${isOpen ? "visible" : "invisible"}`}>
-       <div className={`absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0"}`} onClick={onClose}></div>
+       {/* 背景 (Backdrop) */}
+       <div 
+         className={`absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0"}`} 
+         onClick={onClose}
+       ></div>
        
-       <div ref={sheetRef} className={`relative w-full max-w-lg bg-white rounded-t-[2.5rem] shadow-2xl pointer-events-auto transition-transform duration-300 ease-out flex flex-col max-h-[95vh] ${isOpen ? "translate-y-0" : "translate-y-full"}`}>
-          <div className="shrink-0 relative h-12 flex items-center justify-center cursor-pointer" onClick={onClose}>
-             <div className="w-12 h-1.5 bg-slate-200 rounded-full absolute top-4"></div>
+       {/* シート本体 */}
+       <div 
+         ref={sheetRef} 
+         className={`
+           relative w-full max-w-lg bg-[#f8fafc] rounded-t-[2rem] shadow-2xl pointer-events-auto 
+           transition-transform duration-300 ease-out flex flex-col max-h-[92vh]
+           ${isOpen ? "translate-y-0" : "translate-y-full"}
+         `}
+       >
+          {/* ドラッグハンドル */}
+          <div className="shrink-0 h-8 flex items-center justify-center cursor-pointer" onClick={onClose}>
+             <div className="w-10 h-1.5 bg-slate-300 rounded-full opacity-60"></div>
           </div>
           
-          <div className="flex-1 overflow-y-auto px-6 pb-6 pt-0 space-y-8 no-scrollbar">
-             {/* 1. タイトルセクション */}
+          {/* スクロールエリア (コンテンツ) */}
+          <div className="flex-1 overflow-y-auto px-5 pb-32 pt-2 space-y-6 no-scrollbar">
+             
+             {/* 1. ヘッダー情報 (絵文字・タイトル・時間) */}
              <div className="space-y-4">
-                <div className="flex items-start gap-4">
-                   <div className="w-20 h-20 shrink-0 bg-slate-50 rounded-2xl flex items-center justify-center relative shadow-inner border border-slate-100">
-                      <input type="text" value={formData.emoji} onChange={(e)=>setFormData({...formData, emoji:e.target.value})} className="w-full h-full bg-transparent text-center text-5xl outline-none p-0 appearance-none" placeholder="🎵"/>
+                {/* タイトル行 */}
+                <div className="flex items-start gap-3">
+                   <div className="w-16 h-16 shrink-0 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 relative overflow-hidden">
+                      <input type="text" value={formData.emoji} onChange={(e)=>setFormData({...formData, emoji:e.target.value})} className="w-full h-full bg-transparent text-center text-4xl outline-none p-0 appearance-none z-10"/>
                    </div>
-                   <div className="flex-1 pt-1">
-                      <label className="text-[10px] font-bold text-slate-400 block mb-1">タイトル</label>
-                      <input type="text" value={formData.title} onChange={(e)=>setFormData({...formData, title:e.target.value})} placeholder="練習, 移動, 本番..." className="w-full bg-transparent text-2xl font-black placeholder:text-slate-200 outline-none border-b-2 border-slate-100 focus:border-[#00c2e8] transition-colors py-1 text-slate-800 appearance-none rounded-none"/>
-                   </div>
-                </div>
-                <div className="flex gap-2 overflow-x-auto no-scrollbar py-2 mask-linear">
-                   {EMOJI_PRESETS.map((emoji) => (
-                      <button key={emoji} onClick={() => setFormData({...formData, emoji})} className={`shrink-0 w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all ${formData.emoji === emoji ? "bg-cyan-50 text-[#00c2e8] scale-110 shadow-sm border border-cyan-100" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}>{emoji}</button>
-                   ))}
-                </div>
-             </div>
-
-             {/* 2. タイムブロック */}
-             <div className="bg-slate-50 p-4 rounded-3xl space-y-4 border border-slate-100">
-                <div className="flex items-center gap-2 mb-2">
-                   <Clock className="w-4 h-4 text-[#00c2e8]"/>
-                   <span className="text-xs font-bold text-slate-500">時間設定</span>
-                </div>
-                <div className="flex items-center gap-4">
                    <div className="flex-1">
-                      <label className="text-[10px] font-bold text-slate-400 block mb-1 text-center">開始</label>
-                      <input type="time" value={formData.startTime} onChange={(e)=>setFormData({...formData, startTime:e.target.value})} className="w-full h-14 bg-white border border-slate-200 rounded-xl text-2xl font-black text-center outline-none shadow-sm focus:ring-2 focus:ring-cyan-100 focus:border-cyan-200 transition-all text-slate-800 appearance-none"/>
-                   </div>
-                   <div className="text-slate-300 pt-4"><ArrowRight className="w-6 h-6"/></div>
-                   <div className="flex-1 relative">
-                      <label className="text-[10px] font-bold text-slate-400 block mb-1 text-center">終了</label>
-                      <div className="relative w-full h-14">
-                         <input type="time" value={formData.endTime} onChange={(e)=>setFormData({...formData, endTime:e.target.value})} className={`w-full h-full bg-white border border-slate-200 rounded-xl text-2xl font-black text-center outline-none shadow-sm focus:ring-2 focus:ring-cyan-100 focus:border-cyan-200 transition-all appearance-none ${!formData.endTime ? 'text-transparent' : 'text-slate-800'}`}/>
-                         {!formData.endTime && <div className="absolute inset-0 flex items-center justify-center text-slate-300 text-2xl font-black pointer-events-none tracking-widest">--:--</div>}
+                      <input type="text" value={formData.title} onChange={(e)=>setFormData({...formData, title:e.target.value})} placeholder="タイトルを入力..." className="w-full bg-transparent text-xl font-black placeholder:text-slate-300 outline-none border-b-2 border-slate-200 focus:border-[#00c2e8] transition-colors py-2 text-slate-800 rounded-none"/>
+                      {/* 絵文字プリセット (横スクロール) */}
+                      <div className="flex gap-2 overflow-x-auto no-scrollbar py-2 mask-linear">
+                         {EMOJI_PRESETS.map((emoji) => (
+                            <button key={emoji} onClick={() => setFormData({...formData, emoji})} className="shrink-0 text-lg opacity-60 hover:opacity-100 transition-opacity hover:scale-110">{emoji}</button>
+                         ))}
                       </div>
-                      {formData.endTime && <button onClick={() => setFormData({...formData, endTime: ""})} className="absolute -top-2 -right-2 w-6 h-6 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm z-10"><X className="w-3 h-3"/></button>}
                    </div>
                 </div>
-             </div>
 
-             {/* 3. 詳細情報 */}
-             <div className="space-y-4">
-                
-                {/* 対象タグ */}
-                <div>
-                   <div className="flex items-center justify-between mb-2">
-                      <label className="text-[10px] font-bold text-slate-400 block">対象タグ</label>
-                      <button onClick={() => setIsTagEditMode(!isTagEditMode)} className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 ${isTagEditMode ? "bg-red-50 text-red-500" : "bg-slate-100 text-slate-400"}`}>{isTagEditMode ? "完了" : "編集"}</button>
+                {/* 時刻設定 (デジタル時計風ブロック) */}
+                <div className="flex items-center gap-2">
+                   {/* 開始 */}
+                   <div className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all">
+                      <label className="text-[10px] font-bold text-slate-400 block text-center mb-1">開始</label>
+                      <input type="time" value={formData.startTime} onChange={(e)=>setFormData({...formData, startTime:e.target.value})} className="w-full bg-transparent text-2xl font-black text-center outline-none text-slate-800 appearance-none font-mono tracking-tight"/>
                    </div>
                    
+                   <ArrowRight className="w-5 h-5 text-slate-300" />
+                   
+                   {/* 終了 */}
+                   <div className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all">
+                      <label className="text-[10px] font-bold text-slate-400 block text-center mb-1">終了</label>
+                      <input type="time" value={formData.endTime} onChange={(e)=>setFormData({...formData, endTime:e.target.value})} className={`w-full bg-transparent text-2xl font-black text-center outline-none appearance-none font-mono tracking-tight ${!formData.endTime ? 'text-slate-300' : 'text-slate-800'}`}/>
+                      {formData.endTime && (
+                        <button onClick={() => setFormData({...formData, endTime: ""})} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm"><X className="w-3 h-3"/></button>
+                      )}
+                   </div>
+                </div>
+             </div>
+
+             {/* 2. 詳細設定カード (場所・メモ・タグ・人) */}
+             <div className="bg-white rounded-[1.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                
+                {/* 場所 */}
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-50">
+                   <div className="w-8 h-8 rounded-full bg-cyan-50 text-[#00c2e8] flex items-center justify-center shrink-0">
+                      <MapPin className="w-4 h-4"/>
+                   </div>
+                   <input type="text" value={formData.location} onChange={(e)=>setFormData({...formData, location:e.target.value})} placeholder="場所 (例: 大ホール)" className="flex-1 bg-transparent text-sm font-bold outline-none text-slate-700 placeholder:text-slate-300"/>
+                </div>
+
+                {/* メモ */}
+                <div className="flex items-start gap-3 px-5 py-4 border-b border-slate-50">
+                   <div className="w-8 h-8 rounded-full bg-yellow-50 text-yellow-500 flex items-center justify-center shrink-0 mt-0.5">
+                      <StickyNote className="w-4 h-4"/>
+                   </div>
+                   <textarea 
+                     value={formData.note} 
+                     onChange={(e) => { 
+                       setFormData({ ...formData, note: e.target.value }); 
+                       e.target.style.height = "auto"; 
+                       e.target.style.height = `${e.target.scrollHeight}px`; 
+                     }} 
+                     placeholder="メモ・備考" 
+                     className="flex-1 bg-transparent text-sm font-medium outline-none resize-none min-h-[3rem] text-slate-700 placeholder:text-slate-300 leading-relaxed"
+                   ></textarea>
+                </div>
+
+                {/* タグ (横スクロール) */}
+                <div className="px-5 py-4 border-b border-slate-50">
+                   <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-slate-400 flex items-center gap-1"><Tag className="w-3 h-3"/> 対象タグ</span>
+                      <button onClick={() => setIsTagEditMode(!isTagEditMode)} className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${isTagEditMode ? "bg-red-100 text-red-500" : "bg-slate-100 text-slate-400"}`}>{isTagEditMode ? "完了" : "編集"}</button>
+                   </div>
                    <div className="flex flex-wrap gap-2">
-                      <button onClick={() => toggleTag("全員")} className={`h-9 px-4 rounded-full font-bold text-xs flex items-center gap-1 transition-all ${(formData.target === "全員" || !formData.target) ? "bg-[#00c2e8] text-white shadow-md shadow-cyan-200" : "bg-slate-100 text-slate-500"} ${isTagEditMode ? "opacity-50 pointer-events-none" : ""}`}>
+                      <button onClick={() => toggleTag("全員")} className={`h-8 px-3 rounded-full font-bold text-xs flex items-center gap-1 transition-all ${(formData.target === "全員" || !formData.target) ? "bg-[#00c2e8] text-white" : "bg-slate-50 text-slate-500"} ${isTagEditMode ? "opacity-30 pointer-events-none" : ""}`}>
                          {(formData.target === "全員" || !formData.target) && <Check className="w-3 h-3"/>} 全員
                       </button>
-                      
                       {recentTags.filter(t => t !== "全員").map(t => {
-                         const currentList = formData.target ? formData.target.split(",").map(x => x.trim()) : [];
-                         const isActive = currentList.includes(t);
+                         const isActive = formData.target?.split(",").map(x=>x.trim()).includes(t);
                          return (
-                            <button key={t} onClick={() => isTagEditMode ? toggleTag(t) : toggleTag(t)} className={`h-9 px-3 rounded-full font-bold text-xs transition-all flex items-center gap-1 relative ${isTagEditMode ? "bg-red-50 text-red-500 border border-red-100 pr-8 animate-pulse-slow" : isActive ? "bg-cyan-50 text-[#00c2e8] border border-cyan-200" : "bg-white border border-slate-200 text-slate-500"}`}>
-                               {(!isTagEditMode && isActive) && <Check className="w-3 h-3"/>} 
-                               {t}
-                               {isTagEditMode && <div className="absolute right-1 top-1/2 -translate-y-1/2"><XCircle className="w-4 h-4 fill-red-200 text-red-500" /></div>}
+                            <button key={t} onClick={() => toggleTag(t)} className={`h-8 px-3 rounded-full font-bold text-xs flex items-center gap-1 relative transition-all ${isTagEditMode ? "bg-red-50 text-red-500 border border-red-100 pr-7" : isActive ? "bg-cyan-50 text-[#00c2e8] border border-cyan-200" : "bg-slate-50 text-slate-500 border border-transparent"}`}>
+                               {!isTagEditMode && isActive && <Check className="w-3 h-3"/>} {t}
+                               {isTagEditMode && <XCircle className="w-3.5 h-3.5 absolute right-2 text-red-400"/>}
                             </button>
                          )
                       })}
+                      {!isTagEditMode && (
+                        <div className="flex items-center bg-slate-50 rounded-full pl-3 pr-1 h-8 border border-slate-100">
+                           <input type="text" value={newTagInput} onChange={(e)=>setNewTagInput(e.target.value)} placeholder="タグ追加..." className="bg-transparent w-20 text-xs font-bold outline-none"/>
+                           <button onClick={() => {if(newTagInput.trim()){ toggleTag(newTagInput.trim()); setNewTagInput("") }}} disabled={!newTagInput.trim()} className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-slate-500 disabled:opacity-30"><ArrowUp className="w-3 h-3"/></button>
+                        </div>
+                      )}
                    </div>
-                   
-                   {!isTagEditMode && (
-                      <div className="flex gap-2 mt-3">
-                         <input type="text" value={newTagInput} onChange={(e) => setNewTagInput(e.target.value)} placeholder="新しいタグ..." className="flex-1 h-9 bg-slate-50 rounded-lg px-3 text-xs font-bold outline-none focus:ring-2 focus:ring-cyan-100 appearance-none"/>
-                         {/* 単純に追加するだけなので、親のリストに追加したいが…今回は簡易的に入力欄クリア＋State反映のみ。次回保存時に反映される */}
-                         <button onClick={() => {if(newTagInput.trim()){ toggleTag(newTagInput.trim()); setNewTagInput("") }}} disabled={!newTagInput.trim()} className="h-9 px-3 bg-slate-800 text-white rounded-lg text-xs font-bold disabled:opacity-50">追加</button>
-                      </div>
-                   )}
                 </div>
 
-                {/* 担当スタッフ */}
-                <div className="pt-2 border-t border-slate-50">
-                   <div className="flex items-center gap-2 mb-2">
-                      <Users className="w-4 h-4 text-indigo-400"/>
-                      <label className="text-[10px] font-bold text-slate-400 block">担当スタッフ (任意)</label>
+                {/* 担当者 (横スクロール) */}
+                <div className="px-5 py-4">
+                   <div className="flex items-center gap-2 mb-2 text-xs font-bold text-slate-400">
+                      <Users className="w-3 h-3"/> 担当スタッフ
                    </div>
-                   <div className="flex flex-wrap gap-2 mb-3">
+                   <div className="flex flex-wrap gap-2">
                       {recentAssignees.map(a => {
-                         const current = formData.assignee ? formData.assignee.split(",").map(x => x.trim()) : [];
-                         const isActive = current.includes(a);
+                         const isActive = formData.assignee?.split(",").map(x=>x.trim()).includes(a);
                          return (
                             <button key={a} onClick={() => toggleAssignee(a)} className={`h-8 px-3 rounded-lg font-bold text-xs flex items-center gap-1 border transition-all ${isActive ? "bg-indigo-50 border-indigo-200 text-indigo-500" : "bg-white border-slate-200 text-slate-500"}`}>
                                {isActive && <Check className="w-3 h-3"/>}{a}
                             </button>
                          )
                       })}
-                   </div>
-                   <div className="flex gap-2">
-                      <input type="text" value={newAssigneeInput} onChange={(e) => setNewAssigneeInput(e.target.value)} placeholder="担当者名 (例: 田中)" className="flex-1 h-9 bg-slate-50 rounded-lg px-3 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-100 appearance-none"/>
-                      <button onClick={() => {if(newAssigneeInput.trim()){ toggleAssignee(newAssigneeInput.trim()); setNewAssigneeInput("") }}} disabled={!newAssigneeInput.trim()} className="h-9 px-3 bg-indigo-500 text-white rounded-lg text-xs font-bold disabled:opacity-50">追加</button>
-                   </div>
-                </div>
-
-                <div className="space-y-3 pt-2">
-                   <div className="flex items-center gap-3 bg-slate-50 rounded-2xl px-4 h-12 border border-slate-100">
-                      <MapPin className="w-4 h-4 text-slate-400 shrink-0"/>
-                      <input type="text" value={formData.location} onChange={(e)=>setFormData({...formData, location:e.target.value})} placeholder="場所 (例: 大ホール)" className="flex-1 bg-transparent text-sm font-bold outline-none text-slate-700 appearance-none"/>
-                   </div>
-                   <div className="flex items-start gap-3 bg-slate-50 rounded-2xl px-4 py-3 border border-slate-100">
-                      <AlignLeft className="w-4 h-4 text-slate-400 shrink-0 mt-1"/>
-                      <textarea value={formData.note} onChange={(e) => { setFormData({ ...formData, note: e.target.value }); e.target.style.height = "auto"; e.target.style.height = `${e.target.scrollHeight}px`; }} placeholder="メモ・備考" className="flex-1 bg-transparent text-sm font-medium outline-none resize-none min-h-[4rem] text-slate-700 appearance-none"></textarea>
+                      <div className="flex items-center bg-slate-50 rounded-lg pl-3 pr-1 h-8 border border-slate-100">
+                           <input type="text" value={newAssigneeInput} onChange={(e)=>setNewAssigneeInput(e.target.value)} placeholder="担当者追加..." className="bg-transparent w-20 text-xs font-bold outline-none"/>
+                           <button onClick={() => {if(newAssigneeInput.trim()){ toggleAssignee(newAssigneeInput.trim()); setNewAssigneeInput("") }}} disabled={!newAssigneeInput.trim()} className="w-6 h-6 bg-indigo-100 rounded-md flex items-center justify-center text-indigo-500 disabled:opacity-30"><ArrowUp className="w-3 h-3"/></button>
+                      </div>
                    </div>
                 </div>
              </div>
              
-             {/* 4. 資料紐付け */}
-             {materials.length > 0 && (
-                <div className="space-y-3 pt-2 border-t border-slate-100">
-                   <div className="flex items-center gap-2 px-1 text-slate-400">
-                      <Paperclip className="w-4 h-4" />
-                      <span className="text-xs font-bold">資料を紐付ける</span>
-                   </div>
-                   <div className="grid grid-cols-1 gap-2">
-                      {materials.map(m => {
-                         const isLinked = formData.materialIds.includes(String(m.id));
-                         const { icon: Icon, color, bg } = getMaterialInfo(m.url);
-                         return (
-                            <button key={m.id} onClick={() => toggleMaterialLink(m.id)} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${isLinked ? "bg-cyan-50 border-cyan-200 shadow-sm" : "bg-white border-slate-100 hover:bg-slate-50"}`}>
-                               <div className="flex items-center gap-3 overflow-hidden">
-                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${bg}`}><Icon className={`w-4 h-4 ${color}`} /></div>
-                                  <span className={`text-xs font-bold truncate ${isLinked ? "text-slate-800" : "text-slate-500"}`}>{m.title}</span>
-                               </div>
-                               {isLinked ? <div className="w-5 h-5 bg-[#00c2e8] rounded-full flex items-center justify-center"><Check className="w-3 h-3 text-white"/></div> : <div className="w-5 h-5 rounded-full border-2 border-slate-200"></div>}
-                            </button>
-                         )
-                      })}
-                   </div>
-                </div>
-             )}
-
-             {/* 並び順設定 */}
-             <div className="pt-4 border-t border-slate-100">
-                <button onClick={() => setIsSortOpen(!isSortOpen)} className="flex items-center justify-between w-full py-2">
-                   <div className="flex items-center gap-2 text-xs font-bold text-slate-400"><Settings className="w-4 h-4" /> 高度な設定・並び順</div>
-                   {isSortOpen ? <ChevronUp className="w-4 h-4 text-slate-300"/> : <ChevronDown className="w-4 h-4 text-slate-300"/>}
-                </button>
-                {isSortOpen && (
-                   <div className="flex items-center justify-between gap-4 pt-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                      <button onClick={() => setFormData({...formData, sortOrder: -10})} className={`flex-1 py-3 rounded-xl flex flex-col items-center justify-center gap-1 transition-all border ${formData.sortOrder < 0 ? "bg-cyan-50 border-cyan-200 text-[#00c2e8]" : "bg-white border-slate-100 text-slate-400"}`}><ArrowUp className="w-5 h-5"/><span className="text-[10px] font-black">一番上</span></button>
-                      <button onClick={() => setFormData({...formData, sortOrder: 0})} className={`flex-1 py-3 rounded-xl flex flex-col items-center justify-center gap-1 transition-all border ${formData.sortOrder === 0 ? "bg-slate-800 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-400"}`}><Minus className="w-5 h-5"/><span className="text-[10px] font-black">標準</span></button>
-                      <button onClick={() => setFormData({...formData, sortOrder: 10})} className={`flex-1 py-3 rounded-xl flex flex-col items-center justify-center gap-1 transition-all border ${formData.sortOrder > 0 ? "bg-orange-50 border-orange-200 text-orange-500" : "bg-white border-slate-100 text-slate-400"}`}><ArrowDown className="w-5 h-5"/><span className="text-[10px] font-black">一番下</span></button>
-                   </div>
+             {/* 3. オプション (アコーディオン) */}
+             <div className="space-y-3">
+                
+                {/* 資料紐付け */}
+                {materials.length > 0 && (
+                  <div className="bg-white rounded-[1.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                    <button onClick={() => setIsMaterialsOpen(!isMaterialsOpen)} className="w-full flex items-center justify-between p-5 bg-white hover:bg-slate-50 transition-colors">
+                       <div className="flex items-center gap-2 text-slate-600 font-bold text-sm">
+                          <Paperclip className="w-4 h-4 text-[#00c2e8]" />
+                          資料を紐付ける
+                          {formData.materialIds.length > 0 && <span className="bg-[#00c2e8] text-white text-[10px] px-1.5 py-0.5 rounded-md ml-1">{formData.materialIds.length}</span>}
+                       </div>
+                       {isMaterialsOpen ? <ChevronUp className="w-4 h-4 text-slate-400"/> : <ChevronDown className="w-4 h-4 text-slate-400"/>}
+                    </button>
+                    {isMaterialsOpen && (
+                       <div className="px-5 pb-5 pt-0 space-y-2 animate-in fade-in slide-in-from-top-2">
+                          <div className="h-px bg-slate-50 mb-3"></div>
+                          {materials.map(m => {
+                             const isLinked = formData.materialIds.includes(String(m.id));
+                             const { icon: Icon, color, bg } = getMaterialInfo(m.url);
+                             return (
+                                <button key={m.id} onClick={() => toggleMaterialLink(m.id)} className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${isLinked ? "bg-cyan-50 border-cyan-200" : "bg-white border-slate-100"}`}>
+                                   <div className="flex items-center gap-3 overflow-hidden">
+                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${bg}`}><Icon className={`w-4 h-4 ${color}`} /></div>
+                                      <span className={`text-xs font-bold truncate ${isLinked ? "text-slate-800" : "text-slate-500"}`}>{m.title}</span>
+                                   </div>
+                                   {isLinked && <Check className="w-4 h-4 text-[#00c2e8]"/>}
+                                </button>
+                             )
+                          })}
+                       </div>
+                    )}
+                  </div>
                 )}
+
+                {/* 高度な設定 (並び順) */}
+                <div className="bg-white rounded-[1.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                   <button onClick={() => setIsSortOpen(!isSortOpen)} className="w-full flex items-center justify-between p-5 bg-white hover:bg-slate-50 transition-colors">
+                       <div className="flex items-center gap-2 text-slate-600 font-bold text-sm">
+                          <Settings className="w-4 h-4 text-slate-400" />
+                          高度な設定（並び順）
+                       </div>
+                       {isSortOpen ? <ChevronUp className="w-4 h-4 text-slate-400"/> : <ChevronDown className="w-4 h-4 text-slate-400"/>}
+                   </button>
+                   {isSortOpen && (
+                      <div className="px-5 pb-5 pt-0 animate-in fade-in slide-in-from-top-2">
+                         <div className="h-px bg-slate-50 mb-4"></div>
+                         <div className="flex gap-3">
+                            <button onClick={() => setFormData({...formData, sortOrder: -10})} className={`flex-1 py-3 rounded-xl flex flex-col items-center gap-1 border transition-all ${formData.sortOrder < 0 ? "bg-cyan-50 border-cyan-200 text-[#00c2e8]" : "bg-white border-slate-100 text-slate-400"}`}><ArrowUp className="w-4 h-4"/><span className="text-[10px] font-black">優先</span></button>
+                            <button onClick={() => setFormData({...formData, sortOrder: 0})} className={`flex-1 py-3 rounded-xl flex flex-col items-center gap-1 border transition-all ${formData.sortOrder === 0 ? "bg-slate-800 border-slate-800 text-white" : "bg-white border-slate-100 text-slate-400"}`}><Minus className="w-4 h-4"/><span className="text-[10px] font-black">標準</span></button>
+                            <button onClick={() => setFormData({...formData, sortOrder: 10})} className={`flex-1 py-3 rounded-xl flex flex-col items-center gap-1 border transition-all ${formData.sortOrder > 0 ? "bg-orange-50 border-orange-200 text-orange-500" : "bg-white border-slate-100 text-slate-400"}`}><ArrowDown className="w-4 h-4"/><span className="text-[10px] font-black">後回し</span></button>
+                         </div>
+                      </div>
+                   )}
+                </div>
              </div>
           </div>
 
-          <div className="shrink-0 p-6 pt-2 bg-white pb-8">
-             <button onClick={saveItem} className="w-full h-14 bg-[#00c2e8] rounded-2xl font-black text-white active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-200/50 hover:bg-cyan-400">
+          {/* Sticky Footer (固定保存ボタン) */}
+          <div className="absolute bottom-0 inset-x-0 p-4 bg-white/80 backdrop-blur-md border-t border-slate-100 z-10 rounded-b-[2rem]">
+             <button 
+               onClick={saveItem} 
+               className="w-full h-14 bg-[#00c2e8] rounded-2xl font-black text-white active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-200/50 hover:bg-cyan-400 hover:shadow-cyan-300/50"
+             >
                 {editingItem ? <><RefreshCw className="w-5 h-5"/> 変更を保存</> : <><Save className="w-5 h-5"/> リストに追加</>}
              </button>
           </div>
