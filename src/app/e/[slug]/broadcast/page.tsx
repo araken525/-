@@ -6,7 +6,6 @@ import Link from "next/link";
 import { ArrowLeft, Megaphone, Trash2, Send, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-// 全角英数字を半角に変換する魔法の関数
 const toHalfWidth = (str: string) => {
   return str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) => {
     return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
@@ -25,18 +24,19 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
   const [isSending, setIsSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // 初期ロード
   useEffect(() => {
     const checkAuth = async () => {
-      // パスワード以外の情報を取得（パスワードは取得できなくてもエラーにしない）
+      // ★修正: 具体的なカラム指定をやめて '*' にする（エラー回避）
       const { data: event, error } = await supabase
         .from("events")
-        .select("id, title, announcement, password") // passwordを一応指定するが、取れなくてもOK
+        .select("*") 
         .eq("slug", slug)
         .single();
 
       if (error || !event) {
-        alert("イベントが見つかりません");
+        // ★修正: エラーの原因をコンソールに出す
+        console.error("データ取得エラー:", error);
+        alert(`イベントが見つかりません\nエラー: ${error?.message}`);
         router.push(`/e/${slug}`);
         return;
       }
@@ -44,56 +44,47 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
       setEventData(event);
       setInputMessage(event.announcement || "");
       
-      // 自動ログイン試行 (ローカルストレージに保存されたパスワードを使ってDBに問い合わせる)
       const savedPass = localStorage.getItem(`admin-pass-${slug}`);
       if (savedPass) {
-        // DBに直接問い合わせる
+        // 自動ログイン時も '*' で確認
         const { data } = await supabase
           .from("events")
-          .select("id")
+          .select("*")
           .eq("slug", slug)
           .eq("password", savedPass)
           .maybeSingle();
           
-        if (data) {
-          setIsAuthenticated(true);
-        }
+        if (data) setIsAuthenticated(true);
       }
       setLoading(false);
     };
     checkAuth();
   }, [slug, router]);
 
-  // ★修正: DBへの問い合わせ方式に変更
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
-    // 1. 入力されたパスワードを半角に変換してスペース削除
     const cleanInput = toHalfWidth(password).trim();
     
-    // 2. そのままの入力と、半角変換した入力の両方でトライしてみる（念の為）
-    // DBに「このパスワードを持つイベントはある？」と聞く
+    // ★修正: ここも '*' に変更
     const { data, error } = await supabase
       .from("events")
-      .select("id, password")
+      .select("*")
       .eq("slug", slug)
-      .in("password", [password.trim(), cleanInput]) // 生の入力 or 半角変換後
+      .in("password", [password.trim(), cleanInput])
       .maybeSingle();
 
     if (data) {
-      // ログイン成功！
       setIsAuthenticated(true);
-      // 正解だった方のパスワードを保存
       localStorage.setItem(`admin-pass-${slug}`, data.password);
       setErrorMsg("");
     } else {
-      console.error("Login failed", error);
+      console.error("Login failed:", error);
       setErrorMsg("パスワードが違います");
     }
   };
 
-  // アナウンス送信
   const handleUpdate = async () => {
     if (!inputMessage.trim()) return;
     setIsSending(true);
@@ -104,7 +95,8 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
       .eq("id", eventData.id);
 
     if (error) {
-      alert("送信に失敗しました");
+      console.error("Update error:", error);
+      alert(`送信失敗: ${error.message}`);
     } else {
       alert("アナウンスを送信しました！");
       setEventData({ ...eventData, announcement: inputMessage });
@@ -112,7 +104,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
     setIsSending(false);
   };
 
-  // アナウンス削除
   const handleDelete = async () => {
     if (!confirm("現在のアナウンスを取り下げますか？")) return;
     setIsSending(true);
@@ -123,7 +114,7 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
       .eq("id", eventData.id);
 
     if (error) {
-      alert("削除に失敗しました");
+      alert("削除失敗");
     } else {
       setInputMessage("");
       setEventData({ ...eventData, announcement: null });
@@ -134,7 +125,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
 
   if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400 font-bold">読み込み中...</div>;
 
-  // --- 1. 認証画面 ---
   if (!isAuthenticated) {
     return (
       <main className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
@@ -148,7 +138,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-              {/* type="text" にして入力内容が見えるようにしています */}
               <input 
                 type="text" 
                 value={password}
@@ -176,7 +165,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
     );
   }
 
-  // --- 2. 放送室 (操作画面) ---
   return (
     <main className="min-h-screen bg-slate-50 font-sans">
       <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 z-50 flex items-center px-4 justify-between">
@@ -192,7 +180,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
       </header>
 
       <div className="pt-24 px-4 max-w-lg mx-auto pb-12">
-        
         <div className="mb-8">
           <div className="text-xs font-bold text-slate-400 mb-2 pl-2">現在の状況</div>
           {eventData.announcement ? (
