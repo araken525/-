@@ -122,7 +122,8 @@ export default function ScheduleItemCard({
               {hasLongNote && (
                 <button
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="ml-5 mt-1 flex items-center gap-1 text-xs font-bold text-[#00c2e8] hover:underline"
+                  // ★修正: 「もっと見る」をグレーに変更
+                  className="ml-5 mt-1 flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-slate-600"
                 >
                   {isExpanded ? (
                     <><ChevronUp className="w-3 h-3" /> 閉じる</>
@@ -134,9 +135,9 @@ export default function ScheduleItemCard({
             </div>
           )}
 
-          {/* 5. 添付ファイル (メモの下に移動) */}
+          {/* 5. 添付ファイル (★修正: 横並び・折り返し・下線なし) */}
           {linkedMaterials.length > 0 && (
-            <div className="flex flex-col gap-1.5 pt-1 pl-5">
+            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1 pl-5">
               {linkedMaterials.map((m) => {
                 const Icon = getMaterialIcon(m.url);
                 return (
@@ -148,7 +149,8 @@ export default function ScheduleItemCard({
                     className="group flex items-center gap-1.5 w-fit"
                   >
                     <Icon className="w-3.5 h-3.5 shrink-0 text-[#00c2e8]" />
-                    <span className="text-xs font-bold text-[#00c2e8] group-hover:opacity-70 transition-opacity truncate max-w-[200px] border-b border-transparent group-hover:border-[#00c2e8]">
+                    {/* border-bを削除し、hover時のopacityのみに */}
+                    <span className="text-xs font-bold text-[#00c2e8] group-hover:opacity-70 transition-opacity truncate max-w-[200px]">
                       {m.title}
                     </span>
                   </a>
