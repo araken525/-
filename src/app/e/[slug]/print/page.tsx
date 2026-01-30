@@ -99,8 +99,8 @@ export default function PrintPage({ params }: { params: Promise<{ slug: string }
     // 「全員」タグがついているものは常に表示
     if (itTargets.includes("全員")) return true;
 
-    // 選択されたタグが含まれているかチェック
-    return itTargets.some(t => selectedTags.includes(t));
+    // 選択されたタグが含まれているかチェック (★ここを修正)
+    return itTargets.some((t: string) => selectedTags.includes(t));
   });
 
   const targetDisplayName = selectedTags.length === 0 ? "全員・全パート" : selectedTags.join("・");
@@ -147,7 +147,7 @@ export default function PrintPage({ params }: { params: Promise<{ slug: string }
                    {selectedTags.length === 0 ? <CheckSquare className="w-4 h-4"/> : <Square className="w-4 h-4"/>}
                    全て表示 (全員)
                 </button>
-                {allTags.map(tag => {
+                {allTags.map((tag: string) => {
                   const isSelected = selectedTags.includes(tag);
                   return (
                     <button 
