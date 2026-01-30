@@ -33,15 +33,16 @@ export default function FloatingActionMenu({ title, slug }: Props) {
     }
   };
 
-  // 印刷URL（現在の絞り込み状態を引き継ぐ）
   const printUrl = `/e/${slug}/print${typeof window !== "undefined" ? window.location.search : ""}`;
 
   return (
     <>
-      {/* --- メニューボタン (下から3番目: bottom-42) --- */}
+      {/* ★修正: bottom-42 は存在しないので bottom-44 に変更 
+        (一番下:6, 二番目:24, 三番目:44 で等間隔になります)
+      */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-42 right-6 z-40 w-14 h-14 bg-white text-slate-600 rounded-full shadow-xl shadow-slate-200/50 flex items-center justify-center transition-all active:scale-90 border border-slate-50"
+        className="fixed bottom-44 right-6 z-40 w-14 h-14 bg-white text-slate-600 rounded-full shadow-xl shadow-slate-200/50 flex items-center justify-center transition-all active:scale-90 border border-slate-50"
       >
         <MoreHorizontal className="w-6 h-6" />
       </button>
