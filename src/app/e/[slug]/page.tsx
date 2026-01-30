@@ -5,11 +5,10 @@ import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RefreshBadge from "@/components/RefreshBadge";
 import RealtimeListener from "@/components/RealtimeListener";
-// ▼ さっき作った自動更新コンポーネントを読み込み
 import AutoRefresh from "@/components/AutoRefresh";
 import { StaffFilter, MaterialsAccordion } from "@/components/EventPageClient";
 import Link from "next/link";
-import { MapPin, Calendar, Clock, Filter, X, Sparkles, ArrowRight } from "lucide-react";
+import { MapPin, Calendar, Clock, Filter, X, Sparkles, ArrowRight, Link2 } from "lucide-react";
 
 /* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
@@ -56,6 +55,34 @@ function getTargetColor(t: string) {
   return "bg-cyan-50 text-[#00c2e8]";
 }
 
+// アイコン・ラベル判定 (ホバーはPC限定・青テーマ)
+function getMaterialInfo(url: string) {
+  const u = url.toLowerCase();
+  
+  // 共通スタイル: ホバーはsm以上のみ、色は青
+  const style = { 
+    color: "text-[#00c2e8]", 
+    bg: "bg-cyan-50 sm:hover:bg-[#00c2e8] sm:hover:text-white transition-colors" 
+  };
+
+  // 簡易的な参照 (実際には上部でimportしたコンポーネントを使う想定)
+  const { Youtube, Video, FileText, Image: ImageIcon, Link2 } = require("lucide-react");
+
+  if (u.includes("youtube") || u.includes("youtu.be")) {
+    return { icon: Youtube, ...style, label: "YouTube" };
+  }
+  if (u.endsWith(".mp4") || u.endsWith(".mov") || u.includes("vimeo")) {
+    return { icon: Video, ...style, label: "Video" };
+  }
+  if (u.endsWith(".pdf")) {
+    return { icon: FileText, ...style, label: "PDF" };
+  }
+  if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+    return { icon: ImageIcon, ...style, label: "Image" };
+  }
+  return { icon: Link2, ...style, label: "Link" };
+}
+
 function groupByStartTime(items: any[]) {
   const map = new Map<string, any[]>();
   for (const item of items) {
@@ -66,16 +93,25 @@ function groupByStartTime(items: any[]) {
   return Array.from(map.entries()).map(([time, items]) => ({ time, items: items.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)) }));
 }
 
+// ★修正: サーバーの場所に関わらず、強制的に「日本時間」でNOW判定を行う
 function isNow(start: string, end?: string | null) {
-  const now = new Date();
-  const [sh, sm] = start.slice(0, 5).split(":").map(Number);
-  const s = new Date();
-  s.setHours(sh, sm, 0, 0);
   if (!end) return false;
+
+  // 1. 現在時刻を日本時間(JST)で取得
+  const now = new Date();
+  const jstNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+  const currentMinutes = jstNow.getHours() * 60 + jstNow.getMinutes();
+
+  // 2. 開始時間を分に換算
+  const [sh, sm] = start.slice(0, 5).split(":").map(Number);
+  const startMinutes = sh * 60 + sm;
+
+  // 3. 終了時間を分に換算
   const [eh, em] = end.slice(0, 5).split(":").map(Number);
-  const e = new Date();
-  e.setHours(eh, em, 0, 0);
-  return now >= s && now <= e;
+  const endMinutes = eh * 60 + em;
+
+  // 4. 分単位で比較 (開始以上 〜 終了未満)
+  return currentMinutes >= startMinutes && currentMinutes < endMinutes;
 }
 
 function toDate(v: any) {
@@ -182,9 +218,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         emergencyContacts={emergencyContacts}
       />
       
-      {/* リアルタイム更新の待受 */}
+      {/* リアルタイム更新リスナー & 1分ごとの自動更新 */}
       <RealtimeListener eventId={event.id} />
-      {/* ★追加: 1分ごとの定期更新 */}
       <AutoRefresh />
 
       <div className="pt-24 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-6">
