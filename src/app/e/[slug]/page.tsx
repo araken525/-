@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 import { supabase } from "@/lib/supabaseClient";
 import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
-import RefreshBadge from "@/components/RefreshBadge";
 import RealtimeListener from "@/components/RealtimeListener";
 import AutoRefresh from "@/components/AutoRefresh";
 import { StaffFilter, MaterialsAccordion } from "@/components/EventPageClient";
@@ -65,7 +64,6 @@ function getMaterialInfo(url: string) {
     bg: "bg-cyan-50 sm:hover:bg-[#00c2e8] sm:hover:text-white transition-colors" 
   };
 
-  // 簡易的な参照 (実際には上部でimportしたコンポーネントを使う想定)
   const { Youtube, Video, FileText, Image: ImageIcon, Link2 } = require("lucide-react");
 
   if (u.includes("youtube") || u.includes("youtu.be")) {
@@ -93,40 +91,21 @@ function groupByStartTime(items: any[]) {
   return Array.from(map.entries()).map(([time, items]) => ({ time, items: items.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)) }));
 }
 
-// ★修正: サーバーの場所に関わらず、強制的に「日本時間」でNOW判定を行う
+// 強制的に「日本時間」でNOW判定を行う
 function isNow(start: string, end?: string | null) {
   if (!end) return false;
 
-  // 1. 現在時刻を日本時間(JST)で取得
   const now = new Date();
   const jstNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
   const currentMinutes = jstNow.getHours() * 60 + jstNow.getMinutes();
 
-  // 2. 開始時間を分に換算
   const [sh, sm] = start.slice(0, 5).split(":").map(Number);
   const startMinutes = sh * 60 + sm;
 
-  // 3. 終了時間を分に換算
   const [eh, em] = end.slice(0, 5).split(":").map(Number);
   const endMinutes = eh * 60 + em;
 
-  // 4. 分単位で比較 (開始以上 〜 終了未満)
   return currentMinutes >= startMinutes && currentMinutes < endMinutes;
-}
-
-function toDate(v: any) {
-  if (!v) return null;
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function relativeJa(d: Date) {
-  const diffMs = Date.now() - d.getTime();
-  const min = Math.floor(diffMs / 1000 / 60);
-  if (min < 1) return "たった今";
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}時間前`;
-  return d.toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 function toggleTag(currentTags: string[], tag: string): string {
@@ -201,15 +180,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
   const groups = groupByStartTime(filtered);
 
-  const candidates: Date[] = [];
-  const evUpd = toDate((event as any).updated_at);
-  if (evUpd) candidates.push(evUpd);
-  for (const it of allItems) {
-    const d = toDate((it as any).updated_at) || toDate((it as any).created_at);
-    if (d) candidates.push(d);
-  }
-  const lastUpdated = candidates.length > 0 ? new Date(Math.max(...candidates.map((d) => d.getTime()))) : null;
-
   return (
     <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white pb-20">
       <EventHeader 
@@ -218,7 +188,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         emergencyContacts={emergencyContacts}
       />
       
-      {/* リアルタイム更新リスナー & 1分ごとの自動更新 */}
+      {/* リアルタイム更新 & 1分自動更新 */}
       <RealtimeListener eventId={event.id} />
       <AutoRefresh />
 
@@ -365,8 +335,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
           )}
         </div>
       </div>
-
-      {lastUpdated && <RefreshBadge dateText={relativeJa(lastUpdated)} />}
 
       {/* フッター */}
       <footer className="mt-32 pb-12 px-4">
