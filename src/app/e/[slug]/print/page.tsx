@@ -99,7 +99,7 @@ export default function PrintPage({ params }: { params: Promise<{ slug: string }
     // 「全員」タグがついているものは常に表示
     if (itTargets.includes("全員")) return true;
 
-    // 選択されたタグが含まれているかチェック (★ここを修正)
+    // 選択されたタグが含まれているかチェック
     return itTargets.some((t: string) => selectedTags.includes(t));
   });
 
@@ -242,13 +242,13 @@ export default function PrintPage({ params }: { params: Promise<{ slug: string }
                  return (
                    <tr key={item.id} className="border-b border-slate-200 page-break group odd:bg-white even:bg-slate-50/50">
                      
-                     {/* 1. 時間カラム */}
+                     {/* 1. 時間カラム (font-mono削除、tabular-nums追加) */}
                      <td className="py-4 pl-2 align-top">
-                       <div className="text-lg font-black font-mono tracking-tighter leading-none text-slate-900">
+                       <div className="text-lg font-black tracking-tighter leading-none text-slate-900 tabular-nums">
                          {hhmm(item.start_time)}
                        </div>
                        {item.end_time && (
-                         <div className="text-xs font-bold font-mono text-slate-400 mt-1 flex items-center gap-1">
+                         <div className="text-xs font-bold text-slate-400 mt-1 flex items-center gap-1 tabular-nums">
                            <span className="opacity-50">~</span>{hhmm(item.end_time)}
                          </div>
                        )}
