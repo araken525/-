@@ -1,12 +1,21 @@
+"use client";
+
+import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { headers } from "next/headers";
 import { 
-  Printer, Calendar, MapPin, Clock, Hash, 
-  User, StickyNote, Activity 
+  Printer, Calendar, MapPin, Hash, User, StickyNote, Activity, 
+  Filter, CheckSquare, Square, X, Loader2 
 } from "lucide-react";
 import EventQRCode from "@/components/EventQRCode";
+import { Noto_Sans_JP } from "next/font/google";
 
-export const dynamic = "force-dynamic";
+// 美しい日本語フォントの導入
+const notoSansJP = Noto_Sans_JP({
+  subsets: ["latin"],
+  weight: ["400", "500", "700", "900"],
+  preload: true,
+  display: "swap",
+});
 
 /* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
@@ -19,70 +28,162 @@ function fmtDate(d: string) {
 }
 
 /* === メインコンポーネント === */
-export default async function PrintPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ t?: string }> }) {
-  const { slug } = await params;
-  const sp = await searchParams;
+export default function PrintPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
+
+  // --- State ---
+  const [event, setEvent] = useState<any>(null);
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  // タグフィルタリング
-  const rawT = sp?.t ? decodeURIComponent(sp.t) : "";
-  const selectedTags = rawT ? rawT.split(",") : [];
-  const targetName = selectedTags.length > 0 ? selectedTags.join("・") : "全員";
+  // フィルタリング用State
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]); // 空配列 = 全表示
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  
+  // URL (QRコード用)
+  const [publicUrl, setPublicUrl] = useState("");
 
-  // 1. データ取得
-  const { data: event } = await supabase.from("events").select("*").eq("slug", slug).maybeSingle();
-  if (!event) return <div className="p-8 font-bold text-center">イベントが見つかりません</div>;
+  // --- Data Loading ---
+  useEffect(() => {
+    // クライアント側でURLを構築
+    if (typeof window !== "undefined") {
+      setPublicUrl(`${window.location.origin}/e/${slug}`);
+    }
 
-  const { data: items } = await supabase.from("schedule_items").select("*").eq("event_id", event.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
+    (async () => {
+      // 1. イベント取得
+      const { data: eData } = await supabase.from("events").select("*").eq("slug", slug).maybeSingle();
+      if (!eData) {
+        setLoading(false);
+        return;
+      }
+      setEvent(eData);
 
-  // 2. フィルタリング
-  const allItems = items ?? [];
-  const filtered = allItems.filter(it => {
+      // 2. アイテム取得
+      const { data: iData } = await supabase.from("schedule_items").select("*").eq("event_id", eData.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
+      const loadedItems = iData ?? [];
+      setItems(loadedItems);
+
+      // 3. 全タグの抽出 (重複排除)
+      const tagsSet = new Set<string>();
+      loadedItems.forEach(it => {
+        if (it.target && it.target !== "all" && it.target !== "全員") {
+          it.target.split(",").forEach((t: string) => tagsSet.add(t.trim()));
+        }
+      });
+      setAllTags(Array.from(tagsSet).sort());
+      
+      setLoading(false);
+    })();
+  }, [slug]);
+
+  // --- Filtering Logic ---
+  const toggleTag = (tag: string) => {
+    if (selectedTags.includes(tag)) {
+      setSelectedTags(selectedTags.filter(t => t !== tag));
+    } else {
+      setSelectedTags([...selectedTags, tag]);
+    }
+  };
+
+  const filteredItems = items.filter(it => {
+    // 選択なし = 全表示
     if (selectedTags.length === 0) return true;
+
+    // アイテムのタグを取得
     const itTargets = (!it.target || it.target === "all" || it.target === "全員") 
       ? ["全員"] 
-      : it.target.split(",").map((t: string) => {
-          const trimmed = t.trim();
-          return (trimmed === "all") ? "全員" : trimmed;
-        });
+      : it.target.split(",").map((t: string) => t.trim());
+
+    // 「全員」タグがついているものは常に表示
     if (itTargets.includes("全員")) return true;
-    return itTargets.some((tag: string) => selectedTags.includes(tag));
+
+    // 選択されたタグが含まれているかチェック
+    return itTargets.some(t => selectedTags.includes(t));
   });
 
-  // 3. URL構築
-  const headersList = await headers();
-  const host = headersList.get("host") || "taisuke.com";
-  const protocol = host.includes("localhost") ? "http" : "https";
-  const publicUrl = `${protocol}://${host}/e/${slug}`;
-  
+  const targetDisplayName = selectedTags.length === 0 ? "全員・全パート" : selectedTags.join("・");
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!event) return <div className="p-8 font-bold text-center">イベントが見つかりません</div>;
+
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans print:p-0 p-8 w-full max-w-6xl mx-auto selection:bg-slate-200">
+    <div className={`min-h-screen bg-white text-slate-900 print:p-0 p-8 w-full max-w-6xl mx-auto selection:bg-slate-200 ${notoSansJP.className}`}>
       
-      <style>{`
+      <style jsx global>{`
         @media print {
           @page { size: A4; margin: 10mm; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
           .page-break { page-break-inside: avoid; break-inside: avoid; }
-          
-          /* テーブルのヘッダーを次ページにも表示させる */
           thead { display: table-header-group; } 
           tr { page-break-inside: avoid; }
         }
       `}</style>
 
-      {/* 画面表示用ツールバー */}
-      <div className="no-print fixed bottom-8 right-8 z-50 animate-in slide-in-from-bottom-4 fade-in duration-700">
-        <button 
-          className="print-btn flex items-center gap-2 bg-slate-900 text-white px-6 py-4 rounded-full font-bold shadow-xl hover:bg-black hover:scale-105 transition-all"
-        >
-          <Printer className="w-5 h-5" />
-          <span>印刷する</span>
-        </button>
+      {/* === 画面表示用ツールバー (印刷時は非表示) === */}
+      <div className="no-print fixed bottom-8 right-8 z-50 flex flex-col items-end gap-4 animate-in slide-in-from-bottom-4 fade-in duration-700">
+        
+        {/* フィルタメニュー */}
+        {isFilterOpen && (
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 w-64 mb-2 animate-in fade-in zoom-in-95 origin-bottom-right">
+             <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+               <span className="font-bold text-sm text-slate-700">表示するタグを選択</span>
+               <button onClick={() => setIsFilterOpen(false)}><X className="w-4 h-4 text-slate-400 hover:text-slate-600"/></button>
+             </div>
+             <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                <button 
+                  onClick={() => setSelectedTags([])}
+                  className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-bold transition-colors ${selectedTags.length === 0 ? "bg-slate-900 text-white" : "hover:bg-slate-50 text-slate-600"}`}
+                >
+                   {selectedTags.length === 0 ? <CheckSquare className="w-4 h-4"/> : <Square className="w-4 h-4"/>}
+                   全て表示 (全員)
+                </button>
+                {allTags.map(tag => {
+                  const isSelected = selectedTags.includes(tag);
+                  return (
+                    <button 
+                      key={tag}
+                      onClick={() => toggleTag(tag)}
+                      className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-bold transition-colors ${isSelected ? "bg-cyan-50 text-[#00c2e8]" : "hover:bg-slate-50 text-slate-600"}`}
+                    >
+                       {isSelected ? <CheckSquare className="w-4 h-4"/> : <Square className="w-4 h-4"/>}
+                       {tag}
+                    </button>
+                  )
+                })}
+             </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          {/* 絞り込みボタン */}
+          <button 
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className={`flex items-center gap-2 px-5 py-4 rounded-full font-bold shadow-xl transition-all ${isFilterOpen || selectedTags.length > 0 ? "bg-cyan-500 text-white hover:bg-cyan-600" : "bg-white text-slate-700 hover:bg-slate-50"}`}
+          >
+            <Filter className="w-5 h-5" />
+            <span>{selectedTags.length > 0 ? `${selectedTags.length}件で絞り込み中` : "絞り込み"}</span>
+          </button>
+
+          {/* 印刷ボタン */}
+          <button 
+            onClick={() => window.print()}
+            className="flex items-center gap-2 bg-slate-900 text-white px-6 py-4 rounded-full font-bold shadow-xl hover:bg-black hover:scale-105 transition-all"
+          >
+            <Printer className="w-5 h-5" />
+            <span>印刷する</span>
+          </button>
+        </div>
       </div>
-      <script dangerouslySetInnerHTML={{__html: `
-        const btn = document.querySelector('.print-btn');
-        if(btn) btn.addEventListener('click', () => window.print());
-      `}} />
 
       {/* === ヘッダー === */}
       <header className="flex justify-between items-end border-b-2 border-slate-900 pb-6 mb-8 gap-8">
@@ -95,17 +196,17 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
              </div>
           </div>
           
-          {/* フィルタ情報 */}
+          {/* フィルタ情報表示 (印刷用) */}
           <div className="inline-flex items-center gap-2 text-xs font-bold text-slate-500">
              <Hash className="w-3 h-3" />
-             <span>出力対象: {targetName}</span>
+             <span>出力対象: {targetDisplayName}</span>
           </div>
         </div>
 
         {/* QRコード */}
         <div className="flex flex-col items-center gap-1 shrink-0">
            <div className="border border-slate-200 p-1 rounded bg-white">
-             <EventQRCode url={publicUrl} />
+             {publicUrl && <EventQRCode url={publicUrl} />}
            </div>
            <span className="text-[9px] font-bold text-slate-400 tracking-tight">最新情報</span>
         </div>
@@ -113,8 +214,10 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
 
       {/* === テーブル === */}
       <main>
-        {filtered.length === 0 ? (
-           <div className="py-12 text-center text-slate-400 font-bold border-t border-slate-200">予定はありません</div>
+        {filteredItems.length === 0 ? (
+           <div className="py-12 text-center text-slate-400 font-bold border-t border-slate-200">
+             条件に一致する予定はありません
+           </div>
         ) : (
           <table className="w-full border-collapse text-left">
             <thead>
@@ -125,7 +228,7 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
               </tr>
             </thead>
             <tbody>
-              {filtered.map((item) => {
+              {filteredItems.map((item) => {
                  // タグの配列化
                  const tags = item.target && item.target !== "all" && item.target !== "全員"
                     ? item.target.split(",").map((t: string) => t.trim()) 
