@@ -4,12 +4,12 @@ import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { 
   Printer, Calendar, MapPin, Hash, User, StickyNote, Activity, 
-  Filter, CheckSquare, Square, X, Loader2 
+  Filter, CheckSquare, Square, X, Loader2, Eye, Clock, ArrowRight 
 } from "lucide-react";
 import EventQRCode from "@/components/EventQRCode";
 import { Noto_Sans_JP } from "next/font/google";
 
-// 美しい日本語フォントの導入
+// 美しい日本語フォント
 const notoSansJP = Noto_Sans_JP({
   subsets: ["latin"],
   weight: ["400", "500", "700", "900"],
@@ -19,6 +19,25 @@ const notoSansJP = Noto_Sans_JP({
 
 /* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
+
+// 分数を計算して "90分" のように返す
+function getDuration(start: string, end: string | null) {
+  if (!end) return null;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const startMin = sh * 60 + sm;
+  const endMin = eh * 60 + em;
+  let diff = endMin - startMin;
+  if (diff < 0) diff += 24 * 60; // 日またぎ対応(簡易)
+  
+  if (diff === 0) return null;
+  if (diff >= 60) {
+    const h = Math.floor(diff / 60);
+    const m = diff % 60;
+    return m > 0 ? `${h}時間${m}分` : `${h}時間`;
+  }
+  return `${diff}分`;
+}
 
 function fmtDate(d: string) {
   if (!d) return "";
@@ -39,33 +58,34 @@ export default function PrintPage({ params }: { params: Promise<{ slug: string }
   // フィルタリング用State
   const [allTags, setAllTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]); // 空配列 = 全表示
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   
-  // URL (QRコード用)
+  // ★表示オプション (トグル)
+  const [showOptions, setShowOptions] = useState({
+    timeInfo: true,   // 終了時刻・所要時間
+    location: true,   // 場所
+    note: true,       // メモ
+    tags: true,       // タグ
+    assignee: true    // 担当者
+  });
+
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [publicUrl, setPublicUrl] = useState("");
 
   // --- Data Loading ---
   useEffect(() => {
-    // クライアント側でURLを構築
     if (typeof window !== "undefined") {
       setPublicUrl(`${window.location.origin}/e/${slug}`);
     }
 
     (async () => {
-      // 1. イベント取得
       const { data: eData } = await supabase.from("events").select("*").eq("slug", slug).maybeSingle();
-      if (!eData) {
-        setLoading(false);
-        return;
-      }
+      if (!eData) { setLoading(false); return; }
       setEvent(eData);
 
-      // 2. アイテム取得
       const { data: iData } = await supabase.from("schedule_items").select("*").eq("event_id", eData.id).order("start_time", { ascending: true }).order("sort_order", { ascending: true });
       const loadedItems = iData ?? [];
       setItems(loadedItems);
 
-      // 3. 全タグの抽出 (重複排除)
       const tagsSet = new Set<string>();
       loadedItems.forEach(it => {
         if (it.target && it.target !== "all" && it.target !== "全員") {
@@ -73,46 +93,34 @@ export default function PrintPage({ params }: { params: Promise<{ slug: string }
         }
       });
       setAllTags(Array.from(tagsSet).sort());
-      
       setLoading(false);
     })();
   }, [slug]);
 
-  // --- Filtering Logic ---
+  // --- Logic ---
   const toggleTag = (tag: string) => {
-    if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter(t => t !== tag));
-    } else {
-      setSelectedTags([...selectedTags, tag]);
-    }
+    if (selectedTags.includes(tag)) setSelectedTags(selectedTags.filter(t => t !== tag));
+    else setSelectedTags([...selectedTags, tag]);
+  };
+
+  const toggleOption = (key: keyof typeof showOptions) => {
+    setShowOptions(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const filteredItems = items.filter(it => {
-    // 選択なし = 全表示
     if (selectedTags.length === 0) return true;
-
-    // アイテムのタグを取得
     const itTargets = (!it.target || it.target === "all" || it.target === "全員") 
       ? ["全員"] 
       : it.target.split(",").map((t: string) => t.trim());
-
-    // 「全員」タグがついているものは常に表示
     if (itTargets.includes("全員")) return true;
-
-    // 選択されたタグが含まれているかチェック
     return itTargets.some((t: string) => selectedTags.includes(t));
   });
 
   const targetDisplayName = selectedTags.length === 0 ? "全員・全パート" : selectedTags.join("・");
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
-      </div>
-    );
+    return <div className="min-h-screen flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 text-slate-400 animate-spin" /></div>;
   }
-
   if (!event) return <div className="p-8 font-bold text-center">イベントが見つかりません</div>;
 
   return (
@@ -129,52 +137,76 @@ export default function PrintPage({ params }: { params: Promise<{ slug: string }
         }
       `}</style>
 
-      {/* === 画面表示用ツールバー (印刷時は非表示) === */}
+      {/* === ツールバー (印刷時非表示) === */}
       <div className="no-print fixed bottom-8 right-8 z-50 flex flex-col items-end gap-4 animate-in slide-in-from-bottom-4 fade-in duration-700">
         
-        {/* フィルタメニュー */}
         {isFilterOpen && (
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 w-64 mb-2 animate-in fade-in zoom-in-95 origin-bottom-right">
-             <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
-               <span className="font-bold text-sm text-slate-700">表示するタグを選択</span>
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-5 w-72 mb-2 animate-in fade-in zoom-in-95 origin-bottom-right">
+             <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+               <span className="font-bold text-sm text-slate-800 flex items-center gap-2"><Filter className="w-4 h-4"/> 表示設定 & 絞り込み</span>
                <button onClick={() => setIsFilterOpen(false)}><X className="w-4 h-4 text-slate-400 hover:text-slate-600"/></button>
              </div>
-             <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-                <button 
-                  onClick={() => setSelectedTags([])}
-                  className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-bold transition-colors ${selectedTags.length === 0 ? "bg-slate-900 text-white" : "hover:bg-slate-50 text-slate-600"}`}
-                >
-                   {selectedTags.length === 0 ? <CheckSquare className="w-4 h-4"/> : <Square className="w-4 h-4"/>}
-                   全て表示 (全員)
-                </button>
-                {allTags.map((tag: string) => {
-                  const isSelected = selectedTags.includes(tag);
-                  return (
-                    <button 
-                      key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-bold transition-colors ${isSelected ? "bg-cyan-50 text-[#00c2e8]" : "hover:bg-slate-50 text-slate-600"}`}
-                    >
-                       {isSelected ? <CheckSquare className="w-4 h-4"/> : <Square className="w-4 h-4"/>}
-                       {tag}
-                    </button>
-                  )
-                })}
+             
+             {/* 1. 表示オプション (トグル) */}
+             <div className="mb-5 space-y-2">
+               <div className="text-[10px] font-bold text-slate-400 mb-1">表示する項目</div>
+               <div className="grid grid-cols-2 gap-2">
+                 {[
+                   { k: "timeInfo", label: "終了・時間" },
+                   { k: "location", label: "場所" },
+                   { k: "note", label: "メモ" },
+                   { k: "tags", label: "タグ" },
+                   { k: "assignee", label: "担当者" }
+                 ].map((opt) => (
+                   <button 
+                     key={opt.k}
+                     onClick={() => toggleOption(opt.k as keyof typeof showOptions)}
+                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold border transition-all ${showOptions[opt.k as keyof typeof showOptions] ? "bg-slate-800 text-white border-slate-800" : "bg-white text-slate-400 border-slate-200"}`}
+                   >
+                     {showOptions[opt.k as keyof typeof showOptions] ? <CheckSquare className="w-3.5 h-3.5"/> : <Square className="w-3.5 h-3.5"/>}
+                     {opt.label}
+                   </button>
+                 ))}
+               </div>
+             </div>
+
+             {/* 2. タグ絞り込み */}
+             <div className="space-y-1">
+                <div className="text-[10px] font-bold text-slate-400 mb-1">対象パートで絞り込み</div>
+                <div className="max-h-[200px] overflow-y-auto pr-1 custom-scrollbar space-y-1">
+                  <button 
+                    onClick={() => setSelectedTags([])}
+                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-bold transition-colors ${selectedTags.length === 0 ? "bg-cyan-50 text-[#00c2e8]" : "hover:bg-slate-50 text-slate-600"}`}
+                  >
+                    {selectedTags.length === 0 ? <CheckSquare className="w-4 h-4"/> : <Square className="w-4 h-4"/>}
+                    全て表示
+                  </button>
+                  {allTags.map((tag: string) => {
+                    const isSelected = selectedTags.includes(tag);
+                    return (
+                      <button 
+                        key={tag}
+                        onClick={() => toggleTag(tag)}
+                        className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-bold transition-colors ${isSelected ? "bg-cyan-50 text-[#00c2e8]" : "hover:bg-slate-50 text-slate-600"}`}
+                      >
+                        {isSelected ? <CheckSquare className="w-4 h-4"/> : <Square className="w-4 h-4"/>}
+                        {tag}
+                      </button>
+                    )
+                  })}
+                </div>
              </div>
           </div>
         )}
 
         <div className="flex items-center gap-3">
-          {/* 絞り込みボタン */}
           <button 
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className={`flex items-center gap-2 px-5 py-4 rounded-full font-bold shadow-xl transition-all ${isFilterOpen || selectedTags.length > 0 ? "bg-cyan-500 text-white hover:bg-cyan-600" : "bg-white text-slate-700 hover:bg-slate-50"}`}
           >
-            <Filter className="w-5 h-5" />
-            <span>{selectedTags.length > 0 ? `${selectedTags.length}件で絞り込み中` : "絞り込み"}</span>
+            <Eye className="w-5 h-5" />
+            <span>表示・絞り込み</span>
           </button>
-
-          {/* 印刷ボタン */}
           <button 
             onClick={() => window.print()}
             className="flex items-center gap-2 bg-slate-900 text-white px-6 py-4 rounded-full font-bold shadow-xl hover:bg-black hover:scale-105 transition-all"
@@ -186,129 +218,132 @@ export default function PrintPage({ params }: { params: Promise<{ slug: string }
       </div>
 
       {/* === ヘッダー === */}
-      <header className="flex justify-between items-end border-b-2 border-slate-900 pb-6 mb-8 gap-8">
+      <header className="flex justify-between items-end border-b-4 border-slate-900 pb-6 mb-8 gap-8">
         <div className="space-y-4 flex-1">
           <div>
-             <h1 className="text-3xl md:text-4xl font-black leading-tight tracking-tight mb-2">{event.title}</h1>
-             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-base font-bold text-slate-700">
+             <h1 className="text-3xl md:text-5xl font-black leading-tight tracking-tight mb-3">{event.title}</h1>
+             <div className="flex flex-wrap items-center gap-x-8 gap-y-2 text-lg font-bold text-slate-700">
                 <div className="flex items-center gap-2"><Calendar className="w-5 h-5" /> {fmtDate(event.date)}</div>
                 <div className="flex items-center gap-2"><MapPin className="w-5 h-5" /> {event.venue_name || "場所未定"}</div>
              </div>
           </div>
-          
-          {/* フィルタ情報表示 (印刷用) */}
           <div className="inline-flex items-center gap-2 text-xs font-bold text-slate-500">
-             <Hash className="w-3 h-3" />
-             <span>出力対象: {targetDisplayName}</span>
+             <Hash className="w-3.5 h-3.5" />
+             <span>出力対象: <span className="text-slate-900 text-sm">{targetDisplayName}</span></span>
           </div>
         </div>
-
-        {/* QRコード */}
         <div className="flex flex-col items-center gap-1 shrink-0">
-           <div className="border border-slate-200 p-1 rounded bg-white">
+           <div className="border-2 border-slate-900 p-1 rounded bg-white">
              {publicUrl && <EventQRCode url={publicUrl} />}
            </div>
-           <span className="text-[9px] font-bold text-slate-400 tracking-tight">最新情報</span>
+           <span className="text-[10px] font-bold text-slate-500 tracking-tight">最新情報</span>
         </div>
       </header>
 
-      {/* === テーブル === */}
+      {/* === スケジュールテーブル === */}
       <main>
         {filteredItems.length === 0 ? (
-           <div className="py-12 text-center text-slate-400 font-bold border-t border-slate-200">
-             条件に一致する予定はありません
+           <div className="py-20 text-center text-slate-400 font-bold border-t border-slate-200 text-xl">
+             表示する予定はありません
            </div>
         ) : (
           <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="border-b-2 border-slate-800">
-                <th className="py-3 pl-2 w-32 font-black text-sm text-slate-900">時間</th>
-                <th className="py-3 px-4 font-black text-sm text-slate-900">内容</th>
-                <th className="py-3 px-2 w-48 font-black text-sm text-slate-900">詳細・担当</th>
+              <tr className="border-b-2 border-slate-900">
+                <th className="py-4 pl-2 w-28 font-black text-sm text-slate-900">TIME</th>
+                <th className="py-4 px-6 font-black text-sm text-slate-900">CONTENT</th>
+                {(showOptions.tags || showOptions.assignee || showOptions.note) && (
+                  <th className="py-4 px-4 w-1/3 font-black text-sm text-slate-900">DETAILS</th>
+                )}
               </tr>
             </thead>
             <tbody>
               {filteredItems.map((item) => {
-                 // タグの配列化
+                 const duration = getDuration(item.start_time, item.end_time);
                  const tags = item.target && item.target !== "all" && item.target !== "全員"
-                    ? item.target.split(",").map((t: string) => t.trim()) 
-                    : [];
-
-                 // 担当者の配列化
-                 const assignees = item.assignee 
-                    ? item.assignee.split(",").map((a: string) => a.trim()) 
-                    : [];
+                    ? item.target.split(",").map((t: string) => t.trim()) : [];
+                 const assignees = item.assignee ? item.assignee.split(",").map((a: string) => a.trim()) : [];
 
                  return (
-                   <tr key={item.id} className="border-b border-slate-200 page-break group odd:bg-white even:bg-slate-50/50">
+                   <tr key={item.id} className="border-b border-slate-300 page-break group odd:bg-white even:bg-slate-50">
                      
-                     {/* 1. 時間カラム (font-mono削除、tabular-nums追加) */}
-                     <td className="py-4 pl-2 align-top">
-                       <div className="text-lg font-black tracking-tighter leading-none text-slate-900 tabular-nums">
+                     {/* 1. 時間カラム */}
+                     <td className="py-5 pl-2 align-top">
+                       <div className="text-2xl font-black tracking-tighter leading-none text-slate-900 tabular-nums">
                          {hhmm(item.start_time)}
                        </div>
-                       {item.end_time && (
-                         <div className="text-xs font-bold text-slate-400 mt-1 flex items-center gap-1 tabular-nums">
-                           <span className="opacity-50">~</span>{hhmm(item.end_time)}
+                       {/* 終了時刻 (オプション) */}
+                       {showOptions.timeInfo && item.end_time && (
+                         <div className="text-sm font-bold text-slate-500 mt-1.5 flex items-center gap-1 tabular-nums">
+                           <ArrowRight className="w-3 h-3 opacity-50"/> {hhmm(item.end_time)}
                          </div>
                        )}
                      </td>
 
                      {/* 2. 内容カラム */}
-                     <td className="py-4 px-4 align-top">
-                       <div className="flex items-start gap-3">
-                         {/* 統一アイコン */}
-                         <div className="mt-1 shrink-0 text-slate-300">
-                            <Activity className="w-4 h-4" />
-                         </div>
-                         <div className="space-y-2 flex-1">
-                            <div className="text-base font-bold text-slate-900 leading-tight">
-                              {item.title}
-                            </div>
-                            
-                            {item.location && (
-                              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
-                                <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                     <td className="py-5 px-6 align-top">
+                       <div className="space-y-2">
+                          {/* タイトル */}
+                          <div className="text-xl font-black text-slate-900 leading-tight">
+                            {item.title}
+                          </div>
+                          
+                          <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+                            {/* 場所 (オプション) */}
+                            {showOptions.location && item.location && (
+                              <div className="flex items-center gap-1.5 text-sm font-bold text-slate-600">
+                                <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
                                 {item.location}
                               </div>
                             )}
 
-                            {item.note && (
-                              <div className="flex items-start gap-1.5 text-xs font-medium text-slate-600 leading-relaxed bg-white p-2 rounded border border-slate-100">
-                                <StickyNote className="w-3.5 h-3.5 text-slate-300 shrink-0 mt-0.5" />
-                                <span className="whitespace-pre-wrap">{item.note}</span>
+                            {/* 所要時間 (オプション・場所の下/横に配置) */}
+                            {showOptions.timeInfo && duration && (
+                              <div className="flex items-center gap-1.5 text-sm font-bold text-slate-500">
+                                <Clock className="w-4 h-4 text-slate-400 shrink-0" />
+                                {duration}
                               </div>
                             )}
-                         </div>
+                          </div>
                        </div>
                      </td>
 
-                     {/* 3. 詳細・担当カラム */}
-                     <td className="py-4 px-2 align-top">
-                       <div className="flex flex-col gap-3">
-                         
-                         {/* タグ (個別の四角いバッジ) */}
-                         {tags.length > 0 && (
-                           <div className="flex flex-wrap gap-1">
-                             {tags.map((t: string) => (
-                               <span key={t} className="px-2 py-0.5 rounded border border-slate-300 bg-white text-[10px] font-bold text-slate-600">
-                                 {t}
-                               </span>
-                             ))}
-                           </div>
-                         )}
+                     {/* 3. 詳細カラム (表示項目がある場合のみ) */}
+                     {(showOptions.tags || showOptions.assignee || showOptions.note) && (
+                       <td className="py-5 px-4 align-top">
+                         <div className="flex flex-col gap-3">
+                           
+                           {/* メモ (オプション: アイコン+テキストのみ) */}
+                           {showOptions.note && item.note && (
+                              <div className="flex items-start gap-2 text-sm font-medium text-slate-700 leading-relaxed">
+                                <StickyNote className="w-4 h-4 text-slate-400 shrink-0 mt-1" />
+                                <span className="whitespace-pre-wrap">{item.note}</span>
+                              </div>
+                           )}
 
-                         {/* 担当者 */}
-                         {assignees.length > 0 && (
-                           <div className="flex items-start gap-1.5 text-xs text-slate-500">
-                             <User className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
-                             <div className="font-bold leading-relaxed">
-                               {assignees.join("、")}
+                           {/* タグ (オプション) */}
+                           {showOptions.tags && tags.length > 0 && (
+                             <div className="flex flex-wrap gap-1.5">
+                               {tags.map((t: string) => (
+                                 <span key={t} className="px-2 py-0.5 rounded border border-slate-300 bg-white text-[10px] font-bold text-slate-600">
+                                   {t}
+                                 </span>
+                               ))}
                              </div>
-                           </div>
-                         )}
-                       </div>
-                     </td>
+                           )}
+
+                           {/* 担当者 (オプション) */}
+                           {showOptions.assignee && assignees.length > 0 && (
+                             <div className="flex items-start gap-1.5 text-xs text-slate-500 pt-1">
+                               <User className="w-4 h-4 shrink-0 text-slate-400" />
+                               <div className="font-bold leading-relaxed">
+                                 {assignees.join("、")}
+                               </div>
+                             </div>
+                           )}
+                         </div>
+                       </td>
+                     )}
                    </tr>
                  );
               })}
@@ -318,7 +353,7 @@ export default function PrintPage({ params }: { params: Promise<{ slug: string }
       </main>
 
       {/* フッター */}
-      <footer className="mt-8 pt-6 border-t border-slate-200 flex justify-between items-end text-[10px] font-bold text-slate-400 page-break">
+      <footer className="mt-12 pt-6 border-t-2 border-slate-900 flex justify-between items-end text-[10px] font-bold text-slate-400 page-break">
          <div className="space-y-1">
             <div className="flex items-center gap-2">
                <span className="px-1.5 py-0.5 bg-slate-900 text-white rounded text-[9px] tracking-widest">TaiSuke</span>
