@@ -5,8 +5,12 @@ import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RealtimeListener from "@/components/RealtimeListener";
 import AutoRefresh from "@/components/AutoRefresh";
+
+// 3つのフローティングボタンをインポート
 import FloatingFilter from "@/components/FloatingFilter";
 import FloatingMaterials from "@/components/FloatingMaterials";
+import FloatingActionMenu from "@/components/FloatingActionMenu";
+
 import Link from "next/link";
 import { MapPin, Calendar, Clock, Sparkles, ArrowRight } from "lucide-react";
 
@@ -48,11 +52,6 @@ function detectEmoji(title: string) {
   if (t.includes("撤収") || t.includes("片付け")) return "🧹";
   if (t.includes("移動")) return "🚶";
   return "🎵";
-}
-
-function getTargetColor(t: string) {
-  if (!t || t === "all" || t === "全員") return "bg-slate-100 text-slate-500";
-  return "bg-cyan-50 text-[#00c2e8]";
 }
 
 function groupByStartTime(items: any[]) {
@@ -102,8 +101,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const allItems = items ?? [];
 
   const { data: materials } = await supabase.from("event_materials").select("*").eq("event_id", event.id).order("sort_order", { ascending: true });
-  // const hasMaterials = materials && materials.length > 0; // ←この行は不要になったので削除
-
+  
   const emergencyContacts = event.emergency_contacts || [];
 
   const tagsSet = new Set<string>();
@@ -154,22 +152,22 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white pb-20">
       <EventHeader 
         title={event.title} 
-        slug={slug} 
+        slug={slug}
         emergencyContacts={emergencyContacts}
       />
       
       <RealtimeListener eventId={event.id} />
       <AutoRefresh />
 
-      {/* フローティングボタンたち */}
+      {/* フローティングボタン 3兄弟 */}
       <FloatingFilter 
         slug={slug}
         tags={dynamicTabs}
         assignees={dynamicAssignees}
         selectedTags={selectedTags}
       />
-      {/* ★修正: nullの時は空配列を渡すように変更 */}
       <FloatingMaterials materials={materials ?? []} />
+      <FloatingActionMenu title={event.title} slug={slug} />
 
       <div className="pt-24 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-6">
         
