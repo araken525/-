@@ -15,7 +15,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
   const [eventData, setEventData] = useState<any>(null);
   const [isSending, setIsSending] = useState(false);
 
-  // 初期ロード (パスワードチェックなしでデータだけ取る)
   useEffect(() => {
     const fetchEvent = async () => {
       const { data: event, error } = await supabase
@@ -28,7 +27,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
         alert("イベントが見つかりません");
         return;
       }
-
       setEventData(event);
       setInputMessage(event.announcement || "");
       setLoading(false);
@@ -36,33 +34,44 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
     fetchEvent();
   }, [slug]);
 
-  // アナウンス送信
   const handleUpdate = async () => {
     if (!inputMessage.trim()) return;
     setIsSending(true);
 
+    // ★修正: メッセージと一緒に「現在時刻」も保存する
+    const now = new Date().toISOString();
+
     const { error } = await supabase
       .from("events")
-      .update({ announcement: inputMessage })
+      .update({ 
+        announcement: inputMessage,
+        announcement_updated_at: now // ここを追加
+      })
       .eq("id", eventData.id);
 
     if (error) {
       alert(`送信失敗: ${error.message}`);
     } else {
       alert("送信しました！");
-      setEventData({ ...eventData, announcement: inputMessage });
+      setEventData({ 
+        ...eventData, 
+        announcement: inputMessage,
+        announcement_updated_at: now 
+      });
     }
     setIsSending(false);
   };
 
-  // アナウンス削除
   const handleDelete = async () => {
     if (!confirm("取り下げますか？")) return;
     setIsSending(true);
 
     const { error } = await supabase
       .from("events")
-      .update({ announcement: null })
+      .update({ 
+        announcement: null,
+        announcement_updated_at: null // 時刻もクリア
+      })
       .eq("id", eventData.id);
 
     if (error) {
@@ -77,7 +86,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
 
   if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-bold text-slate-400">読み込み中...</div>;
 
-  // 認証画面をスキップして、いきなり操作画面を表示
   return (
     <main className="min-h-screen bg-slate-50 font-sans">
       <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 z-50 flex items-center px-4 justify-between">
@@ -96,14 +104,16 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
         <div className="mb-8">
           <div className="text-xs font-bold text-slate-400 mb-2 pl-2">現在の状況</div>
           {eventData.announcement ? (
-            <div className="bg-slate-800 text-amber-400 p-4 rounded-2xl shadow-lg flex items-start gap-3 animate-pulse">
-              <Megaphone className="w-5 h-5 shrink-0 mt-0.5" />
-              <div className="text-sm font-bold leading-relaxed">{eventData.announcement}</div>
+            // 管理画面のプレビューも新しいデザイン（簡易版）に合わせる
+            <div className="bg-white border border-cyan-100 shadow-sm p-4 rounded-2xl flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-cyan-50 flex items-center justify-center shrink-0 text-[#00c2e8]">
+                <Megaphone className="w-4 h-4" />
+              </div>
+              <div className="text-sm font-bold text-slate-700 leading-relaxed">{eventData.announcement}</div>
             </div>
           ) : (
             <div className="bg-white border-2 border-dashed border-slate-200 p-6 rounded-2xl text-center">
               <div className="text-slate-400 font-bold text-sm">現在アナウンスは流れていません</div>
-              <p className="text-[10px] text-slate-300 mt-1">下のフォームから送信できます</p>
             </div>
           )}
         </div>
@@ -131,16 +141,9 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
             <button
               onClick={handleUpdate}
               disabled={!inputMessage.trim() || isSending}
-              className="flex-[2] py-3.5 bg-amber-500 text-white rounded-xl font-black shadow-lg shadow-amber-200 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
+              className="flex-[2] py-3.5 bg-[#00c2e8] text-white rounded-xl font-black shadow-lg shadow-cyan-200 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
             >
-              {isSending ? (
-                "送信中..."
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  アナウンスする
-                </>
-              )}
+              {isSending ? "送信中..." : <><Send className="w-4 h-4" /> アナウンスする</>}
             </button>
           </div>
         </div>
