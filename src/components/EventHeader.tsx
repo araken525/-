@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-// ▼ Phone, AlertCircle を追加
-import { Share2, Check, QrCode, Wrench, X, Printer, Phone, AlertCircle } from "lucide-react";
+import { 
+  Share2, Check, QrCode, Wrench, X, Printer, Phone, 
+  AlertCircle, MoreHorizontal 
+} from "lucide-react";
 import EventQRCode from "./EventQRCode";
 
 type Props = {
   title: string;
   slug: string;
-  // ▼ 追加: 連絡先データを受け取る
   emergencyContacts?: { name: string, tel: string, role: string }[];
 };
 
@@ -17,8 +18,11 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
   const [scrolled, setScrolled] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
-  // ▼ 追加: 連絡先モーダル用
   const [showContact, setShowContact] = useState(false);
+  
+  // ▼ 追加: メニュー開閉用
+  const [showMenu, setShowMenu] = useState(false);
+  
   const [currentUrl, setCurrentUrl] = useState("");
 
   const hasContacts = emergencyContacts.length > 0;
@@ -49,6 +53,8 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+    // シェアしたらメニューを閉じる
+    setShowMenu(false);
   };
 
   // ボタン共通スタイル
@@ -57,11 +63,7 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
     ? "bg-white text-slate-600 border-slate-100 hover:bg-slate-50" 
     : "bg-white/80 backdrop-blur-md text-slate-600 hover:text-[#00c2e8] hover:bg-white";
   
-  const shareBtnStyle = scrolled
-    ? "bg-slate-900 text-white hover:bg-slate-700"
-    : "bg-[#00c2e8] text-white hover:bg-cyan-500 shadow-cyan-200/50";
-  
-  // 緊急連絡先ボタンのスタイル (赤系)
+  // 緊急連絡先ボタン (赤系)
   const emergencyBtnStyle = scrolled
     ? "bg-red-50 text-red-500 border-red-100 hover:bg-red-100"
     : "bg-red-500/80 backdrop-blur-md text-white hover:bg-red-500";
@@ -81,8 +83,9 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
           {title}
         </h1>
         
-        <div className="flex items-center gap-2 ml-auto pointer-events-auto pb-1 pt-1">
-          {/* 緊急連絡先 (データがある時だけ表示) */}
+        <div className="flex items-center gap-2 ml-auto pointer-events-auto pb-1 pt-1 relative">
+          
+          {/* 1. 緊急連絡先 (最優先・単独表示) */}
           {hasContacts && (
             <button 
               onClick={() => setShowContact(true)} 
@@ -93,20 +96,64 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
             </button>
           )}
 
+          {/* 2. 編集ボタン (よく使うので単独表示) */}
           <Link href={`/e/${slug}/edit`} className={`${btnBase} ${btnStyle}`} title="編集">
             <Wrench className="w-4 h-4" />
           </Link>
-          
-          <Link href={`/e/${slug}/print`} target="_blank" className={`${btnBase} ${btnStyle}`} title="印刷プレビュー">
-            <Printer className="w-4 h-4" />
-          </Link>
 
-          <button onClick={() => setShowQR(true)} className={`${btnBase} ${btnStyle}`} title="QRコード">
-            <QrCode className="w-4 h-4" />
-          </button>
-          <button onClick={handleShare} className={`${btnBase} ${shareBtnStyle}`} title="共有">
-            {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-          </button>
+          {/* 3. その他メニュー (共有・QR・印刷を収納) */}
+          <div className="relative">
+             <button 
+               onClick={() => setShowMenu(!showMenu)} 
+               className={`${btnBase} ${btnStyle} ${showMenu ? "ring-2 ring-cyan-100 bg-white" : ""}`} 
+               title="メニュー"
+             >
+               <MoreHorizontal className="w-4 h-4" />
+             </button>
+
+             {/* ドロップダウンメニュー */}
+             {showMenu && (
+               <>
+                 <div className="fixed inset-0 z-0" onClick={() => setShowMenu(false)}></div>
+                 <div className="absolute right-0 top-12 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 flex flex-col gap-1 animate-in fade-in zoom-in-95 origin-top-right z-20">
+                    
+                    <button 
+                      onClick={handleShare} 
+                      className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-slate-50 text-left transition-colors group"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-cyan-50 text-[#00c2e8] flex items-center justify-center group-hover:bg-[#00c2e8] group-hover:text-white transition-colors">
+                        {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                      </div>
+                      <span className="text-xs font-bold text-slate-700">共有する</span>
+                    </button>
+
+                    <button 
+                      onClick={() => { setShowQR(true); setShowMenu(false); }} 
+                      className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-slate-50 text-left transition-colors group"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center group-hover:bg-slate-800 group-hover:text-white transition-colors">
+                        <QrCode className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-700">QRコードを表示</span>
+                    </button>
+
+                    <Link 
+                      href={`/e/${slug}/print`} 
+                      target="_blank"
+                      onClick={() => setShowMenu(false)}
+                      className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-slate-50 text-left transition-colors group"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center group-hover:bg-slate-800 group-hover:text-white transition-colors">
+                        <Printer className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-700">印刷プレビュー</span>
+                    </Link>
+
+                 </div>
+               </>
+             )}
+          </div>
+
         </div>
       </header>
 
@@ -151,7 +198,7 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
         </div>
       )}
 
-      {/* --- QRコードモーダル (変更なし) --- */}
+      {/* --- QRコードモーダル --- */}
       {showQR && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
           <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-md transition-opacity" onClick={() => setShowQR(false)} />
