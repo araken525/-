@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation"; // ★追加: URLパラメータ監視用
 import { 
   Share2, Check, QrCode, Wrench, X, Printer, Phone, 
   MoreHorizontal, Ticket 
@@ -15,28 +16,34 @@ type Props = {
 };
 
 export default function EventHeader({ title, slug, emergencyContacts = [] }: Props) {
+  const searchParams = useSearchParams(); // ★追加: 現在の絞り込み状態を取得
   const [scrolled, setScrolled] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [currentUrl, setCurrentUrl] = useState("");
+  const [shareUrl, setShareUrl] = useState("");
 
   const hasContacts = emergencyContacts.length > 0;
 
+  // ★修正: パラメータが変わるたびに共有用URLを更新
   useEffect(() => {
-    setCurrentUrl(window.location.href);
+    const origin = window.location.origin;
+    const params = searchParams?.toString();
+    const fullUrl = `${origin}/e/${slug}${params ? `?${params}` : ""}`;
+    setShareUrl(fullUrl);
+
     const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [slug, searchParams]);
 
   const handleShare = async () => {
-    const url = currentUrl || `${window.location.origin}/e/${slug}`;
+    // ★修正: 常に最新の shareUrl を使用
     const shareData = {
       title: title,
       text: `${title}のタイムスケジュール`,
-      url: url,
+      url: shareUrl,
     };
 
     if (navigator.share) {
@@ -46,12 +53,15 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
         console.log("Share canceled");
       }
     } else {
-      navigator.clipboard.writeText(url);
+      navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
     setShowMenu(false);
   };
+
+  // 印刷用URL生成 (絞り込み状態を引き継ぐ)
+  const printUrl = `/e/${slug}/print${searchParams?.toString() ? `?${searchParams.toString()}` : ""}`;
 
   // ボタン共通スタイル
   const btnBase = "w-9 h-9 flex items-center justify-center rounded-full shadow-md active:scale-95 transition-all relative z-10 border border-transparent";
@@ -81,7 +91,7 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
         
         <div className="flex items-center gap-2 ml-auto pointer-events-auto pb-1 pt-1 relative">
           
-          {/* 1. 緊急連絡先 (電話アイコンに変更) */}
+          {/* 1. 緊急連絡先 */}
           {hasContacts && (
             <button 
               onClick={() => setShowContact(true)} 
@@ -92,7 +102,7 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
             </button>
           )}
 
-          {/* 2. その他メニュー (共有・QR・印刷・編集を収納) */}
+          {/* 2. その他メニュー */}
           <div className="relative">
              <button 
                onClick={() => setShowMenu(!showMenu)} 
@@ -123,7 +133,8 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
                       <span className="text-xs font-bold text-slate-700">QRコードを表示</span>
                     </button>
 
-                    <Link href={`/e/${slug}/print`} target="_blank" onClick={() => setShowMenu(false)} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-slate-50 text-left transition-colors group">
+                    {/* ★修正: 印刷ボタンもパラメータ引き継ぎ */}
+                    <Link href={printUrl} target="_blank" onClick={() => setShowMenu(false)} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-slate-50 text-left transition-colors group">
                       <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center group-hover:bg-slate-800 group-hover:text-white transition-colors">
                         <Printer className="w-4 h-4" />
                       </div>
@@ -133,7 +144,7 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
                     {/* 区切り線 */}
                     <div className="h-px bg-slate-100 my-1 mx-2"></div>
 
-                    {/* 管理者向け機能 (編集ボタンをここに移動) */}
+                    {/* 管理者向け機能 */}
                     <Link href={`/e/${slug}/edit`} onClick={() => setShowMenu(false)} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-slate-50 text-left transition-colors group">
                       <div className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
                         <Wrench className="w-4 h-4" />
@@ -185,7 +196,7 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
         </div>
       )}
 
-      {/* --- QRコードモーダル (Access Pass風デザイン) --- */}
+      {/* --- QRコードモーダル (Access Pass風) --- */}
       {showQR && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowQR(false)} />
@@ -207,14 +218,14 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
 
             {/* 2. Content */}
             <div className="p-8 flex flex-col items-center bg-white relative">
-               {/* Ticket cutout effect (circles) */}
+               {/* Ticket cutout effect */}
                <div className="absolute -top-3 left-0 w-6 h-6 bg-slate-900 rounded-full translate-x-[-50%]"></div>
                <div className="absolute -top-3 right-0 w-6 h-6 bg-slate-900 rounded-full translate-x-[50%]"></div>
                
-               {/* QR Code Container */}
+               {/* QR Code Container (動的URL反映) */}
                <div className="p-1 rounded-xl border-2 border-slate-100 mb-6">
                  <div className="bg-white rounded-lg overflow-hidden">
-                   {currentUrl && <EventQRCode url={currentUrl} />}
+                   {shareUrl && <EventQRCode url={shareUrl} />}
                  </div>
                </div>
 
