@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation"; // ★追加: URLパラメータ監視用
+import { useSearchParams } from "next/navigation";
 import { 
   Share2, Check, QrCode, Wrench, X, Printer, Phone, 
   MoreHorizontal, Ticket 
@@ -16,7 +16,7 @@ type Props = {
 };
 
 export default function EventHeader({ title, slug, emergencyContacts = [] }: Props) {
-  const searchParams = useSearchParams(); // ★追加: 現在の絞り込み状態を取得
+  const searchParams = useSearchParams();
   const [scrolled, setScrolled] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -26,7 +26,7 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
 
   const hasContacts = emergencyContacts.length > 0;
 
-  // ★修正: パラメータが変わるたびに共有用URLを更新
+  // パラメータが変わるたびに共有用URLを更新
   useEffect(() => {
     const origin = window.location.origin;
     const params = searchParams?.toString();
@@ -39,7 +39,6 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
   }, [slug, searchParams]);
 
   const handleShare = async () => {
-    // ★修正: 常に最新の shareUrl を使用
     const shareData = {
       title: title,
       text: `${title}のタイムスケジュール`,
@@ -69,7 +68,7 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
     ? "bg-white text-slate-600 border-slate-100 hover:bg-slate-50" 
     : "bg-white/80 backdrop-blur-md text-slate-600 hover:text-[#00c2e8] hover:bg-white";
   
-  // 緊急連絡先ボタン (赤系・電話アイコン)
+  // 緊急連絡先ボタン
   const emergencyBtnStyle = scrolled
     ? "bg-red-50 text-red-500 border-red-100 hover:bg-red-100"
     : "bg-red-500/80 backdrop-blur-md text-white hover:bg-red-500";
@@ -133,7 +132,7 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
                       <span className="text-xs font-bold text-slate-700">QRコードを表示</span>
                     </button>
 
-                    {/* ★修正: 印刷ボタンもパラメータ引き継ぎ */}
+                    {/* 印刷ボタン */}
                     <Link href={printUrl} target="_blank" onClick={() => setShowMenu(false)} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-slate-50 text-left transition-colors group">
                       <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center group-hover:bg-slate-800 group-hover:text-white transition-colors">
                         <Printer className="w-4 h-4" />
@@ -196,14 +195,14 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
         </div>
       )}
 
-      {/* --- QRコードモーダル (Access Pass風) --- */}
+      {/* --- QRコードモーダル (Access Pass風・日本語・青テーマ) --- */}
       {showQR && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowQR(false)} />
           
           <div className="relative w-full max-w-xs bg-white rounded-[2rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-8 duration-500">
-            {/* 1. Header Gradient */}
-            <div className="bg-gradient-to-br from-[#00c2e8] to-blue-600 p-6 text-center text-white relative">
+            {/* 1. Header (青テーマ・日本語化) */}
+            <div className="bg-gradient-to-br from-[#00c2e8] to-blue-500 p-6 text-center text-white relative">
                <div className="absolute top-4 right-4">
                  <button onClick={() => setShowQR(false)} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-full text-white transition-colors">
                    <X className="w-4 h-4" />
@@ -212,8 +211,8 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm border border-white/30">
                   <Ticket className="w-6 h-6 text-white" />
                </div>
-               <h3 className="text-lg font-black tracking-tight leading-none">ACCESS PASS</h3>
-               <p className="text-[10px] font-medium opacity-80 mt-1 uppercase tracking-widest">Share Schedule</p>
+               <h3 className="text-xl font-black tracking-tight leading-none">スケジュール共有</h3>
+               <p className="text-[10px] font-bold opacity-90 mt-1">スマホで読み取ってアクセス</p>
             </div>
 
             {/* 2. Content */}
@@ -231,16 +230,16 @@ export default function EventHeader({ title, slug, emergencyContacts = [] }: Pro
 
                {/* Info */}
                <div className="text-center w-full">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Event</div>
+                  <div className="text-[10px] font-bold text-slate-400 mb-1">イベント名</div>
                   <h2 className="text-lg font-black text-slate-800 leading-tight line-clamp-2 px-2">
                     {title}
                   </h2>
                </div>
 
                {/* Helper Text */}
-               <div className="mt-6 flex items-center gap-2 text-[10px] font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full">
+               <div className="mt-6 flex items-center gap-2 text-[10px] font-bold text-slate-500 bg-slate-50 px-4 py-2 rounded-full">
                   <QrCode className="w-3 h-3" />
-                  <span>Scan to open schedule</span>
+                  <span>読み取ると、現在の条件で開きます</span>
                </div>
             </div>
             
