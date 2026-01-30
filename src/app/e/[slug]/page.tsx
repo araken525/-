@@ -5,9 +5,9 @@ import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RealtimeListener from "@/components/RealtimeListener";
 import AutoRefresh from "@/components/AutoRefresh";
-import { MaterialsAccordion } from "@/components/EventPageClient";
-// ▼ 作成したフローティングフィルターを読み込み
 import FloatingFilter from "@/components/FloatingFilter";
+// ★追加: 資料用フローティングボタン
+import FloatingMaterials from "@/components/FloatingMaterials";
 import Link from "next/link";
 import { MapPin, Calendar, Clock, Sparkles, ArrowRight } from "lucide-react";
 
@@ -162,13 +162,14 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <RealtimeListener eventId={event.id} />
       <AutoRefresh />
 
-      {/* ★追加: フローティングフィルター */}
+      {/* フローティングボタンたち */}
       <FloatingFilter 
         slug={slug}
         tags={dynamicTabs}
         assignees={dynamicAssignees}
         selectedTags={selectedTags}
       />
+      <FloatingMaterials materials={materials} />
 
       <div className="pt-24 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-6">
         
@@ -194,13 +195,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
              </div>
            </div>
         </section>
-
-        {/* 以前のフィルターバー(<section>)はここにありましたが削除しました */}
-
-        {/* 資料アコーディオン */}
-        {hasMaterials && (
-          <MaterialsAccordion materials={materials} />
-        )}
 
         {/* タイムライン */}
         <div className="space-y-10 w-full pt-4">
