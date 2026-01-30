@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
-import { ArrowLeft, Megaphone, Trash2, Send, Lock, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Megaphone, Trash2, Send, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 // 全角→半角変換
@@ -21,65 +21,76 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [inputMessage, setInputMessage] = useState("");
+  // eventDataにはパスワードを含めない（どうせ取れないので）
   const [eventData, setEventData] = useState<any>(null);
   const [isSending, setIsSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // 初期ロード
   useEffect(() => {
     const checkAuth = async () => {
-      // 1. イベントデータを取得
+      // 1. イベント情報を取得（パスワード以外の公開情報のみ）
       const { data: event, error } = await supabase
         .from("events")
-        .select("*")
+        .select("id, title, announcement") 
         .eq("slug", slug)
         .single();
 
       if (error || !event) {
-        console.error("データ取得エラー:", error);
-        alert("イベントが見つかりません。コンソールを確認してください。");
+        alert("イベントが見つかりません");
+        router.push(`/e/${slug}`);
         return;
       }
 
       setEventData(event);
       setInputMessage(event.announcement || "");
 
-      // ★デバッグ用：正解のパスワードをコンソールに出す
-      console.log("====================================");
-      console.log("【デバッグ】DBのパスワード:", event.password);
-      console.log("====================================");
-
-      // 2. 自動ログイン判定 (ローカルストレージ)
+      // 2. 自動ログイン試行 (RPCを使って答え合わせ)
       const savedPass = localStorage.getItem(`admin-pass-${slug}`);
-      if (savedPass && savedPass === event.password) {
-        setIsAuthenticated(true);
+      if (savedPass) {
+        const { data: isValid } = await supabase.rpc("verify_event_password", {
+          event_slug: slug,
+          input_password: savedPass,
+        });
+
+        if (isValid) {
+          setIsAuthenticated(true);
+        }
       }
       setLoading(false);
     };
     checkAuth();
-  }, [slug]);
+  }, [slug, router]);
 
-  // ★修正: シンプルな比較ロジックに戻し、ログを出す
-  const handleLogin = (e: React.FormEvent) => {
+  // ★修正: RPCを使ってDB側で答え合わせをする
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
-    if (!eventData) {
-      setErrorMsg("データを読み込めていません");
-      return;
-    }
+    // 入力を整形
+    const cleanInput = toHalfWidth(password).trim();
+    
+    // DBの「答え合わせ係（verify_event_password）」に聞く
+    // 生の入力と、半角変換後の両方で試す
+    const { data: isMatchRaw } = await supabase.rpc("verify_event_password", {
+      event_slug: slug,
+      input_password: password.trim(),
+    });
+    
+    const { data: isMatchClean } = await supabase.rpc("verify_event_password", {
+      event_slug: slug,
+      input_password: cleanInput,
+    });
 
-    const inputClean = toHalfWidth(password).trim();
-    const dbPassClean = toHalfWidth(eventData.password || "").trim();
-
-    console.log(`入力: "${inputClean}" / 正解: "${dbPassClean}"`);
-
-    // パスワードが一致するか、またはDBのパスワードが空(設定ミス)なら通す
-    if (inputClean === dbPassClean) {
+    if (isMatchRaw || isMatchClean) {
+      // 正解！
       setIsAuthenticated(true);
-      localStorage.setItem(`admin-pass-${slug}`, eventData.password);
+      // 正解だったほう（あるいは整形後）を保存
+      localStorage.setItem(`admin-pass-${slug}`, isMatchRaw ? password.trim() : cleanInput);
+      setErrorMsg("");
     } else {
-      setErrorMsg("パスワードが違います（コンソールで正解を確認できます）");
+      // 不正解
+      console.error("Password verification failed");
+      setErrorMsg("パスワードが違います");
     }
   };
 
@@ -154,11 +165,7 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
               入室する
             </button>
           </form>
-          
-          <div className="mt-6 text-[10px] text-slate-400">
-             ※開発用ヒント: F12キーでコンソールを開くと<br/>正解のパスワードが見えます
-          </div>
-          <div className="mt-4">
+          <div className="mt-6">
             <Link href={`/e/${slug}`} className="text-xs font-bold text-slate-400 hover:text-slate-600">
               キャンセルして戻る
             </Link>
