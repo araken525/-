@@ -6,6 +6,13 @@ import Link from "next/link";
 import { ArrowLeft, Megaphone, Trash2, Send, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+// 全角英数字を半角に変換する魔法の関数
+const toHalfWidth = (str: string) => {
+  return str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) => {
+    return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+  });
+};
+
 export default function BroadcastPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const router = useRouter();
@@ -23,7 +30,7 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
     const checkAuth = async () => {
       const { data: event, error } = await supabase
         .from("events")
-        .select("*")
+        .select("*") 
         .eq("slug", slug)
         .single();
 
@@ -35,48 +42,35 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
 
       setEventData(event);
       setInputMessage(event.announcement || "");
-
-      // 保存済みパスワードがあれば自動ログインを試みる
+      
+      // 自動ログイン試行
       const savedPass = localStorage.getItem(`admin-pass-${slug}`);
-      if (savedPass) {
-        // パスワードが合っているか確認
-        const { data } = await supabase
-          .from("events")
-          .select("id")
-          .eq("slug", slug)
-          .eq("password", savedPass)
-          .maybeSingle();
-          
-        if (data) {
-          setIsAuthenticated(true);
-        }
+      if (savedPass && savedPass === event.password) {
+        setIsAuthenticated(true);
       }
       setLoading(false);
     };
     checkAuth();
   }, [slug, router]);
 
-  // ★修正: ログイン処理を強化 (DBに直接問い合わせる)
-  const handleLogin = async (e: React.FormEvent) => {
+  // ログイン判定 (全角→半角変換、スペース削除)
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
-    // 空白を削除してチェック
-    const cleanPassword = password.trim();
+    if (!eventData || !eventData.password) {
+      setErrorMsg("イベントデータの読み込みに失敗しました");
+      return;
+    }
 
-    const { data, error } = await supabase
-      .from("events")
-      .select("id")
-      .eq("slug", slug)
-      .eq("password", cleanPassword) // パスワード一致チェック
-      .maybeSingle();
+    const cleanInput = toHalfWidth(password).trim();
+    const cleanStored = toHalfWidth(eventData.password).trim();
 
-    if (data) {
+    if (cleanInput === cleanStored) {
       setIsAuthenticated(true);
-      localStorage.setItem(`admin-pass-${slug}`, cleanPassword);
+      localStorage.setItem(`admin-pass-${slug}`, eventData.password);
       setErrorMsg("");
     } else {
-      console.error("Login failed", error);
       setErrorMsg("パスワードが違います");
     }
   };
@@ -136,8 +130,9 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+              {/* ★ここを変更: type="password" -> "text" */}
               <input 
-                type="password" 
+                type="text" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="パスワード"
@@ -166,7 +161,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
   // --- 2. 放送室 (操作画面) ---
   return (
     <main className="min-h-screen bg-slate-50 font-sans">
-      {/* ヘッダー */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 z-50 flex items-center px-4 justify-between">
         <div className="flex items-center gap-3">
           <Link href={`/e/${slug}`} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
@@ -181,7 +175,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
 
       <div className="pt-24 px-4 max-w-lg mx-auto pb-12">
         
-        {/* 現在のステータス表示 */}
         <div className="mb-8">
           <div className="text-xs font-bold text-slate-400 mb-2 pl-2">現在の状況</div>
           {eventData.announcement ? (
@@ -197,7 +190,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
           )}
         </div>
 
-        {/* 入力フォーム */}
         <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100">
           <label className="block text-sm font-black text-slate-800 mb-4 pl-1">
             メッセージを作成
@@ -211,7 +203,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
           ></textarea>
 
           <div className="flex items-center gap-3">
-            {/* 削除ボタン */}
             <button
               onClick={handleDelete}
               disabled={!eventData.announcement || isSending}
@@ -221,7 +212,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
               取り下げ
             </button>
 
-            {/* 送信ボタン */}
             <button
               onClick={handleUpdate}
               disabled={!inputMessage.trim() || isSending}
