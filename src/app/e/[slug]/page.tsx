@@ -6,6 +6,7 @@ import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RealtimeListener from "@/components/RealtimeListener";
 import AutoRefresh from "@/components/AutoRefresh";
 
+// フローティングボタン 3兄弟
 import FloatingFilter from "@/components/FloatingFilter";
 import FloatingMaterials from "@/components/FloatingMaterials";
 import FloatingActionMenu from "@/components/FloatingActionMenu";
@@ -16,7 +17,7 @@ import EventAnnouncement from "@/components/EventAnnouncement";
 import Link from "next/link";
 import { MapPin, Calendar, Clock, Sparkles, ArrowRight } from "lucide-react";
 
-/* === ヘルパー関数 (変更なし) === */
+/* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
 
 function getDayNumber(dateStr: string) {
@@ -161,11 +162,16 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <RealtimeListener eventId={event.id} />
       <AutoRefresh />
 
-      {/* ★追加: アナウンスバー (ヘッダーの高さ分 pt-16 で下げる) */}
-      <div className="pt-16">
-        <EventAnnouncement eventId={event.id} initialAnnouncement={event.announcement} />
+      {/* ★修正: アナウンスバー (ヘッダーの下に配置。pt-20で余白確保) */}
+      <div className="pt-20">
+        <EventAnnouncement 
+          eventId={event.id} 
+          initialAnnouncement={event.announcement} 
+          updatedAt={event.announcement_updated_at} // ★時刻データを渡す
+        />
       </div>
 
+      {/* フローティングボタンコンテナ */}
       <div className="fixed bottom-6 right-6 z-40 flex flex-col-reverse gap-4 items-end pointer-events-none">
         <div className="pointer-events-auto">
           <FloatingFilter 
@@ -183,8 +189,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         </div>
       </div>
 
-      {/* ★変更: pt-24 を pt-8 に変更 (上の pt-16 + pt-8 で合計24相当の余白になる) */}
-      <div className="pt-8 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-6">
+      {/* コンテンツエリア (アナウンスバーがあるので上の余白は少なめのpt-4) */}
+      <div className="pt-4 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-6">
         
         {/* イベント情報カード */}
         <section className="relative bg-white rounded-[2rem] p-8 overflow-hidden shadow-sm h-full min-h-[160px]">
