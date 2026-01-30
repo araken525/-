@@ -6,7 +6,6 @@ import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RealtimeListener from "@/components/RealtimeListener";
 import AutoRefresh from "@/components/AutoRefresh";
 import FloatingFilter from "@/components/FloatingFilter";
-// ★追加: 資料用フローティングボタン
 import FloatingMaterials from "@/components/FloatingMaterials";
 import Link from "next/link";
 import { MapPin, Calendar, Clock, Sparkles, ArrowRight } from "lucide-react";
@@ -103,7 +102,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const allItems = items ?? [];
 
   const { data: materials } = await supabase.from("event_materials").select("*").eq("event_id", event.id).order("sort_order", { ascending: true });
-  const hasMaterials = materials && materials.length > 0;
+  // const hasMaterials = materials && materials.length > 0; // ←この行は不要になったので削除
 
   const emergencyContacts = event.emergency_contacts || [];
 
@@ -169,7 +168,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         assignees={dynamicAssignees}
         selectedTags={selectedTags}
       />
-      <FloatingMaterials materials={materials} />
+      {/* ★修正: nullの時は空配列を渡すように変更 */}
+      <FloatingMaterials materials={materials ?? []} />
 
       <div className="pt-24 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-6">
         
