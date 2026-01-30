@@ -57,13 +57,10 @@ function getTargetColor(t: string) {
 // アイコン・ラベル判定 (ホバーはPC限定・青テーマ)
 function getMaterialInfo(url: string) {
   const u = url.toLowerCase();
-  
-  // 共通スタイル: ホバーはsm以上のみ、色は青
   const style = { 
     color: "text-[#00c2e8]", 
     bg: "bg-cyan-50 sm:hover:bg-[#00c2e8] sm:hover:text-white transition-colors" 
   };
-
   const { Youtube, Video, FileText, Image: ImageIcon, Link2 } = require("lucide-react");
 
   if (u.includes("youtube") || u.includes("youtu.be")) {
@@ -91,17 +88,26 @@ function groupByStartTime(items: any[]) {
   return Array.from(map.entries()).map(([time, items]) => ({ time, items: items.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)) }));
 }
 
-// 強制的に「日本時間」でNOW判定を行う
-function isNow(start: string, end?: string | null) {
-  if (!end) return false;
+// ★修正: 日付の一致もチェックするように変更 (eventDate: YYYY-MM-DD)
+function isNow(start: string, end: string | null, eventDate: string) {
+  if (!end || !eventDate) return false;
 
+  // 1. 日本時間(JST)で「今日の日付」と「今の時間(分)」を取得
   const now = new Date();
   const jstNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
-  const currentMinutes = jstNow.getHours() * 60 + jstNow.getMinutes();
+  
+  const y = jstNow.getFullYear();
+  const m = String(jstNow.getMonth() + 1).padStart(2, "0");
+  const d = String(jstNow.getDate()).padStart(2, "0");
+  const todayYMD = `${y}-${m}-${d}`;
 
+  // 2. 日付がイベント当日でなければ false
+  if (todayYMD !== eventDate) return false;
+
+  // 3. 時間の判定 (分単位)
+  const currentMinutes = jstNow.getHours() * 60 + jstNow.getMinutes();
   const [sh, sm] = start.slice(0, 5).split(":").map(Number);
   const startMinutes = sh * 60 + sm;
-
   const [eh, em] = end.slice(0, 5).split(":").map(Number);
   const endMinutes = eh * 60 + em;
 
@@ -302,7 +308,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
                 <div className={`grid gap-4 md:gap-6 ${gridClass}`}>
                   {group.items.map((it: any) => {
-                    const now = isNow(it.start_time, it.end_time);
+                    // ★修正: ここでイベント日付も渡す
+                    const now = isNow(it.start_time, it.end_time, event.date);
                     const emoji = it.emoji || detectEmoji(it.title);
                     const duration = getDuration(it.start_time, it.end_time);
                     const startHhmm = hhmm(it.start_time);
