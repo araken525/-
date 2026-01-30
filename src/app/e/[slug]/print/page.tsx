@@ -1,17 +1,15 @@
 import { supabase } from "@/lib/supabaseClient";
 import { headers } from "next/headers";
-import { Printer, Calendar, MapPin, Clock, Hash, AlignLeft } from "lucide-react";
+import { 
+  Printer, Calendar, MapPin, Clock, Hash, 
+  User, StickyNote, Activity 
+} from "lucide-react";
 import EventQRCode from "@/components/EventQRCode";
 
 export const dynamic = "force-dynamic";
 
 /* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
-
-function getDisplayTarget(targetStr: string) {
-  if (!targetStr || targetStr === "all" || targetStr === "全員") return "全員";
-  return targetStr.replace(/,/g, "・");
-}
 
 function fmtDate(d: string) {
   if (!d) return "";
@@ -57,14 +55,18 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
   const publicUrl = `${protocol}://${host}/e/${slug}`;
   
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans print:p-0 p-8 w-full max-w-4xl mx-auto selection:bg-slate-200">
+    <div className="min-h-screen bg-white text-slate-900 font-sans print:p-0 p-8 w-full max-w-6xl mx-auto selection:bg-slate-200">
       
       <style>{`
         @media print {
-          @page { size: A4; margin: 15mm; }
+          @page { size: A4; margin: 10mm; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
           .page-break { page-break-inside: avoid; break-inside: avoid; }
+          
+          /* テーブルのヘッダーを次ページにも表示させる */
+          thead { display: table-header-group; } 
+          tr { page-break-inside: avoid; }
         }
       `}</style>
 
@@ -83,7 +85,7 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
       `}} />
 
       {/* === ヘッダー === */}
-      <header className="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-10 gap-8">
+      <header className="flex justify-between items-end border-b-2 border-slate-900 pb-6 mb-8 gap-8">
         <div className="space-y-4 flex-1">
           <div>
              <h1 className="text-3xl md:text-4xl font-black leading-tight tracking-tight mb-2">{event.title}</h1>
@@ -93,10 +95,10 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
              </div>
           </div>
           
-          {/* タグ情報 */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600">
+          {/* フィルタ情報 */}
+          <div className="inline-flex items-center gap-2 text-xs font-bold text-slate-500">
              <Hash className="w-3 h-3" />
-             <span>表示対象: <span className="text-slate-900 font-black">{targetName}</span></span>
+             <span>出力対象: {targetName}</span>
           </div>
         </div>
 
@@ -105,91 +107,122 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
            <div className="border border-slate-200 p-1 rounded bg-white">
              <EventQRCode url={publicUrl} />
            </div>
-           <span className="text-[9px] font-bold text-slate-400 tracking-tight">最新情報はこちら</span>
+           <span className="text-[9px] font-bold text-slate-400 tracking-tight">最新情報</span>
         </div>
       </header>
 
-      {/* === タイムライン === */}
-      <main className="relative pl-4">
-         {/* 縦線 (全体を貫く線) */}
-         <div className="absolute left-[5.5rem] top-4 bottom-4 w-0.5 bg-slate-200"></div>
+      {/* === テーブル === */}
+      <main>
+        {filtered.length === 0 ? (
+           <div className="py-12 text-center text-slate-400 font-bold border-t border-slate-200">予定はありません</div>
+        ) : (
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b-2 border-slate-800">
+                <th className="py-3 pl-2 w-32 font-black text-sm text-slate-900">時間</th>
+                <th className="py-3 px-4 font-black text-sm text-slate-900">内容</th>
+                <th className="py-3 px-2 w-48 font-black text-sm text-slate-900">詳細・担当</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((item, index) => {
+                 // タグの配列化
+                 const tags = item.target && item.target !== "all" && item.target !== "全員"
+                    ? item.target.split(",").map((t: string) => t.trim()) 
+                    : [];
 
-         {filtered.length === 0 && (
-           <div className="py-12 text-center text-slate-400 font-bold">予定はありません</div>
-         )}
+                 // 担当者の配列化
+                 const assignees = item.assignee 
+                    ? item.assignee.split(",").map((a: string) => a.trim()) 
+                    : [];
 
-         {filtered.map((item, index) => {
-            const isLast = index === filtered.length - 1;
-            
-            return (
-              <div key={item.id} className="grid grid-cols-[5rem_auto] gap-8 relative pb-10 page-break group">
-                
-                {/* 1. 時刻カラム */}
-                <div className="text-right pt-0.5 relative z-10">
-                   <div className="text-xl font-black font-mono tracking-tighter leading-none text-slate-900">
-                     {hhmm(item.start_time)}
-                   </div>
-                   {item.end_time && (
-                     <div className="text-xs font-bold font-mono text-slate-400 mt-1">
-                       <span className="mr-0.5 text-[10px] opacity-60">~</span>{hhmm(item.end_time)}
-                     </div>
-                   )}
-                </div>
+                 return (
+                   <tr key={item.id} className="border-b border-slate-200 page-break group odd:bg-white even:bg-slate-50/50">
+                     
+                     {/* 1. 時間カラム */}
+                     <tr className="py-4 pl-2 align-top">
+                       <td className="py-4 pl-2 align-top">
+                         <div className="text-lg font-black font-mono tracking-tighter leading-none text-slate-900">
+                           {hhmm(item.start_time)}
+                         </div>
+                         {item.end_time && (
+                           <div className="text-xs font-bold font-mono text-slate-400 mt-1 flex items-center gap-1">
+                             <span className="opacity-50">~</span>{hhmm(item.end_time)}
+                           </div>
+                         )}
+                       </td>
+                     </tr>
 
-                {/* タイムラインのドット (丸) */}
-                <div className="absolute left-[5.5rem] top-2 -translate-x-1/2 w-3 h-3 bg-white border-[3px] border-slate-900 rounded-full z-10"></div>
+                     {/* 2. 内容カラム (iPhone絵文字なし、アイコン統一) */}
+                     <td className="py-4 px-4 align-top">
+                       <div className="flex items-start gap-3">
+                         {/* 統一アイコン */}
+                         <div className="mt-1 shrink-0 text-slate-300">
+                            <Activity className="w-4 h-4" />
+                         </div>
+                         <div className="space-y-2 flex-1">
+                            <div className="text-base font-bold text-slate-900 leading-tight">
+                              {item.title}
+                            </div>
+                            
+                            {item.location && (
+                              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+                                <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                                {item.location}
+                              </div>
+                            )}
 
-                {/* 2. コンテンツカラム */}
-                <div className="pt-0 relative">
-                   {/* タイトル & タグ */}
-                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-1">
-                     <h3 className="text-lg font-black leading-tight text-slate-900">
-                       {item.title}
-                     </h3>
-                     {/* タグバッジ */}
-                     {item.target && item.target !== "全員" && item.target !== "all" && (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap">
-                          {getDisplayTarget(item.target)}
-                        </span>
-                     )}
-                   </div>
+                            {item.note && (
+                              <div className="flex items-start gap-1.5 text-xs font-medium text-slate-600 leading-relaxed bg-white p-2 rounded border border-slate-100">
+                                <StickyNote className="w-3.5 h-3.5 text-slate-300 shrink-0 mt-0.5" />
+                                <span className="whitespace-pre-wrap">{item.note}</span>
+                              </div>
+                            )}
+                         </div>
+                       </div>
+                     </td>
 
-                   {/* 場所 */}
-                   {item.location && (
-                     <div className="text-xs font-bold text-slate-500 flex items-center gap-1.5 mb-2">
-                       <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                       {item.location}
-                     </div>
-                   )}
+                     {/* 3. 詳細・担当カラム (タグは繋げずバッジ表示) */}
+                     <td className="py-4 px-2 align-top">
+                       <div className="flex flex-col gap-3">
+                         
+                         {/* タグ (個別の四角いバッジ) */}
+                         {tags.length > 0 && (
+                           <div className="flex flex-wrap gap-1">
+                             {tags.map(t => (
+                               <span key={t} className="px-2 py-0.5 rounded border border-slate-300 bg-white text-[10px] font-bold text-slate-600">
+                                 {t}
+                               </span>
+                             ))}
+                           </div>
+                         )}
 
-                   {/* メモ (ノート風デザイン) */}
-                   {item.note && (
-                     <div className="mt-2 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap pl-3 border-l-2 border-slate-200">
-                       {item.note}
-                     </div>
-                   )}
-                   
-                   {/* 担当者 (存在する場合のみ) */}
-                   {item.assignee && (
-                     <div className="mt-2 text-xs font-bold text-slate-500 flex items-center gap-1.5">
-                       <span className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center text-[10px] text-slate-400">👤</span>
-                       <span>{item.assignee}</span>
-                     </div>
-                   )}
-                </div>
-              </div>
-            );
-         })}
+                         {/* 担当者 */}
+                         {assignees.length > 0 && (
+                           <div className="flex items-start gap-1.5 text-xs text-slate-500">
+                             <User className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
+                             <div className="font-bold leading-relaxed">
+                               {assignees.join("、")}
+                             </div>
+                           </div>
+                         )}
+                       </div>
+                     </td>
+                   </tr>
+                 );
+              })}
+            </tbody>
+          </table>
+        )}
       </main>
 
       {/* フッター */}
-      <footer className="mt-4 pt-6 border-t border-slate-200 flex justify-between items-end text-[10px] font-bold text-slate-400 page-break">
+      <footer className="mt-8 pt-6 border-t border-slate-200 flex justify-between items-end text-[10px] font-bold text-slate-400 page-break">
          <div className="space-y-1">
             <div className="flex items-center gap-2">
                <span className="px-1.5 py-0.5 bg-slate-900 text-white rounded text-[9px] tracking-widest">TaiSuke</span>
                <span>Smart Schedule Sharing</span>
             </div>
-            <div>※QRコードから最新のスケジュールを確認できます</div>
          </div>
          <div className="text-right font-mono opacity-50">
            {publicUrl}
