@@ -142,8 +142,8 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
               
               <div className="relative z-10 p-5 pb-3">
                 <div className="flex items-center gap-2 mb-3">
-                  {/* ここを「アナウンス」に修正 */}
-                  <span className="text-xs font-black text-red-600 flex items-center gap-1.5 bg-red-50 px-2 py-1 rounded-md border border-red-100">
+                  {/* 囲みなしに変更 */}
+                  <span className="text-xs font-black text-red-600 flex items-center gap-1.5">
                     <AlertTriangle className="w-3.5 h-3.5" />
                     アナウンス
                   </span>

@@ -60,7 +60,6 @@ export default function EventAnnouncement({ eventId, initialAnnouncement, update
 
   return (
     <div className="py-2 animate-in slide-in-from-top duration-300">
-      {/* タイムラインカード風の赤基調デザイン（閉じるボタンなし） */}
       <div className="relative rounded-[1.5rem] overflow-hidden border border-red-100/50 bg-white shadow-sm">
         
         {/* 背景グラデーション */}
@@ -71,13 +70,13 @@ export default function EventAnnouncement({ eventId, initialAnnouncement, update
           ANNOUNCEMENT
         </div>
 
-        {/* コンテンツ（前面配置） */}
+        {/* コンテンツ */}
         <div className="relative z-10 p-5 pb-3">
-          {/* ヘッダー */}
+          {/* ヘッダー: 囲みを外してシンプルに */}
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-xs font-black text-red-600 flex items-center gap-1.5 bg-red-50 px-2 py-1 rounded-md border border-red-100">
+            <span className="text-xs font-black text-red-600 flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5" />
-              重要なお知らせ
+              アナウンス
             </span>
           </div>
 
