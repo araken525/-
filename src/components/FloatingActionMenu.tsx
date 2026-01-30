@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
-  MoreHorizontal, X, Share2, Check, QrCode, Printer, Wrench 
+  MoreHorizontal, X, Share2, Check, QrCode, Printer, Wrench, Megaphone 
 } from "lucide-react";
 import EventQRCode from "./EventQRCode";
 
@@ -37,10 +37,10 @@ export default function FloatingActionMenu({ title, slug }: Props) {
 
   return (
     <>
-      {/* ★修正: fixed配置を削除 */}
+      {/* メニューボタン (下から3番目) */}
       <button
         onClick={() => setIsOpen(true)}
-        className="w-14 h-14 bg-white text-slate-600 rounded-full shadow-xl shadow-slate-200/50 flex items-center justify-center transition-all active:scale-90 border border-slate-50"
+        className="fixed bottom-44 right-6 z-40 w-14 h-14 bg-white text-slate-600 rounded-full shadow-xl shadow-slate-200/50 flex items-center justify-center transition-all active:scale-90 border border-slate-50"
       >
         <MoreHorizontal className="w-6 h-6" />
       </button>
@@ -61,7 +61,10 @@ export default function FloatingActionMenu({ title, slug }: Props) {
               </button>
             </div>
 
-            <div className="p-6 grid grid-cols-4 gap-2">
+            {/* グリッドレイアウト (4列 -> 5つ目の要素は自動で2段目へ) */}
+            <div className="p-6 grid grid-cols-4 gap-y-6 gap-x-2">
+              
+              {/* 1. 共有 */}
               <button onClick={handleShare} className="flex flex-col items-center gap-2 group">
                 <div className="w-14 h-14 rounded-2xl bg-cyan-50 text-[#00c2e8] flex items-center justify-center group-hover:bg-[#00c2e8] group-hover:text-white transition-colors">
                   {copied ? <Check className="w-6 h-6" /> : <Share2 className="w-6 h-6" />}
@@ -69,6 +72,7 @@ export default function FloatingActionMenu({ title, slug }: Props) {
                 <span className="text-[10px] font-bold text-slate-500">共有</span>
               </button>
 
+              {/* 2. QRコード */}
               <button onClick={() => setShowQR(true)} className="flex flex-col items-center gap-2 group">
                 <div className="w-14 h-14 rounded-2xl bg-slate-50 text-slate-600 flex items-center justify-center group-hover:bg-slate-800 group-hover:text-white transition-colors">
                   <QrCode className="w-6 h-6" />
@@ -76,6 +80,7 @@ export default function FloatingActionMenu({ title, slug }: Props) {
                 <span className="text-[10px] font-bold text-slate-500">QRコード</span>
               </button>
 
+              {/* 3. 印刷 */}
               <Link href={printUrl} target="_blank" className="flex flex-col items-center gap-2 group">
                 <div className="w-14 h-14 rounded-2xl bg-slate-50 text-slate-600 flex items-center justify-center group-hover:bg-slate-800 group-hover:text-white transition-colors">
                   <Printer className="w-6 h-6" />
@@ -83,18 +88,28 @@ export default function FloatingActionMenu({ title, slug }: Props) {
                 <span className="text-[10px] font-bold text-slate-500">印刷</span>
               </Link>
 
+              {/* 4. 編集 (管理者) */}
               <Link href={`/e/${slug}/edit`} className="flex flex-col items-center gap-2 group">
                 <div className="w-14 h-14 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
                   <Wrench className="w-6 h-6" />
                 </div>
                 <span className="text-[10px] font-bold text-slate-400">編集</span>
               </Link>
+
+              {/* ★追加: 5. 放送室 (管理者) */}
+              <Link href={`/e/${slug}/broadcast`} className="flex flex-col items-center gap-2 group">
+                <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center group-hover:bg-amber-400 group-hover:text-white transition-colors border border-amber-100">
+                  <Megaphone className="w-6 h-6" />
+                </div>
+                <span className="text-[10px] font-bold text-slate-500">放送室</span>
+              </Link>
+
             </div>
           </div>
         </div>
       )}
 
-      {/* QRコードモーダル */}
+      {/* QRモーダル (省略なし) */}
       {showQR && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-200">
           <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" onClick={() => setShowQR(false)} />
