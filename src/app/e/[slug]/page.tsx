@@ -6,18 +6,16 @@ import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RealtimeListener from "@/components/RealtimeListener";
 import AutoRefresh from "@/components/AutoRefresh";
 
-// フローティングボタン 3兄弟
 import FloatingFilter from "@/components/FloatingFilter";
 import FloatingMaterials from "@/components/FloatingMaterials";
 import FloatingActionMenu from "@/components/FloatingActionMenu";
 
-// ★追加: アナウンスコンポーネント
 import EventAnnouncement from "@/components/EventAnnouncement";
 
 import Link from "next/link";
 import { MapPin, Calendar, Clock, Sparkles, ArrowRight } from "lucide-react";
 
-/* === ヘルパー関数 === */
+/* === ヘルパー関数 (省略なし) === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
 
 function getDayNumber(dateStr: string) {
@@ -162,16 +160,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <RealtimeListener eventId={event.id} />
       <AutoRefresh />
 
-      {/* ★修正: アナウンスバー (ヘッダーの下に配置。pt-20で余白確保) */}
-      <div className="pt-20">
-        <EventAnnouncement 
-          eventId={event.id} 
-          initialAnnouncement={event.announcement} 
-          updatedAt={event.announcement_updated_at} // ★時刻データを渡す
-        />
-      </div>
+      {/* ★修正: ここにあった EventAnnouncement を削除 */}
 
-      {/* フローティングボタンコンテナ */}
       <div className="fixed bottom-6 right-6 z-40 flex flex-col-reverse gap-4 items-end pointer-events-none">
         <div className="pointer-events-auto">
           <FloatingFilter 
@@ -189,10 +179,10 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         </div>
       </div>
 
-      {/* コンテンツエリア (アナウンスバーがあるので上の余白は少なめのpt-4) */}
-      <div className="pt-4 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-6">
+      {/* ★修正: ヘッダー下の余白を元の pt-24 に戻す */}
+      <div className="pt-24 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-6">
         
-        {/* イベント情報カード */}
+        {/* 1. イベント情報カード (ヒーロー) */}
         <section className="relative bg-white rounded-[2rem] p-8 overflow-hidden shadow-sm h-full min-h-[160px]">
            <div className="absolute inset-0 bg-[conic-gradient(at_top_left,_var(--tw-gradient-stops))] from-cyan-200 via-blue-100 to-[#00c2e8] opacity-80"></div>
            <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/40 rounded-full blur-3xl mix-blend-overlay"></div>
@@ -215,7 +205,14 @@ export default async function Page({ params, searchParams }: { params: Promise<{
            </div>
         </section>
 
-        {/* タイムライン */}
+        {/* ★追加: ここにアナウンスを移動！(ヒーローとタイムラインの間) */}
+        <EventAnnouncement 
+          eventId={event.id} 
+          initialAnnouncement={event.announcement} 
+          updatedAt={event.announcement_updated_at}
+        />
+
+        {/* 2. タイムライン */}
         <div className="space-y-10 w-full pt-4">
           <div className="pl-2 flex items-center gap-2 border-b border-slate-100 pb-4">
              <Clock className="w-6 h-6 text-[#00c2e8]" />

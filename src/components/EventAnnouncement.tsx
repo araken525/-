@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Megaphone, X, Clock } from "lucide-react";
+import { Megaphone, X, Clock, AlertTriangle } from "lucide-react";
 
 type Props = {
   eventId: string;
@@ -34,7 +34,6 @@ export default function EventAnnouncement({ eventId, initialAnnouncement, update
   // 表示チェック（既読管理）
   const checkVisibility = (msg: string | null) => {
     if (!msg) return false;
-    // メッセージの内容が変わっていたら表示する
     const lastRead = localStorage.getItem(`announcement-read-${eventId}`);
     return lastRead !== msg;
   };
@@ -45,14 +44,11 @@ export default function EventAnnouncement({ eventId, initialAnnouncement, update
     }
   }, [initialAnnouncement]);
 
-  // 時刻表示の自動更新（1分ごとに書き換え）
+  // 時刻表示の自動更新
   useEffect(() => {
     if (!timeStr) return;
-    setTimeAgo(getTimeAgo(timeStr)); // 初回実行
-
-    const timer = setInterval(() => {
-      setTimeAgo(getTimeAgo(timeStr));
-    }, 60000);
+    setTimeAgo(getTimeAgo(timeStr));
+    const timer = setInterval(() => { setTimeAgo(getTimeAgo(timeStr)); }, 60000);
     return () => clearInterval(timer);
   }, [timeStr]);
 
@@ -66,20 +62,14 @@ export default function EventAnnouncement({ eventId, initialAnnouncement, update
         (payload) => {
           const newMsg = payload.new.announcement;
           const newTime = payload.new.announcement_updated_at;
-
           if (newMsg !== message) {
             setMessage(newMsg);
             setTimeStr(newTime);
-            if (newMsg) {
-              setIsVisible(true);
-            } else {
-              setIsVisible(false);
-            }
+            setIsVisible(!!newMsg);
           }
         }
       )
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [eventId, message]);
 
@@ -93,37 +83,45 @@ export default function EventAnnouncement({ eventId, initialAnnouncement, update
   if (!message || !isVisible) return null;
 
   return (
-    <div className="px-4 pb-4 animate-in slide-in-from-top duration-300">
-      <div className="relative bg-white rounded-2xl p-4 shadow-lg shadow-cyan-100/50 border border-cyan-100 overflow-hidden flex items-start gap-4">
+    // 上下に少し余白を持たせる
+    <div className="py-2 animate-in slide-in-from-top duration-300">
+      {/* 赤を基調としたリッチなカードデザイン */}
+      <div className="relative bg-white rounded-2xl p-4 shadow-lg shadow-red-100/50 border border-red-100 overflow-hidden flex items-start gap-4">
         
-        {/* 左側の青い装飾バー */}
-        <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-[#00c2e8]"></div>
+        {/* 左側の赤い装飾バー（グラデーションで高級感を） */}
+        <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-gradient-to-b from-red-400 to-red-600"></div>
 
-        {/* アイコン */}
-        <div className="w-10 h-10 rounded-full bg-cyan-50 flex items-center justify-center shrink-0 text-[#00c2e8] mt-0.5">
+        {/* アイコン（赤背景、赤文字、ゆっくり脈打つアニメーション） */}
+        <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center shrink-0 text-red-500 mt-0.5 animate-[pulse_3s_ease-in-out_infinite]">
           <Megaphone className="w-5 h-5" />
         </div>
 
         {/* コンテンツ */}
         <div className="flex-1 min-w-0 py-0.5">
            <div className="flex items-center gap-2 mb-1">
-             <span className="text-xs font-black text-[#00c2e8]">お知らせ</span>
+             {/* タイトル変更と赤色化 */}
+             <span className="text-xs font-black text-red-600 flex items-center gap-1">
+               <AlertTriangle className="w-3 h-3" />
+               アナウンス
+             </span>
+             {/* 時刻表示 */}
              {timeAgo && (
-               <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+               <div className="flex items-center gap-1 text-[10px] font-bold text-red-300/80">
                  <Clock className="w-3 h-3" />
                  {timeAgo}
                </div>
              )}
            </div>
-           <div className="text-sm font-bold text-slate-700 leading-relaxed whitespace-pre-wrap">
+           {/* メッセージ本文 */}
+           <div className="text-sm font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">
              {message}
            </div>
         </div>
 
-        {/* 閉じるボタン */}
+        {/* 閉じるボタン (ホバー時に赤くなる) */}
         <button 
           onClick={handleClose}
-          className="shrink-0 -mr-1 -mt-1 p-2 text-slate-300 hover:text-slate-500 transition-colors"
+          className="shrink-0 -mr-1 -mt-1 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all rounded-full"
         >
           <X className="w-5 h-5" />
         </button>
