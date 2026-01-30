@@ -2,32 +2,33 @@ import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 
+// ★ここがミソ：Tailwindが探している変数名「--font-geist-sans」に
+// Noto Sans JP を割り当てることで、設定変更なしで強制適用させます。
 const notoSansJP = Noto_Sans_JP({
   subsets: ["latin"],
   weight: ["400", "500", "700", "900"],
   preload: true,
   display: "swap",
+  variable: "--font-geist-sans", // ← 変数名をあえて既存のものに合わせる
 });
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1, // スマホで入力時に勝手にズームしないようにする
+  maximumScale: 1,
   userScalable: false,
-  themeColor: "#0f172a", // スマホのステータスバーの色
+  themeColor: "#0f172a",
 };
 
 export const metadata: Metadata = {
   title: "TaiSuke - タイムスケジュール共有",
   description: "舞台・イベントの進行状況をリアルタイムで共有",
 
-  // favicon / app icon
   icons: {
     icon: "/icon.png",
     apple: "/apple-icon.png",
   },
 
-  // SNS（OGP / Twitter）
   openGraph: {
     title: "TaiSuke - タイムスケジュール共有",
     description: "舞台・イベントの進行状況をリアルタイムで共有",
@@ -62,8 +63,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
+      {/* variable をクラス名に追加することで、
+         Tailwindの font-sans がこのフォントを参照するようになります 
+      */}
       <body
-        className={`${notoSansJP.className} antialiased bg-slate-50 text-slate-900`}
+        className={`${notoSansJP.variable} antialiased bg-slate-50 text-slate-900 font-sans`}
       >
         {children}
       </body>
