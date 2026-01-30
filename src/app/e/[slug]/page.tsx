@@ -5,7 +5,9 @@ import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RefreshBadge from "@/components/RefreshBadge";
 import RealtimeListener from "@/components/RealtimeListener";
-import { StaffFilter, MaterialsAccordion } from "@/components/EventPageClient"; // ★ EmergencyAction を削除
+// ▼ さっき作った自動更新コンポーネントを読み込み
+import AutoRefresh from "@/components/AutoRefresh";
+import { StaffFilter, MaterialsAccordion } from "@/components/EventPageClient";
 import Link from "next/link";
 import { MapPin, Calendar, Clock, Filter, X, Sparkles, ArrowRight } from "lucide-react";
 
@@ -174,14 +176,16 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
   return (
     <main className="min-h-screen bg-[#f7f9fb] font-sans selection:bg-[#00c2e8] selection:text-white pb-20">
-      {/* ★修正: ヘッダーに連絡先データを渡す */}
       <EventHeader 
         title={event.title} 
         slug={slug} 
         emergencyContacts={emergencyContacts}
       />
       
+      {/* リアルタイム更新の待受 */}
       <RealtimeListener eventId={event.id} />
+      {/* ★追加: 1分ごとの定期更新 */}
+      <AutoRefresh />
 
       <div className="pt-24 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-6">
         
@@ -192,8 +196,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
            <div className="absolute -bottom-10 -right-4 text-[120px] font-black text-white/40 select-none leading-none z-0 tracking-tighter -rotate-6 mix-blend-overlay">
               {getDayNumber(event.date)}
            </div>
-           
-           {/* ★以前ここにあった <EmergencyAction /> は削除済み */}
 
            <div className="relative z-10 text-left mt-2">
              <div className="inline-flex items-center gap-1.5 bg-white/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-cyan-700 mb-3 shadow-sm">
