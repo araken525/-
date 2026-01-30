@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Megaphone, X, Clock, AlertTriangle } from "lucide-react";
+import { X, Clock, AlertTriangle } from "lucide-react";
 
 type Props = {
   eventId: string;
@@ -84,8 +84,8 @@ export default function EventAnnouncement({ eventId, initialAnnouncement, update
 
   return (
     <div className="py-2 animate-in slide-in-from-top duration-300">
-      {/* ヒーローカード風デザイン */}
-      <div className="relative rounded-[1.5rem] p-5 overflow-hidden border border-red-100/50 flex items-start gap-4 bg-white">
+      {/* タイムラインカード風の赤基調デザイン */}
+      <div className="relative rounded-[1.5rem] overflow-hidden border border-red-100/50 bg-white">
         
         {/* 背景グラデーション */}
         <div className="absolute inset-0 bg-[conic-gradient(at_bottom_right,_var(--tw-gradient-stops))] from-red-50 via-orange-50/50 to-white opacity-80 pointer-events-none"></div>
@@ -96,40 +96,37 @@ export default function EventAnnouncement({ eventId, initialAnnouncement, update
         </div>
 
         {/* コンテンツ（前面配置） */}
-        <div className="relative z-10 flex-1 flex items-start gap-4">
-          {/* アイコン */}
-          <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center shrink-0 text-red-600 mt-0.5">
-            <Megaphone className="w-5 h-5" />
+        <div className="relative z-10 p-5 pb-3">
+          {/* ヘッダーと閉じるボタン */}
+          <div className="flex items-start justify-between mb-3">
+            <span className="text-xs font-black text-red-700 flex items-center gap-1">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              アナウンス
+            </span>
+            <button 
+              onClick={handleClose}
+              className="-mr-2 -mt-2 p-2 text-red-300 hover:text-red-600 hover:bg-red-50/50 transition-all rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          <div className="flex-1 min-w-0 py-0.5">
-             {/* タイトルと時刻 */}
-             <div className="flex items-center gap-2 mb-1.5">
-               <span className="text-xs font-black text-red-700 flex items-center gap-1">
-                 <AlertTriangle className="w-3 h-3" />
-                 アナウンス
-               </span>
-               {timeAgo && (
-                 <div className="flex items-center gap-1 text-[10px] font-bold text-red-400/80">
-                   <Clock className="w-3 h-3" />
-                   {timeAgo}
-                 </div>
-               )}
-             </div>
-             {/* メッセージ本文 */}
-             <div className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
-               {message}
-             </div>
+          {/* メッセージ本文 */}
+          <div className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap mb-4">
+            {message}
           </div>
+          
+          {/* 薄い区切り線 */}
+          <div className="h-px bg-red-100/50 w-full mb-2"></div>
+
+          {/* 下部の時間情報 */}
+          {timeAgo && (
+            <div className="flex items-center justify-end gap-1 text-[10px] font-bold text-red-400/80">
+              <Clock className="w-3 h-3" />
+              最終更新: {timeAgo}
+            </div>
+          )}
         </div>
-
-        {/* 閉じるボタン */}
-        <button 
-          onClick={handleClose}
-          className="relative z-10 shrink-0 -mr-2 -mt-2 p-2 text-red-300 hover:text-red-600 hover:bg-red-50/50 transition-all rounded-full"
-        >
-          <X className="w-5 h-5" />
-        </button>
       </div>
     </div>
   );
