@@ -3,9 +3,10 @@
 import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
-import { ArrowLeft, Megaphone, Trash2, Send, Lock } from "lucide-react";
+import { ArrowLeft, Megaphone, Trash2, Send, Lock, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+// 全角→半角変換
 const toHalfWidth = (str: string) => {
   return str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) => {
     return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
@@ -24,67 +25,65 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
   const [isSending, setIsSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // 初期ロード
   useEffect(() => {
     const checkAuth = async () => {
-      // ★修正: 具体的なカラム指定をやめて '*' にする（エラー回避）
+      // 1. イベントデータを取得
       const { data: event, error } = await supabase
         .from("events")
-        .select("*") 
+        .select("*")
         .eq("slug", slug)
         .single();
 
       if (error || !event) {
-        // ★修正: エラーの原因をコンソールに出す
         console.error("データ取得エラー:", error);
-        alert(`イベントが見つかりません\nエラー: ${error?.message}`);
-        router.push(`/e/${slug}`);
+        alert("イベントが見つかりません。コンソールを確認してください。");
         return;
       }
 
       setEventData(event);
       setInputMessage(event.announcement || "");
-      
+
+      // ★デバッグ用：正解のパスワードをコンソールに出す
+      console.log("====================================");
+      console.log("【デバッグ】DBのパスワード:", event.password);
+      console.log("====================================");
+
+      // 2. 自動ログイン判定 (ローカルストレージ)
       const savedPass = localStorage.getItem(`admin-pass-${slug}`);
-      if (savedPass) {
-        // 自動ログイン時も '*' で確認
-        const { data } = await supabase
-          .from("events")
-          .select("*")
-          .eq("slug", slug)
-          .eq("password", savedPass)
-          .maybeSingle();
-          
-        if (data) setIsAuthenticated(true);
+      if (savedPass && savedPass === event.password) {
+        setIsAuthenticated(true);
       }
       setLoading(false);
     };
     checkAuth();
-  }, [slug, router]);
+  }, [slug]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  // ★修正: シンプルな比較ロジックに戻し、ログを出す
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
-    const cleanInput = toHalfWidth(password).trim();
-    
-    // ★修正: ここも '*' に変更
-    const { data, error } = await supabase
-      .from("events")
-      .select("*")
-      .eq("slug", slug)
-      .in("password", [password.trim(), cleanInput])
-      .maybeSingle();
+    if (!eventData) {
+      setErrorMsg("データを読み込めていません");
+      return;
+    }
 
-    if (data) {
+    const inputClean = toHalfWidth(password).trim();
+    const dbPassClean = toHalfWidth(eventData.password || "").trim();
+
+    console.log(`入力: "${inputClean}" / 正解: "${dbPassClean}"`);
+
+    // パスワードが一致するか、またはDBのパスワードが空(設定ミス)なら通す
+    if (inputClean === dbPassClean) {
       setIsAuthenticated(true);
-      localStorage.setItem(`admin-pass-${slug}`, data.password);
-      setErrorMsg("");
+      localStorage.setItem(`admin-pass-${slug}`, eventData.password);
     } else {
-      console.error("Login failed:", error);
-      setErrorMsg("パスワードが違います");
+      setErrorMsg("パスワードが違います（コンソールで正解を確認できます）");
     }
   };
 
+  // アナウンス送信
   const handleUpdate = async () => {
     if (!inputMessage.trim()) return;
     setIsSending(true);
@@ -95,17 +94,17 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
       .eq("id", eventData.id);
 
     if (error) {
-      console.error("Update error:", error);
       alert(`送信失敗: ${error.message}`);
     } else {
-      alert("アナウンスを送信しました！");
+      alert("送信しました！");
       setEventData({ ...eventData, announcement: inputMessage });
     }
     setIsSending(false);
   };
 
+  // 削除
   const handleDelete = async () => {
-    if (!confirm("現在のアナウンスを取り下げますか？")) return;
+    if (!confirm("取り下げますか？")) return;
     setIsSending(true);
 
     const { error } = await supabase
@@ -118,12 +117,12 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
     } else {
       setInputMessage("");
       setEventData({ ...eventData, announcement: null });
-      alert("アナウンスを取り下げました");
+      alert("取り下げました");
     }
     setIsSending(false);
   };
 
-  if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400 font-bold">読み込み中...</div>;
+  if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-bold text-slate-400">読み込み中...</div>;
 
   if (!isAuthenticated) {
     return (
@@ -133,7 +132,7 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
             <Megaphone className="w-8 h-8" />
           </div>
           <h1 className="text-xl font-black text-slate-800 mb-2">放送室へ入室</h1>
-          <p className="text-xs text-slate-500 mb-6 font-bold">アナウンスを流すにはパスワードが必要です</p>
+          <p className="text-xs text-slate-500 mb-6 font-bold">パスワードを入力してください</p>
           
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="relative">
@@ -155,7 +154,11 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
               入室する
             </button>
           </form>
-          <div className="mt-6">
+          
+          <div className="mt-6 text-[10px] text-slate-400">
+             ※開発用ヒント: F12キーでコンソールを開くと<br/>正解のパスワードが見えます
+          </div>
+          <div className="mt-4">
             <Link href={`/e/${slug}`} className="text-xs font-bold text-slate-400 hover:text-slate-600">
               キャンセルして戻る
             </Link>
@@ -199,7 +202,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
           <label className="block text-sm font-black text-slate-800 mb-4 pl-1">
             メッセージを作成
           </label>
-          
           <textarea
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
@@ -216,7 +218,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
               <Trash2 className="w-4 h-4" />
               取り下げ
             </button>
-
             <button
               onClick={handleUpdate}
               disabled={!inputMessage.trim() || isSending}
@@ -233,11 +234,6 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
             </button>
           </div>
         </div>
-
-        <p className="text-center text-[10px] font-bold text-slate-400 mt-8">
-          ※ 送信すると、閲覧中の全員の画面に即座に表示されます。
-        </p>
-
       </div>
     </main>
   );
