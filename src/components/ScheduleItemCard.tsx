@@ -1,247 +1,195 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import { 
-  Share2, Check, QrCode, Wrench, X, Printer, Phone, 
-  MoreHorizontal, Ticket 
+  Clock, MapPin, ChevronDown, ChevronUp, Link2, 
+  Youtube, Video, FileText, Image as ImageIcon, 
+  User, Hourglass, StickyNote 
 } from "lucide-react";
-import EventQRCode from "./EventQRCode";
 
-type Props = {
-  title: string;
-  slug: string;
-  emergencyContacts?: { name: string, tel: string, role: string }[];
+type ScheduleItemCardProps = {
+  it: any;
+  now: boolean;
+  emoji: string;
+  duration: string | null;
+  startHhmm: string;
+  endHhmm: string | null;
+  materials: any[];
 };
 
-export default function EventHeader({ title, slug, emergencyContacts = [] }: Props) {
-  const [scrolled, setScrolled] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [showQR, setShowQR] = useState(false);
-  const [showContact, setShowContact] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const [currentUrl, setCurrentUrl] = useState("");
+function getMaterialIcon(url: string) {
+  const u = url.toLowerCase();
+  if (u.includes("youtube") || u.includes("youtu.be")) return Youtube;
+  if (u.endsWith(".mp4") || u.endsWith(".mov") || u.includes("vimeo")) return Video;
+  if (u.endsWith(".pdf")) return FileText;
+  if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) return ImageIcon;
+  return Link2;
+}
 
-  const hasContacts = emergencyContacts.length > 0;
+export default function ScheduleItemCard({
+  it,
+  now,
+  emoji,
+  duration,
+  startHhmm,
+  endHhmm,
+  materials,
+}: ScheduleItemCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  useEffect(() => {
-    setCurrentUrl(window.location.href);
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  // メモが長いかどうかの判定 (60文字以上 or 3行以上)
+  const hasLongNote = it.note && (it.note.length > 60 || it.note.split("\n").length > 2);
 
-  const handleShare = async () => {
-    const url = currentUrl || `${window.location.origin}/e/${slug}`;
-    const shareData = {
-      title: title,
-      text: `${title}のタイムスケジュール`,
-      url: url,
-    };
+  const linkedMaterials = materials.filter((m) => {
+    if (!it.material_ids) return false;
+    const ids = it.material_ids.split(",");
+    return ids.includes(String(m.id));
+  });
 
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch (err) {
-        console.log("Share canceled");
-      }
-    } else {
-      navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-    setShowMenu(false);
-  };
+  const targets = (!it.target || it.target === "all" || it.target === "全員")
+    ? ["全員"]
+    : it.target.split(",").map((t: string) => t.trim());
 
-  // ボタン共通スタイル
-  const btnBase = "w-9 h-9 flex items-center justify-center rounded-full shadow-md active:scale-95 transition-all relative z-10 border border-transparent";
-  const btnStyle = scrolled 
-    ? "bg-white text-slate-600 border-slate-100 hover:bg-slate-50" 
-    : "bg-white/80 backdrop-blur-md text-slate-600 hover:text-[#00c2e8] hover:bg-white";
-  
-  // 緊急連絡先ボタン (赤系・電話アイコン)
-  const emergencyBtnStyle = scrolled
-    ? "bg-red-50 text-red-500 border-red-100 hover:bg-red-100"
-    : "bg-red-500/80 backdrop-blur-md text-white hover:bg-red-500";
+  const assignees = it.assignee
+    ? it.assignee.split(",").map((a: string) => a.trim())
+    : [];
 
   return (
-    <>
-      <header 
-        className={`fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4 transition-all duration-500 gap-4
-          ${scrolled ? "bg-white/80 backdrop-blur-xl border-b border-slate-200/50" : "bg-transparent pointer-events-none"}
-        `}
-      >
-        <h1 
-          className={`flex-1 text-sm font-black truncate transition-all duration-500 pointer-events-auto
-            ${scrolled ? "opacity-100 translate-y-0 text-slate-800" : "opacity-0 -translate-y-2"}
-          `}
-        >
-          {title}
-        </h1>
-        
-        <div className="flex items-center gap-2 ml-auto pointer-events-auto pb-1 pt-1 relative">
+    <div
+      className={`
+        relative bg-white rounded-[1.5rem] p-6 flex gap-4 items-start overflow-hidden h-full flex-col
+        ${now 
+          ? "shadow-lg border-2 border-[#00c2e8] z-10" 
+          : "shadow-sm border border-slate-50"}
+      `}
+    >
+      {/* NOWバッジ */}
+      {now && (
+        <div className="absolute -top-3 -left-2 bg-[#00c2e8] text-white px-3 py-1 rounded-full text-[10px] font-black shadow-md border-2 border-white z-20">
+          NOW
+        </div>
+      )}
+
+      {/* 背景の透かし文字 (開始時間) */}
+      <div className="absolute -bottom-4 -right-2 text-[5rem] font-black text-slate-50/80 select-none watermark-text leading-none z-0 pointer-events-none">
+        {startHhmm}
+      </div>
+
+      <div className="relative z-10 flex items-start gap-4 w-full">
+        {/* 左側: 絵文字 */}
+        <div className="shrink-0 text-[3rem] leading-none drop-shadow-sm filter grayscale-[0.1]">
+          {emoji}
+        </div>
+
+        {/* 右側: 情報エリア */}
+        <div className="flex-1 min-w-0 flex flex-col h-full space-y-2">
           
-          {/* 1. 緊急連絡先 (電話アイコンに変更) */}
-          {hasContacts && (
-            <button 
-              onClick={() => setShowContact(true)} 
-              className={`${btnBase} ${emergencyBtnStyle}`} 
-              title="緊急連絡先"
-            >
-              <Phone className="w-4 h-4" />
-            </button>
+          {/* 1. タイトル */}
+          <h3 className={`text-xl font-black leading-tight tracking-tight ${now ? "text-[#00c2e8]" : "text-slate-900"}`}>
+            {it.title}
+          </h3>
+
+          {/* 2. 終了時間 (グレー) */}
+          {endHhmm && (
+            <div className="flex items-center text-xs font-bold text-slate-500">
+              <Clock className="w-3.5 h-3.5 mr-1.5 text-slate-400" />
+              <span>~{endHhmm} まで</span>
+            </div>
           )}
 
-          {/* 2. その他メニュー (共有・QR・印刷・編集を収納) */}
-          <div className="relative">
-             <button 
-               onClick={() => setShowMenu(!showMenu)} 
-               className={`${btnBase} ${btnStyle} ${showMenu ? "ring-2 ring-cyan-100 bg-white" : ""}`} 
-               title="メニュー"
-             >
-               <MoreHorizontal className="w-4 h-4" />
-             </button>
-
-             {/* ドロップダウンメニュー */}
-             {showMenu && (
-               <>
-                 <div className="fixed inset-0 z-0" onClick={() => setShowMenu(false)}></div>
-                 <div className="absolute right-0 top-12 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 flex flex-col gap-1 animate-in fade-in zoom-in-95 origin-top-right z-20">
-                    
-                    {/* 一般機能 */}
-                    <button onClick={handleShare} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-slate-50 text-left transition-colors group">
-                      <div className="w-8 h-8 rounded-full bg-cyan-50 text-[#00c2e8] flex items-center justify-center group-hover:bg-[#00c2e8] group-hover:text-white transition-colors">
-                        {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-                      </div>
-                      <span className="text-xs font-bold text-slate-700">共有する</span>
-                    </button>
-
-                    <button onClick={() => { setShowQR(true); setShowMenu(false); }} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-slate-50 text-left transition-colors group">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center group-hover:bg-slate-800 group-hover:text-white transition-colors">
-                        <QrCode className="w-4 h-4" />
-                      </div>
-                      <span className="text-xs font-bold text-slate-700">QRコードを表示</span>
-                    </button>
-
-                    <Link href={`/e/${slug}/print`} target="_blank" onClick={() => setShowMenu(false)} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-slate-50 text-left transition-colors group">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center group-hover:bg-slate-800 group-hover:text-white transition-colors">
-                        <Printer className="w-4 h-4" />
-                      </div>
-                      <span className="text-xs font-bold text-slate-700">印刷プレビュー</span>
-                    </Link>
-
-                    {/* 区切り線 */}
-                    <div className="h-px bg-slate-100 my-1 mx-2"></div>
-
-                    {/* 管理者向け機能 (編集ボタンをここに移動) */}
-                    <Link href={`/e/${slug}/edit`} onClick={() => setShowMenu(false)} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-slate-50 text-left transition-colors group">
-                      <div className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
-                        <Wrench className="w-4 h-4" />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-slate-600">編集モード</span>
-                        <span className="text-[10px] text-slate-400">管理者用</span>
-                      </div>
-                    </Link>
-
-                 </div>
-               </>
-             )}
+          {/* 3. タグ (色付きバッジ) */}
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {targets.map((tag: string, i: number) => {
+              const isAll = tag === "全員";
+              const colorClass = isAll ? "bg-slate-100 text-slate-500" : "bg-cyan-50 text-[#00c2e8]";
+              return (
+                <span key={`target-${i}`} className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-black ${colorClass}`}>
+                  {tag}
+                </span>
+              );
+            })}
           </div>
-        </div>
-      </header>
 
-      {/* --- 緊急連絡先モーダル --- */}
-      {showContact && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md transition-opacity" onClick={() => setShowContact(false)} />
-          <div className="relative w-full max-w-sm bg-white rounded-[2.5rem] p-6 shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col items-center border border-slate-100">
-             <button onClick={() => setShowContact(false)} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors">
-               <X className="w-5 h-5" />
-             </button>
-
-             <div className="text-center mb-6 mt-2">
-                <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
-                  <Phone className="w-8 h-8" />
+          {/* 4. メモ (グレー・アイコン・開閉あり) */}
+          {it.note && (
+            <div className="pt-1">
+              <div className="flex items-start gap-1.5 text-sm text-slate-500 font-medium">
+                <StickyNote className="w-3.5 h-3.5 shrink-0 mt-1 text-slate-400" />
+                <div className={`leading-relaxed whitespace-pre-wrap break-words ${!isExpanded ? "line-clamp-2" : ""}`}>
+                  {it.note}
                 </div>
-                <h3 className="text-xl font-black text-slate-800">緊急連絡先</h3>
-                <p className="text-xs text-slate-400 mt-1">タップして発信できます</p>
-             </div>
-             
-             <div className="space-y-3 w-full">
-               {emergencyContacts.map((c, i) => (
-                 <a key={i} href={`tel:${c.tel}`} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-red-50 hover:border-red-100 transition-colors group">
-                    <div>
-                       <div className="text-xs font-bold text-slate-400 mb-0.5">{c.role}</div>
-                       <div className="text-lg font-black text-slate-800 group-hover:text-red-600">{c.name}</div>
-                    </div>
-                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-slate-300 group-hover:text-red-500">
-                       <Phone className="w-5 h-5" />
-                    </div>
-                 </a>
-               ))}
-             </div>
+              </div>
+              {hasLongNote && (
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  // ★修正: 「もっと見る」をグレーに変更
+                  className="ml-5 mt-1 flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-slate-600"
+                >
+                  {isExpanded ? (
+                    <><ChevronUp className="w-3 h-3" /> 閉じる</>
+                  ) : (
+                    <><ChevronDown className="w-3 h-3" /> もっと見る</>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* 5. 添付ファイル (★修正: 横並び・折り返し・下線なし) */}
+          {linkedMaterials.length > 0 && (
+            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1 pl-5">
+              {linkedMaterials.map((m) => {
+                const Icon = getMaterialIcon(m.url);
+                return (
+                  <a
+                    key={m.id}
+                    href={m.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-1.5 w-fit"
+                  >
+                    <Icon className="w-3.5 h-3.5 shrink-0 text-[#00c2e8]" />
+                    {/* border-bを削除し、hover時のopacityのみに */}
+                    <span className="text-xs font-bold text-[#00c2e8] group-hover:opacity-70 transition-opacity truncate max-w-[200px]">
+                      {m.title}
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+          )}
+
+          {/* 6. 担当スタッフ (グレー・アイコン・カンマ区切り) */}
+          {assignees.length > 0 && (
+            <div className="flex items-start gap-1.5 pt-1 text-xs text-slate-500 font-medium">
+              <User className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
+              <span className="leading-relaxed">
+                {assignees.join(", ")}
+              </span>
+            </div>
+          )}
+
+          {/* 7. フッター情報 (場所・時間) */}
+          <div className="flex flex-wrap items-center gap-4 pt-3 mt-2 border-t border-slate-50 text-xs font-bold text-slate-400">
+            {/* 場所 */}
+            {it.location && (
+              <div className="flex items-center gap-1 text-slate-500 max-w-[60%] truncate">
+                <MapPin className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                <span className="truncate">{it.location}</span>
+              </div>
+            )}
+
+            {/* 所要時間 */}
+            {duration && (
+              <div className="flex items-center gap-1 ml-auto">
+                <Hourglass className="w-3.5 h-3.5 text-slate-300" />
+                {duration}
+              </div>
+            )}
           </div>
+
         </div>
-      )}
-
-      {/* --- QRコードモーダル (Access Pass風デザイン) --- */}
-      {showQR && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowQR(false)} />
-          
-          <div className="relative w-full max-w-xs bg-white rounded-[2rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-8 duration-500">
-            {/* 1. Header Gradient */}
-            <div className="bg-gradient-to-br from-[#00c2e8] to-blue-600 p-6 text-center text-white relative">
-               <div className="absolute top-4 right-4">
-                 <button onClick={() => setShowQR(false)} className="p-1.5 bg-white/20 hover:bg-white/30 rounded-full text-white transition-colors">
-                   <X className="w-4 h-4" />
-                 </button>
-               </div>
-               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 backdrop-blur-sm border border-white/30">
-                  <Ticket className="w-6 h-6 text-white" />
-               </div>
-               <h3 className="text-lg font-black tracking-tight leading-none">ACCESS PASS</h3>
-               <p className="text-[10px] font-medium opacity-80 mt-1 uppercase tracking-widest">Share Schedule</p>
-            </div>
-
-            {/* 2. Content */}
-            <div className="p-8 flex flex-col items-center bg-white relative">
-               {/* Ticket cutout effect (circles) */}
-               <div className="absolute -top-3 left-0 w-6 h-6 bg-slate-900 rounded-full translate-x-[-50%]"></div>
-               <div className="absolute -top-3 right-0 w-6 h-6 bg-slate-900 rounded-full translate-x-[50%]"></div>
-               
-               {/* QR Code Container */}
-               <div className="p-1 rounded-xl border-2 border-slate-100 mb-6">
-                 <div className="bg-white rounded-lg overflow-hidden">
-                   {currentUrl && <EventQRCode url={currentUrl} />}
-                 </div>
-               </div>
-
-               {/* Info */}
-               <div className="text-center w-full">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Event</div>
-                  <h2 className="text-lg font-black text-slate-800 leading-tight line-clamp-2 px-2">
-                    {title}
-                  </h2>
-               </div>
-
-               {/* Helper Text */}
-               <div className="mt-6 flex items-center gap-2 text-[10px] font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full">
-                  <QrCode className="w-3 h-3" />
-                  <span>Scan to open schedule</span>
-               </div>
-            </div>
-            
-            {/* 3. Bottom Decorative Bar */}
-            <div className="h-2 bg-slate-100 flex items-center justify-center gap-1 overflow-hidden">
-               {[...Array(20)].map((_, i) => (
-                  <div key={i} className="w-1 h-1 rounded-full bg-slate-200 shrink-0"></div>
-               ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+      </div>
+    </div>
   );
 }
