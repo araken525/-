@@ -89,7 +89,7 @@ export default function FloatingFilter({ slug, tags, assignees, selectedTags }: 
                         key={tag}
                         href={getNextUrl(tag)}
                         scroll={false}
-                        onClick={() => { if(window.innerWidth < 640) setIsOpen(false); }} // スマホなら閉じる(任意)
+                        // ★修正: スマホで勝手に閉じる処理(onClick)を削除しました
                         className={`
                           px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border
                           ${active 
@@ -120,6 +120,7 @@ export default function FloatingFilter({ slug, tags, assignees, selectedTags }: 
                           key={staff}
                           href={getNextUrl(staff)}
                           scroll={false}
+                          // ★修正: ここも勝手に閉じる処理を削除
                           className={`
                             px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border
                             ${active 
@@ -143,7 +144,7 @@ export default function FloatingFilter({ slug, tags, assignees, selectedTags }: 
                 <Link
                   href={`/e/${slug}`}
                   scroll={false}
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => setIsOpen(false)} // クリアの時は閉じてOKですよね？
                   className="w-full flex items-center justify-center gap-2 py-3.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all shadow-sm"
                 >
                   <RotateCcw className="w-4 h-4" />
