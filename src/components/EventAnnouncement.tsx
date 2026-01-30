@@ -83,45 +83,50 @@ export default function EventAnnouncement({ eventId, initialAnnouncement, update
   if (!message || !isVisible) return null;
 
   return (
-    // 上下に少し余白を持たせる
     <div className="py-2 animate-in slide-in-from-top duration-300">
-      {/* 赤を基調としたリッチなカードデザイン */}
-      <div className="relative bg-white rounded-2xl p-4 shadow-lg shadow-red-100/50 border border-red-100 overflow-hidden flex items-start gap-4">
+      {/* ヒーローカード風デザイン */}
+      <div className="relative rounded-[1.5rem] p-5 overflow-hidden border border-red-100/50 flex items-start gap-4 bg-white">
         
-        {/* 左側の赤い装飾バー（グラデーションで高級感を） */}
-        <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-gradient-to-b from-red-400 to-red-600"></div>
-
-        {/* アイコン（赤背景、赤文字、ゆっくり脈打つアニメーション） */}
-        <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center shrink-0 text-red-500 mt-0.5 animate-[pulse_3s_ease-in-out_infinite]">
-          <Megaphone className="w-5 h-5" />
+        {/* 背景グラデーション */}
+        <div className="absolute inset-0 bg-[conic-gradient(at_bottom_right,_var(--tw-gradient-stops))] from-red-50 via-orange-50/50 to-white opacity-80 pointer-events-none"></div>
+        
+        {/* 透かし文字 */}
+        <div className="absolute -bottom-6 -right-2 text-[5rem] font-black text-red-500/5 select-none leading-none z-0 tracking-tighter pointer-events-none">
+          ANNOUNCEMENT
         </div>
 
-        {/* コンテンツ */}
-        <div className="flex-1 min-w-0 py-0.5">
-           <div className="flex items-center gap-2 mb-1">
-             {/* タイトル変更と赤色化 */}
-             <span className="text-xs font-black text-red-600 flex items-center gap-1">
-               <AlertTriangle className="w-3 h-3" />
-               アナウンス
-             </span>
-             {/* 時刻表示 */}
-             {timeAgo && (
-               <div className="flex items-center gap-1 text-[10px] font-bold text-red-300/80">
-                 <Clock className="w-3 h-3" />
-                 {timeAgo}
-               </div>
-             )}
-           </div>
-           {/* メッセージ本文 */}
-           <div className="text-sm font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">
-             {message}
-           </div>
+        {/* コンテンツ（前面配置） */}
+        <div className="relative z-10 flex-1 flex items-start gap-4">
+          {/* アイコン */}
+          <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center shrink-0 text-red-600 mt-0.5">
+            <Megaphone className="w-5 h-5" />
+          </div>
+
+          <div className="flex-1 min-w-0 py-0.5">
+             {/* タイトルと時刻 */}
+             <div className="flex items-center gap-2 mb-1.5">
+               <span className="text-xs font-black text-red-700 flex items-center gap-1">
+                 <AlertTriangle className="w-3 h-3" />
+                 アナウンス
+               </span>
+               {timeAgo && (
+                 <div className="flex items-center gap-1 text-[10px] font-bold text-red-400/80">
+                   <Clock className="w-3 h-3" />
+                   {timeAgo}
+                 </div>
+               )}
+             </div>
+             {/* メッセージ本文 */}
+             <div className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+               {message}
+             </div>
+          </div>
         </div>
 
-        {/* 閉じるボタン (ホバー時に赤くなる) */}
+        {/* 閉じるボタン */}
         <button 
           onClick={handleClose}
-          className="shrink-0 -mr-1 -mt-1 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all rounded-full"
+          className="relative z-10 shrink-0 -mr-2 -mt-2 p-2 text-red-300 hover:text-red-600 hover:bg-red-50/50 transition-all rounded-full"
         >
           <X className="w-5 h-5" />
         </button>
