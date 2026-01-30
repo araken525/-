@@ -37,17 +37,15 @@ export default function FloatingActionMenu({ title, slug }: Props) {
 
   return (
     <>
-      {/* ★修正: bottom-42 は存在しないので bottom-44 に変更 
-        (一番下:6, 二番目:24, 三番目:44 で等間隔になります)
-      */}
+      {/* ★修正: fixed配置を削除 */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-44 right-6 z-40 w-14 h-14 bg-white text-slate-600 rounded-full shadow-xl shadow-slate-200/50 flex items-center justify-center transition-all active:scale-90 border border-slate-50"
+        className="w-14 h-14 bg-white text-slate-600 rounded-full shadow-xl shadow-slate-200/50 flex items-center justify-center transition-all active:scale-90 border border-slate-50"
       >
         <MoreHorizontal className="w-6 h-6" />
       </button>
 
-      {/* --- メニューモーダル --- */}
+      {/* メニューモーダル */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none">
           <div 
@@ -56,8 +54,6 @@ export default function FloatingActionMenu({ title, slug }: Props) {
           ></div>
 
           <div className="relative w-full max-w-md bg-white rounded-t-[2rem] shadow-2xl pointer-events-auto animate-in slide-in-from-bottom-10 duration-300 flex flex-col pb-8">
-            
-            {/* ヘッダー */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <h3 className="text-lg font-black text-slate-800">その他メニュー</h3>
               <button onClick={() => setIsOpen(false)} className="p-2 bg-slate-50 text-slate-400 rounded-full hover:bg-slate-100 transition-colors">
@@ -98,7 +94,7 @@ export default function FloatingActionMenu({ title, slug }: Props) {
         </div>
       )}
 
-      {/* --- QRコードモーダル --- */}
+      {/* QRコードモーダル */}
       {showQR && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-200">
           <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" onClick={() => setShowQR(false)} />

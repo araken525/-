@@ -14,7 +14,6 @@ type Props = {
 export default function FloatingFilter({ slug, tags, assignees, selectedTags }: Props) {
   const [isOpen, setIsOpen] = useState(false);
 
-  // タグのトグルロジック (URL生成用)
   const getNextUrl = (tag: string) => {
     const newTags = selectedTags.includes(tag)
       ? selectedTags.filter((t) => t !== tag)
@@ -28,11 +27,11 @@ export default function FloatingFilter({ slug, tags, assignees, selectedTags }: 
 
   return (
     <>
-      {/* フローティングボタン (右下) */}
+      {/* ★修正: fixed配置を削除し、w-14 h-14 だけ残す */}
       <button
         onClick={() => setIsOpen(true)}
         className={`
-          fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all active:scale-90
+          w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all active:scale-90 relative
           ${isActive 
             ? "bg-[#00c2e8] text-white shadow-cyan-200/50" 
             : "bg-white text-slate-500 shadow-slate-200/50"}
@@ -46,36 +45,26 @@ export default function FloatingFilter({ slug, tags, assignees, selectedTags }: 
         )}
       </button>
 
-      {/* フィルターメニュー (モーダル) */}
+      {/* メニュー (ポータル的に画面全体に広がるのでfixedでOK) */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none">
-          {/* 背景 (クリックで閉じる) */}
           <div 
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity pointer-events-auto"
             onClick={() => setIsOpen(false)}
           ></div>
 
-          {/* コンテンツ */}
           <div className="relative w-full max-w-md bg-white rounded-t-[2rem] shadow-2xl pointer-events-auto animate-in slide-in-from-bottom-10 duration-300 flex flex-col max-h-[85vh]">
-            
-            {/* ヘッダー */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Filter className="w-5 h-5 text-[#00c2e8]" />
                 <h3 className="text-lg font-black text-slate-800">表示を絞り込む</h3>
               </div>
-              <button 
-                onClick={() => setIsOpen(false)}
-                className="p-2 bg-slate-50 text-slate-400 rounded-full hover:bg-slate-100 transition-colors"
-              >
+              <button onClick={() => setIsOpen(false)} className="p-2 bg-slate-50 text-slate-400 rounded-full hover:bg-slate-100 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* スクロールエリア */}
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
-              
-              {/* 1. パート・グループ */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
                   <Tag className="w-4 h-4" />
@@ -89,12 +78,9 @@ export default function FloatingFilter({ slug, tags, assignees, selectedTags }: 
                         key={tag}
                         href={getNextUrl(tag)}
                         scroll={false}
-                        // ★修正: スマホで勝手に閉じる処理(onClick)を削除しました
                         className={`
                           px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border
-                          ${active 
-                            ? "bg-cyan-50 border-cyan-200 text-[#00c2e8]" 
-                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}
+                          ${active ? "bg-cyan-50 border-cyan-200 text-[#00c2e8]" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}
                         `}
                       >
                         {active && <Check className="w-4 h-4" />}
@@ -105,7 +91,6 @@ export default function FloatingFilter({ slug, tags, assignees, selectedTags }: 
                 </div>
               </div>
 
-              {/* 2. 担当スタッフ (存在する場合のみ) */}
               {assignees.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
@@ -120,12 +105,9 @@ export default function FloatingFilter({ slug, tags, assignees, selectedTags }: 
                           key={staff}
                           href={getNextUrl(staff)}
                           scroll={false}
-                          // ★修正: ここも勝手に閉じる処理を削除
                           className={`
                             px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border
-                            ${active 
-                              ? "bg-indigo-50 border-indigo-200 text-indigo-500" 
-                              : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}
+                            ${active ? "bg-indigo-50 border-indigo-200 text-indigo-500" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}
                           `}
                         >
                           {active && <Check className="w-4 h-4" />}
@@ -138,17 +120,16 @@ export default function FloatingFilter({ slug, tags, assignees, selectedTags }: 
               )}
             </div>
 
-            {/* フッター (クリアボタン) */}
             {isActive && (
               <div className="p-4 border-t border-slate-100 bg-slate-50/50 rounded-b-[2rem]">
                 <Link
                   href={`/e/${slug}`}
                   scroll={false}
-                  onClick={() => setIsOpen(false)} // クリアの時は閉じてOKですよね？
+                  onClick={() => setIsOpen(false)}
                   className="w-full flex items-center justify-center gap-2 py-3.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all shadow-sm"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  絞り込みを解除してすべて表示
+                  絞り込みを解除
                 </Link>
               </div>
             )}

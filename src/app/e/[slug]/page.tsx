@@ -6,7 +6,6 @@ import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RealtimeListener from "@/components/RealtimeListener";
 import AutoRefresh from "@/components/AutoRefresh";
 
-// 3つのフローティングボタンをインポート
 import FloatingFilter from "@/components/FloatingFilter";
 import FloatingMaterials from "@/components/FloatingMaterials";
 import FloatingActionMenu from "@/components/FloatingActionMenu";
@@ -14,7 +13,7 @@ import FloatingActionMenu from "@/components/FloatingActionMenu";
 import Link from "next/link";
 import { MapPin, Calendar, Clock, Sparkles, ArrowRight } from "lucide-react";
 
-/* === ヘルパー関数 === */
+/* === ヘルパー関数 (省略なし) === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
 
 function getDayNumber(dateStr: string) {
@@ -159,15 +158,30 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <RealtimeListener eventId={event.id} />
       <AutoRefresh />
 
-      {/* フローティングボタン 3兄弟 */}
-      <FloatingFilter 
-        slug={slug}
-        tags={dynamicTabs}
-        assignees={dynamicAssignees}
-        selectedTags={selectedTags}
-      />
-      <FloatingMaterials materials={materials ?? []} />
-      <FloatingActionMenu title={event.title} slug={slug} />
+      {/* ★修正: 右下のボタンコンテナ (Flexboxで積み上げ) */}
+      <div className="fixed bottom-6 right-6 z-40 flex flex-col-reverse gap-4 items-end pointer-events-none">
+        
+        {/* 1. フィルター (一番下) */}
+        <div className="pointer-events-auto">
+          <FloatingFilter 
+            slug={slug}
+            tags={dynamicTabs}
+            assignees={dynamicAssignees}
+            selectedTags={selectedTags}
+          />
+        </div>
+
+        {/* 2. 資料 (真ん中: データがなければ消えて詰まる) */}
+        <div className="pointer-events-auto">
+          <FloatingMaterials materials={materials ?? []} />
+        </div>
+
+        {/* 3. メニュー (一番上) */}
+        <div className="pointer-events-auto">
+          <FloatingActionMenu title={event.title} slug={slug} />
+        </div>
+
+      </div>
 
       <div className="pt-24 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-6">
         
