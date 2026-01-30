@@ -18,7 +18,7 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
   const [isSending, setIsSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // 初期ロード：イベント情報取得とパスワードチェック
+  // 初期ロード
   useEffect(() => {
     const checkAuth = async () => {
       const { data: event, error } = await supabase
@@ -34,31 +34,54 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
       }
 
       setEventData(event);
-      setInputMessage(event.announcement || ""); // 現在のアナウンスをセット
+      setInputMessage(event.announcement || "");
 
-      // 簡易的な認証チェック (ローカルストレージにパスワードがあれば自動入力)
+      // 保存済みパスワードがあれば自動ログインを試みる
       const savedPass = localStorage.getItem(`admin-pass-${slug}`);
-      if (savedPass && savedPass === event.password) {
-        setIsAuthenticated(true);
+      if (savedPass) {
+        // パスワードが合っているか確認
+        const { data } = await supabase
+          .from("events")
+          .select("id")
+          .eq("slug", slug)
+          .eq("password", savedPass)
+          .maybeSingle();
+          
+        if (data) {
+          setIsAuthenticated(true);
+        }
       }
       setLoading(false);
     };
     checkAuth();
   }, [slug, router]);
 
-  // ログイン処理
-  const handleLogin = (e: React.FormEvent) => {
+  // ★修正: ログイン処理を強化 (DBに直接問い合わせる)
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (eventData && password === eventData.password) {
+    setErrorMsg("");
+
+    // 空白を削除してチェック
+    const cleanPassword = password.trim();
+
+    const { data, error } = await supabase
+      .from("events")
+      .select("id")
+      .eq("slug", slug)
+      .eq("password", cleanPassword) // パスワード一致チェック
+      .maybeSingle();
+
+    if (data) {
       setIsAuthenticated(true);
-      localStorage.setItem(`admin-pass-${slug}`, password);
+      localStorage.setItem(`admin-pass-${slug}`, cleanPassword);
       setErrorMsg("");
     } else {
+      console.error("Login failed", error);
       setErrorMsg("パスワードが違います");
     }
   };
 
-  // アナウンス送信 (更新)
+  // アナウンス送信
   const handleUpdate = async () => {
     if (!inputMessage.trim()) return;
     setIsSending(true);
@@ -71,21 +94,20 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
     if (error) {
       alert("送信に失敗しました");
     } else {
-      // 成功したら一覧へ戻る？ それとも続けて投稿？ → 続けて投稿できるようにする
       alert("アナウンスを送信しました！");
       setEventData({ ...eventData, announcement: inputMessage });
     }
     setIsSending(false);
   };
 
-  // アナウンス削除 (取り下げ)
+  // アナウンス削除
   const handleDelete = async () => {
     if (!confirm("現在のアナウンスを取り下げますか？")) return;
     setIsSending(true);
 
     const { error } = await supabase
       .from("events")
-      .update({ announcement: null }) // nullで消去
+      .update({ announcement: null })
       .eq("id", eventData.id);
 
     if (error) {
@@ -98,7 +120,7 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
     setIsSending(false);
   };
 
-  if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">読み込み中...</div>;
+  if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400 font-bold">読み込み中...</div>;
 
   // --- 1. 認証画面 ---
   if (!isAuthenticated) {
@@ -189,7 +211,7 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
           ></textarea>
 
           <div className="flex items-center gap-3">
-            {/* 削除ボタン (アナウンスがある時だけ押せる) */}
+            {/* 削除ボタン */}
             <button
               onClick={handleDelete}
               disabled={!eventData.announcement || isSending}
