@@ -3,8 +3,23 @@
 import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
-import { ArrowLeft, Megaphone, Trash2, Send } from "lucide-react";
+import { ArrowLeft, Megaphone, Trash2, Send, AlertTriangle, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
+
+// 「◯分前」を計算する関数（プレビュー用）
+function getTimeAgo(dateStr?: string | null) {
+  if (!dateStr) return "";
+  const now = new Date();
+  const past = new Date(dateStr);
+  const diffMs = now.getTime() - past.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+
+  if (diffMins < 1) return "たった今";
+  if (diffMins < 60) return `${diffMins}分前`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}時間前`;
+  return `${Math.floor(diffHours / 24)}日前`;
+}
 
 export default function BroadcastPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -14,6 +29,7 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
   const [inputMessage, setInputMessage] = useState("");
   const [eventData, setEventData] = useState<any>(null);
   const [isSending, setIsSending] = useState(false);
+  const [timeAgo, setTimeAgo] = useState("");
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -27,6 +43,7 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
         alert("イベントが見つかりません");
         return;
       }
+
       setEventData(event);
       setInputMessage(event.announcement || "");
       setLoading(false);
@@ -34,18 +51,30 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
     fetchEvent();
   }, [slug]);
 
+  // プレビュー用の時刻更新
+  useEffect(() => {
+    if (!eventData?.announcement_updated_at) {
+      setTimeAgo("");
+      return;
+    }
+    setTimeAgo(getTimeAgo(eventData.announcement_updated_at));
+    const timer = setInterval(() => {
+      setTimeAgo(getTimeAgo(eventData.announcement_updated_at));
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [eventData?.announcement_updated_at]);
+
   const handleUpdate = async () => {
     if (!inputMessage.trim()) return;
     setIsSending(true);
 
-    // ★修正: メッセージと一緒に「現在時刻」も保存する
     const now = new Date().toISOString();
 
     const { error } = await supabase
       .from("events")
       .update({ 
         announcement: inputMessage,
-        announcement_updated_at: now // ここを追加
+        announcement_updated_at: now 
       })
       .eq("id", eventData.id);
 
@@ -70,7 +99,7 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
       .from("events")
       .update({ 
         announcement: null,
-        announcement_updated_at: null // 時刻もクリア
+        announcement_updated_at: null
       })
       .eq("id", eventData.id);
 
@@ -78,7 +107,7 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
       alert("削除失敗");
     } else {
       setInputMessage("");
-      setEventData({ ...eventData, announcement: null });
+      setEventData({ ...eventData, announcement: null, announcement_updated_at: null });
       alert("取り下げました");
     }
     setIsSending(false);
@@ -102,14 +131,31 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
 
       <div className="pt-24 px-4 max-w-lg mx-auto pb-12">
         <div className="mb-8">
-          <div className="text-xs font-bold text-slate-400 mb-2 pl-2">現在の状況</div>
+          <div className="text-xs font-bold text-slate-400 mb-2 pl-2">現在の状況 (プレビュー)</div>
           {eventData.announcement ? (
-            // 管理画面のプレビューも新しいデザイン（簡易版）に合わせる
-            <div className="bg-white border border-cyan-100 shadow-sm p-4 rounded-2xl flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-cyan-50 flex items-center justify-center shrink-0 text-[#00c2e8]">
-                <Megaphone className="w-4 h-4" />
+            // ★修正: 表示側と同じデザインのプレビューカード
+            <div className="relative rounded-[1.5rem] overflow-hidden border border-red-100/50 bg-white p-5 pb-3">
+              <div className="absolute inset-0 bg-[conic-gradient(at_bottom_right,_var(--tw-gradient-stops))] from-red-50 via-orange-50/50 to-white opacity-80 pointer-events-none"></div>
+              <div className="absolute -bottom-6 -right-2 text-[5rem] font-black text-red-500/5 select-none leading-none z-0 tracking-tighter pointer-events-none">ANNOUNCEMENT</div>
+              
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-3">
+                  <span className="text-xs font-black text-red-700 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    アナウンス
+                  </span>
+                </div>
+                <div className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap mb-4">
+                  {eventData.announcement}
+                </div>
+                <div className="h-px bg-red-100/50 w-full mb-2"></div>
+                {timeAgo && (
+                  <div className="flex items-center justify-end gap-1 text-[10px] font-bold text-red-400/80">
+                    <Clock className="w-3 h-3" />
+                    最終更新: {timeAgo}
+                  </div>
+                )}
               </div>
-              <div className="text-sm font-bold text-slate-700 leading-relaxed">{eventData.announcement}</div>
             </div>
           ) : (
             <div className="bg-white border-2 border-dashed border-slate-200 p-6 rounded-2xl text-center">
@@ -141,7 +187,7 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
             <button
               onClick={handleUpdate}
               disabled={!inputMessage.trim() || isSending}
-              className="flex-[2] py-3.5 bg-[#00c2e8] text-white rounded-xl font-black shadow-lg shadow-cyan-200 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
+              className="flex-[2] py-3.5 bg-amber-500 text-white rounded-xl font-black shadow-lg shadow-amber-200 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
             >
               {isSending ? "送信中..." : <><Send className="w-4 h-4" /> アナウンスする</>}
             </button>
