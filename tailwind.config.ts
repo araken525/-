@@ -14,6 +14,10 @@ const config: Config = {
       },
     },
   },
+  // ▼ これを追加するだけで、スマホでのホバー残り問題が解決します
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
   plugins: [],
 };
 export default config;
