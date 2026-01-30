@@ -326,27 +326,27 @@ export default function EditItemSheet({
                 </div>
 
                 <div className="flex items-center gap-2">
-                   {/* 開始 (labelに変更し、文字にpointer-events-none付与) */}
+                   {/* 開始 (font-monoを削除) */}
                    <label className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all cursor-pointer">
                       <span className="text-[10px] font-bold text-slate-400 block text-center mb-1 pointer-events-none">開始</span>
                       <input 
                         type="time" 
                         value={formData.startTime} 
                         onChange={(e)=>setFormData({...formData, startTime:e.target.value})} 
-                        className="w-full bg-transparent text-2xl font-black text-center outline-none text-slate-800 appearance-none font-mono tracking-tight relative z-10 cursor-pointer"
+                        className="w-full bg-transparent text-2xl font-black text-center outline-none text-slate-800 appearance-none tracking-tight relative z-10 cursor-pointer"
                       />
                    </label>
                    
                    <ArrowRight className="w-5 h-5 text-slate-300" />
                    
-                   {/* 終了 (labelに変更し、クリアボタンの挙動修正) */}
+                   {/* 終了 (font-monoを削除) */}
                    <label className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all cursor-pointer">
                       <span className="text-[10px] font-bold text-slate-400 block text-center mb-1 pointer-events-none">終了</span>
                       <input 
                         type="time" 
                         value={formData.endTime} 
                         onChange={(e)=>setFormData({...formData, endTime:e.target.value})} 
-                        className={`w-full bg-transparent text-2xl font-black text-center outline-none appearance-none font-mono tracking-tight relative z-10 cursor-pointer ${!formData.endTime ? 'text-slate-300' : 'text-slate-800'}`}
+                        className={`w-full bg-transparent text-2xl font-black text-center outline-none appearance-none tracking-tight relative z-10 cursor-pointer ${!formData.endTime ? 'text-slate-300' : 'text-slate-800'}`}
                       />
                       {formData.endTime && (
                         <button 
