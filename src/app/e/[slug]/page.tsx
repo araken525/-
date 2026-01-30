@@ -5,9 +5,11 @@ import EventHeader from "@/components/EventHeader";
 import ScheduleItemCard from "@/components/ScheduleItemCard";
 import RealtimeListener from "@/components/RealtimeListener";
 import AutoRefresh from "@/components/AutoRefresh";
-import { StaffFilter, MaterialsAccordion } from "@/components/EventPageClient";
+import { MaterialsAccordion } from "@/components/EventPageClient";
+// ▼ 作成したフローティングフィルターを読み込み
+import FloatingFilter from "@/components/FloatingFilter";
 import Link from "next/link";
-import { MapPin, Calendar, Clock, Filter, X, Sparkles, ArrowRight, Link2 } from "lucide-react";
+import { MapPin, Calendar, Clock, Sparkles, ArrowRight } from "lucide-react";
 
 /* === ヘルパー関数 === */
 function hhmm(time: string) { return String(time).slice(0, 5); }
@@ -54,30 +56,6 @@ function getTargetColor(t: string) {
   return "bg-cyan-50 text-[#00c2e8]";
 }
 
-// アイコン・ラベル判定 (ホバーはPC限定・青テーマ)
-function getMaterialInfo(url: string) {
-  const u = url.toLowerCase();
-  const style = { 
-    color: "text-[#00c2e8]", 
-    bg: "bg-cyan-50 sm:hover:bg-[#00c2e8] sm:hover:text-white transition-colors" 
-  };
-  const { Youtube, Video, FileText, Image: ImageIcon, Link2 } = require("lucide-react");
-
-  if (u.includes("youtube") || u.includes("youtu.be")) {
-    return { icon: Youtube, ...style, label: "YouTube" };
-  }
-  if (u.endsWith(".mp4") || u.endsWith(".mov") || u.includes("vimeo")) {
-    return { icon: Video, ...style, label: "Video" };
-  }
-  if (u.endsWith(".pdf")) {
-    return { icon: FileText, ...style, label: "PDF" };
-  }
-  if (u.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
-    return { icon: ImageIcon, ...style, label: "Image" };
-  }
-  return { icon: Link2, ...style, label: "Link" };
-}
-
 function groupByStartTime(items: any[]) {
   const map = new Map<string, any[]>();
   for (const item of items) {
@@ -88,11 +66,9 @@ function groupByStartTime(items: any[]) {
   return Array.from(map.entries()).map(([time, items]) => ({ time, items: items.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)) }));
 }
 
-// ★修正: 日付の一致もチェックするように変更 (eventDate: YYYY-MM-DD)
 function isNow(start: string, end: string | null, eventDate: string) {
   if (!end || !eventDate) return false;
 
-  // 1. 日本時間(JST)で「今日の日付」と「今の時間(分)」を取得
   const now = new Date();
   const jstNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
   
@@ -101,10 +77,8 @@ function isNow(start: string, end: string | null, eventDate: string) {
   const d = String(jstNow.getDate()).padStart(2, "0");
   const todayYMD = `${y}-${m}-${d}`;
 
-  // 2. 日付がイベント当日でなければ false
   if (todayYMD !== eventDate) return false;
 
-  // 3. 時間の判定 (分単位)
   const currentMinutes = jstNow.getHours() * 60 + jstNow.getMinutes();
   const [sh, sm] = start.slice(0, 5).split(":").map(Number);
   const startMinutes = sh * 60 + sm;
@@ -112,15 +86,6 @@ function isNow(start: string, end: string | null, eventDate: string) {
   const endMinutes = eh * 60 + em;
 
   return currentMinutes >= startMinutes && currentMinutes < endMinutes;
-}
-
-function toggleTag(currentTags: string[], tag: string): string {
-  const newTags = currentTags.includes(tag)
-    ? currentTags.filter((t) => t !== tag) 
-    : [...currentTags, tag]; 
-  
-  if (newTags.length === 0) return "";
-  return newTags.join(",");
 }
 
 /* === メインコンポーネント === */
@@ -194,9 +159,16 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         emergencyContacts={emergencyContacts}
       />
       
-      {/* リアルタイム更新 & 1分自動更新 */}
       <RealtimeListener eventId={event.id} />
       <AutoRefresh />
+
+      {/* ★追加: フローティングフィルター */}
+      <FloatingFilter 
+        slug={slug}
+        tags={dynamicTabs}
+        assignees={dynamicAssignees}
+        selectedTags={selectedTags}
+      />
 
       <div className="pt-24 px-4 md:px-8 w-full max-w-lg md:max-w-7xl mx-auto space-y-6">
         
@@ -223,58 +195,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
            </div>
         </section>
 
-        {/* フィルターバー */}
-        <section className="bg-white rounded-[1.5rem] p-3 shadow-sm sticky top-16 z-20 transition-all flex items-center justify-between">
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1">
-            <div className="pl-1 pr-2 flex items-center shrink-0">
-              <Filter className="w-4 h-4 text-slate-300 mr-1" />
-              <span className="text-xs font-black text-slate-300">表示切替</span>
-            </div>
-            
-            <Link
-              href={`/e/${slug}`}
-              scroll={false}
-              className={`
-                shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-colors select-none active:scale-95
-                ${selectedTags.length === 0 ? "bg-[#00c2e8] text-white" : "bg-slate-50 text-slate-500"}
-              `}
-            >
-              すべて
-            </Link>
-
-            {dynamicTabs.map((tag) => {
-              const isActive = selectedTags.includes(tag);
-              const nextUrl = toggleTag(selectedTags, tag);
-              const href = nextUrl ? `/e/${slug}?t=${encodeURIComponent(nextUrl)}` : `/e/${slug}`;
-              return (
-                <Link
-                  key={tag}
-                  href={href}
-                  scroll={false}
-                  className={`
-                    shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-colors select-none active:scale-95
-                    ${isActive ? "bg-[#00c2e8] text-white" : "bg-slate-50 text-slate-500"}
-                  `}
-                >
-                  {tag}
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* スタッフフィルター */}
-          {dynamicAssignees.length > 0 && (
-             <StaffFilter assignees={dynamicAssignees} slug={slug} />
-          )}
-
-          {selectedTags.length > 0 && (
-              <div className="pl-2 ml-2 border-l border-slate-100 shrink-0">
-                <Link href={`/e/${slug}`} scroll={false} className="flex items-center text-xs font-bold text-slate-400 bg-slate-50 px-3 py-2 rounded-xl active:scale-95 active:bg-slate-100 transition-all">
-                   <X className="w-3.5 h-3.5 mr-1" /> クリア
-                </Link>
-              </div>
-          )}
-        </section>
+        {/* 以前のフィルターバー(<section>)はここにありましたが削除しました */}
 
         {/* 資料アコーディオン */}
         {hasMaterials && (
@@ -308,7 +229,6 @@ export default async function Page({ params, searchParams }: { params: Promise<{
 
                 <div className={`grid gap-4 md:gap-6 ${gridClass}`}>
                   {group.items.map((it: any) => {
-                    // ★修正: ここでイベント日付も渡す
                     const now = isNow(it.start_time, it.end_time, event.date);
                     const emoji = it.emoji || detectEmoji(it.title);
                     const duration = getDuration(it.start_time, it.end_time);
