@@ -28,7 +28,7 @@ function getDuration(start: string, end: string | null) {
   const startMin = sh * 60 + sm;
   const endMin = eh * 60 + em;
   let diff = endMin - startMin;
-  if (diff < 0) diff += 24 * 60; // 日またぎ対応(簡易)
+  if (diff < 0) diff += 24 * 60; // 日またぎ対応
   
   if (diff === 0) return null;
   if (diff >= 60) {
@@ -57,9 +57,9 @@ export default function PrintPage({ params }: { params: Promise<{ slug: string }
   
   // フィルタリング用State
   const [allTags, setAllTags] = useState<string[]>([]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]); // 空配列 = 全表示
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   
-  // ★表示オプション (トグル)
+  // 表示オプション (トグル)
   const [showOptions, setShowOptions] = useState({
     timeInfo: true,   // 終了時刻・所要時間
     location: true,   // 場所
@@ -147,7 +147,7 @@ export default function PrintPage({ params }: { params: Promise<{ slug: string }
                <button onClick={() => setIsFilterOpen(false)}><X className="w-4 h-4 text-slate-400 hover:text-slate-600"/></button>
              </div>
              
-             {/* 1. 表示オプション (トグル) */}
+             {/* 1. 表示オプション */}
              <div className="mb-5 space-y-2">
                <div className="text-[10px] font-bold text-slate-400 mb-1">表示する項目</div>
                <div className="grid grid-cols-2 gap-2">
@@ -250,10 +250,12 @@ export default function PrintPage({ params }: { params: Promise<{ slug: string }
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="border-b-2 border-slate-900">
-                <th className="py-4 pl-2 w-28 font-black text-sm text-slate-900">TIME</th>
-                <th className="py-4 px-6 font-black text-sm text-slate-900">CONTENT</th>
-                {(showOptions.tags || showOptions.assignee || showOptions.note) && (
-                  <th className="py-4 px-4 w-1/3 font-black text-sm text-slate-900">DETAILS</th>
+                {/* 1. 日本語見出しに変更 */}
+                <th className="py-4 pl-2 w-28 font-black text-sm text-slate-900">時間</th>
+                <th className="py-4 px-6 font-black text-sm text-slate-900">内容</th>
+                {/* 3列目は担当者かタグがある場合のみ表示 */}
+                {(showOptions.tags || showOptions.assignee) && (
+                  <th className="py-4 px-4 w-48 font-black text-sm text-slate-900">担当・タグ</th>
                 )}
               </tr>
             </thead>
@@ -297,7 +299,7 @@ export default function PrintPage({ params }: { params: Promise<{ slug: string }
                               </div>
                             )}
 
-                            {/* 所要時間 (オプション・場所の下/横に配置) */}
+                            {/* 所要時間 (オプション) */}
                             {showOptions.timeInfo && duration && (
                               <div className="flex items-center gap-1.5 text-sm font-bold text-slate-500">
                                 <Clock className="w-4 h-4 text-slate-400 shrink-0" />
@@ -305,22 +307,22 @@ export default function PrintPage({ params }: { params: Promise<{ slug: string }
                               </div>
                             )}
                           </div>
+
+                          {/* 2. メモをここに移動 (オプション) */}
+                          {showOptions.note && item.note && (
+                            <div className="mt-2 flex items-start gap-2 text-sm font-medium text-slate-700 leading-relaxed pl-1">
+                              <StickyNote className="w-4 h-4 text-slate-400 shrink-0 mt-1" />
+                              <span className="whitespace-pre-wrap">{item.note}</span>
+                            </div>
+                          )}
                        </div>
                      </td>
 
-                     {/* 3. 詳細カラム (表示項目がある場合のみ) */}
-                     {(showOptions.tags || showOptions.assignee || showOptions.note) && (
+                     {/* 3. 担当・タグカラム (表示項目がある場合のみ) */}
+                     {(showOptions.tags || showOptions.assignee) && (
                        <td className="py-5 px-4 align-top">
                          <div className="flex flex-col gap-3">
                            
-                           {/* メモ (オプション: アイコン+テキストのみ) */}
-                           {showOptions.note && item.note && (
-                              <div className="flex items-start gap-2 text-sm font-medium text-slate-700 leading-relaxed">
-                                <StickyNote className="w-4 h-4 text-slate-400 shrink-0 mt-1" />
-                                <span className="whitespace-pre-wrap">{item.note}</span>
-                              </div>
-                           )}
-
                            {/* タグ (オプション) */}
                            {showOptions.tags && tags.length > 0 && (
                              <div className="flex flex-wrap gap-1.5">
