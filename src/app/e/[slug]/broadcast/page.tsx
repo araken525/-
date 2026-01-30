@@ -28,9 +28,10 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
   // 初期ロード
   useEffect(() => {
     const checkAuth = async () => {
+      // パスワード以外の情報を取得（パスワードは取得できなくてもエラーにしない）
       const { data: event, error } = await supabase
         .from("events")
-        .select("*") 
+        .select("id, title, announcement, password") // passwordを一応指定するが、取れなくてもOK
         .eq("slug", slug)
         .single();
 
@@ -43,34 +44,51 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
       setEventData(event);
       setInputMessage(event.announcement || "");
       
-      // 自動ログイン試行
+      // 自動ログイン試行 (ローカルストレージに保存されたパスワードを使ってDBに問い合わせる)
       const savedPass = localStorage.getItem(`admin-pass-${slug}`);
-      if (savedPass && savedPass === event.password) {
-        setIsAuthenticated(true);
+      if (savedPass) {
+        // DBに直接問い合わせる
+        const { data } = await supabase
+          .from("events")
+          .select("id")
+          .eq("slug", slug)
+          .eq("password", savedPass)
+          .maybeSingle();
+          
+        if (data) {
+          setIsAuthenticated(true);
+        }
       }
       setLoading(false);
     };
     checkAuth();
   }, [slug, router]);
 
-  // ログイン判定 (全角→半角変換、スペース削除)
-  const handleLogin = (e: React.FormEvent) => {
+  // ★修正: DBへの問い合わせ方式に変更
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
-    if (!eventData || !eventData.password) {
-      setErrorMsg("イベントデータの読み込みに失敗しました");
-      return;
-    }
-
+    // 1. 入力されたパスワードを半角に変換してスペース削除
     const cleanInput = toHalfWidth(password).trim();
-    const cleanStored = toHalfWidth(eventData.password).trim();
+    
+    // 2. そのままの入力と、半角変換した入力の両方でトライしてみる（念の為）
+    // DBに「このパスワードを持つイベントはある？」と聞く
+    const { data, error } = await supabase
+      .from("events")
+      .select("id, password")
+      .eq("slug", slug)
+      .in("password", [password.trim(), cleanInput]) // 生の入力 or 半角変換後
+      .maybeSingle();
 
-    if (cleanInput === cleanStored) {
+    if (data) {
+      // ログイン成功！
       setIsAuthenticated(true);
-      localStorage.setItem(`admin-pass-${slug}`, eventData.password);
+      // 正解だった方のパスワードを保存
+      localStorage.setItem(`admin-pass-${slug}`, data.password);
       setErrorMsg("");
     } else {
+      console.error("Login failed", error);
       setErrorMsg("パスワードが違います");
     }
   };
@@ -130,7 +148,7 @@ export default function BroadcastPage({ params }: { params: Promise<{ slug: stri
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-              {/* ★ここを変更: type="password" -> "text" */}
+              {/* type="text" にして入力内容が見えるようにしています */}
               <input 
                 type="text" 
                 value={password}
