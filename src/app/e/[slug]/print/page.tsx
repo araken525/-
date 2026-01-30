@@ -125,7 +125,7 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
               </tr>
             </thead>
             <tbody>
-              {filtered.map((item, index) => {
+              {filtered.map((item) => {
                  // タグの配列化
                  const tags = item.target && item.target !== "all" && item.target !== "全員"
                     ? item.target.split(",").map((t: string) => t.trim()) 
@@ -140,20 +140,18 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
                    <tr key={item.id} className="border-b border-slate-200 page-break group odd:bg-white even:bg-slate-50/50">
                      
                      {/* 1. 時間カラム */}
-                     <tr className="py-4 pl-2 align-top">
-                       <td className="py-4 pl-2 align-top">
-                         <div className="text-lg font-black font-mono tracking-tighter leading-none text-slate-900">
-                           {hhmm(item.start_time)}
+                     <td className="py-4 pl-2 align-top">
+                       <div className="text-lg font-black font-mono tracking-tighter leading-none text-slate-900">
+                         {hhmm(item.start_time)}
+                       </div>
+                       {item.end_time && (
+                         <div className="text-xs font-bold font-mono text-slate-400 mt-1 flex items-center gap-1">
+                           <span className="opacity-50">~</span>{hhmm(item.end_time)}
                          </div>
-                         {item.end_time && (
-                           <div className="text-xs font-bold font-mono text-slate-400 mt-1 flex items-center gap-1">
-                             <span className="opacity-50">~</span>{hhmm(item.end_time)}
-                           </div>
-                         )}
-                       </td>
-                     </tr>
+                       )}
+                     </td>
 
-                     {/* 2. 内容カラム (iPhone絵文字なし、アイコン統一) */}
+                     {/* 2. 内容カラム */}
                      <td className="py-4 px-4 align-top">
                        <div className="flex items-start gap-3">
                          {/* 統一アイコン */}
@@ -182,14 +180,14 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
                        </div>
                      </td>
 
-                     {/* 3. 詳細・担当カラム (タグは繋げずバッジ表示) */}
+                     {/* 3. 詳細・担当カラム */}
                      <td className="py-4 px-2 align-top">
                        <div className="flex flex-col gap-3">
                          
                          {/* タグ (個別の四角いバッジ) */}
                          {tags.length > 0 && (
                            <div className="flex flex-wrap gap-1">
-                             {tags.map(t => (
+                             {tags.map((t: string) => (
                                <span key={t} className="px-2 py-0.5 rounded border border-slate-300 bg-white text-[10px] font-bold text-slate-600">
                                  {t}
                                </span>
