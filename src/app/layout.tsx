@@ -56,6 +56,8 @@ export const metadata: Metadata = {
   },
 };
 
+// ... (上のimportなどはそのまま)
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -63,11 +65,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      {/* variable をクラス名に追加することで、
-         Tailwindの font-sans がこのフォントを参照するようになります 
+      {/* 修正ポイント: 
+        tracking-normal を追加して、文字間隔を標準に戻します。
+        (お好みで leading-relaxed を足すと行間も少し広がり、より読みやすくなります)
       */}
       <body
-        className={`${notoSansJP.variable} antialiased bg-slate-50 text-slate-900 font-sans`}
+        className={`${notoSansJP.variable} antialiased bg-slate-50 text-slate-900 font-sans tracking-normal`}
       >
         {children}
       </body>
