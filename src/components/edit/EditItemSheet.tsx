@@ -47,6 +47,10 @@ export default function EditItemSheet({
   const [newTagInput, setNewTagInput] = useState("");
   const [newAssigneeInput, setNewAssigneeInput] = useState("");
 
+  // ★修正1: このセッションで追加された一時的なタグ・担当者を保持するStateを追加
+  const [localTags, setLocalTags] = useState<string[]>([]);
+  const [localAssignees, setLocalAssignees] = useState<string[]>([]);
+
   // アクションメニュー用ステート
   const [actionMenu, setActionMenu] = useState<{ type: 'tag' | 'assignee', name: string } | null>(null);
 
@@ -75,6 +79,10 @@ export default function EditItemSheet({
       }
       setNewTagInput("");
       setNewAssigneeInput("");
+      // ★修正1: モーダルを開くたびに一時リストをリセット
+      setLocalTags([]);
+      setLocalAssignees([]);
+      
       setIsSortOpen(false);
       setIsMaterialsOpen(false);
       setIsTagEditMode(false);
@@ -280,11 +288,13 @@ export default function EditItemSheet({
     setTimeout(() => setStatus(""), 2000);
   }
 
+  // ★修正1: 表示用タグリストに localTags を含める
   const currentSelectedTags = formData.target ? formData.target.split(",").map(t => t.trim()).filter(Boolean) : [];
-  const displayTags = Array.from(new Set([...recentTags, ...currentSelectedTags])).filter(t => t !== "全員");
+  const displayTags = Array.from(new Set([...recentTags, ...currentSelectedTags, ...localTags])).filter(t => t !== "全員");
 
+  // ★修正1: 表示用担当者リストに localAssignees を含める
   const currentAssignees = formData.assignee ? formData.assignee.split(",").map(t => t.trim()).filter(Boolean) : [];
-  const displayAssignees = Array.from(new Set([...recentAssignees, ...currentAssignees]));
+  const displayAssignees = Array.from(new Set([...recentAssignees, ...currentAssignees, ...localAssignees]));
 
 
   // --- UI構成 ---
@@ -326,27 +336,27 @@ export default function EditItemSheet({
                 </div>
 
                 <div className="flex items-center gap-2">
-                   {/* 開始 (font-monoを削除) */}
-                   <label className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all cursor-pointer">
+                   {/* ★修正2: 開始 - flex-col items-center を追加し、inputの w-full を w-auto に変更 */}
+                   <label className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all cursor-pointer flex flex-col items-center justify-center">
                       <span className="text-[10px] font-bold text-slate-400 block text-center mb-1 pointer-events-none">開始</span>
                       <input 
                         type="time" 
                         value={formData.startTime} 
                         onChange={(e)=>setFormData({...formData, startTime:e.target.value})} 
-                        className="w-full bg-transparent text-2xl font-black text-center outline-none text-slate-800 appearance-none tracking-tight relative z-10 cursor-pointer"
+                        className="w-auto min-w-[100px] bg-transparent text-2xl font-black text-center outline-none text-slate-800 appearance-none tracking-tight relative z-10 cursor-pointer"
                       />
                    </label>
                    
                    <ArrowRight className="w-5 h-5 text-slate-300" />
                    
-                   {/* 終了 (font-monoを削除) */}
-                   <label className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all cursor-pointer">
+                   {/* ★修正2: 終了 - flex-col items-center を追加し、inputの w-full を w-auto に変更 */}
+                   <label className="flex-1 bg-white rounded-2xl p-2 border border-slate-100 shadow-sm relative group focus-within:ring-2 focus-within:ring-cyan-100 transition-all cursor-pointer flex flex-col items-center justify-center">
                       <span className="text-[10px] font-bold text-slate-400 block text-center mb-1 pointer-events-none">終了</span>
                       <input 
                         type="time" 
                         value={formData.endTime} 
                         onChange={(e)=>setFormData({...formData, endTime:e.target.value})} 
-                        className={`w-full bg-transparent text-2xl font-black text-center outline-none appearance-none tracking-tight relative z-10 cursor-pointer ${!formData.endTime ? 'text-slate-300' : 'text-slate-800'}`}
+                        className={`w-auto min-w-[100px] bg-transparent text-2xl font-black text-center outline-none appearance-none tracking-tight relative z-10 cursor-pointer ${!formData.endTime ? 'text-slate-300' : 'text-slate-800'}`}
                       />
                       {formData.endTime && (
                         <button 
@@ -424,16 +434,32 @@ export default function EditItemSheet({
                       <div className="flex gap-2">
                          <div className="flex-1 h-12 bg-slate-50 rounded-xl flex items-center px-3 border border-slate-100 focus-within:ring-2 focus-within:ring-cyan-100 transition-all">
                             <Plus className="w-4 h-4 text-slate-300 mr-2 shrink-0" />
+                            {/* ★修正1: タグ入力時の localTags 追加処理 */}
                             <input 
                               type="text" 
                               value={newTagInput} 
                               onChange={(e)=>setNewTagInput(e.target.value)} 
-                              onKeyDown={(e) => { if (e.key === 'Enter' && newTagInput.trim()) { handleTagClick(newTagInput.trim()); setNewTagInput(""); } }}
+                              onKeyDown={(e) => { 
+                                if (e.key === 'Enter' && newTagInput.trim()) { 
+                                  const val = newTagInput.trim();
+                                  handleTagClick(val); 
+                                  setLocalTags(prev => [...prev, val]); 
+                                  setNewTagInput(""); 
+                                } 
+                              }}
                               placeholder="新しいタグ..." 
                               className="flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-slate-300 min-w-0"
                             />
                          </div>
-                         <button onClick={() => {if(newTagInput.trim()){ handleTagClick(newTagInput.trim()); setNewTagInput("") }}} disabled={!newTagInput.trim()} className="h-12 px-4 bg-slate-800 text-white rounded-xl text-xs font-bold disabled:opacity-30 active:scale-95 transition-all shrink-0">追加</button>
+                         {/* ★修正1: ボタンクリック時の localTags 追加処理 */}
+                         <button onClick={() => {
+                            const val = newTagInput.trim();
+                            if(val){ 
+                              handleTagClick(val); 
+                              setLocalTags(prev => [...prev, val]);
+                              setNewTagInput("") 
+                            }
+                         }} disabled={!newTagInput.trim()} className="h-12 px-4 bg-slate-800 text-white rounded-xl text-xs font-bold disabled:opacity-30 active:scale-95 transition-all shrink-0">追加</button>
                       </div>
                    )}
                 </div>
@@ -475,16 +501,32 @@ export default function EditItemSheet({
                      <div className="flex gap-2">
                         <div className="flex-1 h-12 bg-slate-50 rounded-xl flex items-center px-3 border border-slate-100 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
                            <Plus className="w-4 h-4 text-slate-300 mr-2 shrink-0" />
+                           {/* ★修正1: 担当者入力時の localAssignees 追加処理 */}
                            <input 
                              type="text" 
                              value={newAssigneeInput} 
                              onChange={(e)=>setNewAssigneeInput(e.target.value)} 
-                             onKeyDown={(e) => { if (e.key === 'Enter' && newAssigneeInput.trim()) { handleAssigneeClick(newAssigneeInput.trim()); setNewAssigneeInput(""); } }}
+                             onKeyDown={(e) => { 
+                               if (e.key === 'Enter' && newAssigneeInput.trim()) { 
+                                 const val = newAssigneeInput.trim();
+                                 handleAssigneeClick(val); 
+                                 setLocalAssignees(prev => [...prev, val]);
+                                 setNewAssigneeInput(""); 
+                               } 
+                             }}
                              placeholder="担当者名 (例: 田中)" 
                              className="flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-slate-300 min-w-0"
                            />
                         </div>
-                        <button onClick={() => {if(newAssigneeInput.trim()){ handleAssigneeClick(newAssigneeInput.trim()); setNewAssigneeInput("") }}} disabled={!newAssigneeInput.trim()} className="h-12 px-4 bg-indigo-500 text-white rounded-xl text-xs font-bold disabled:opacity-30 active:scale-95 transition-all shrink-0">追加</button>
+                        {/* ★修正1: ボタンクリック時の localAssignees 追加処理 */}
+                        <button onClick={() => {
+                           const val = newAssigneeInput.trim();
+                           if(val){ 
+                             handleAssigneeClick(val); 
+                             setLocalAssignees(prev => [...prev, val]);
+                             setNewAssigneeInput("") 
+                           }
+                        }} disabled={!newAssigneeInput.trim()} className="h-12 px-4 bg-indigo-500 text-white rounded-xl text-xs font-bold disabled:opacity-30 active:scale-95 transition-all shrink-0">追加</button>
                      </div>
                    )}
                 </div>
