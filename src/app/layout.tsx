@@ -1,15 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_JP } from "next/font/google";
+// ★変更: 定番の「Inter」と「Noto Sans JP」の2つを読み込みます
+import { Inter, Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 
-// ★ここがミソ：Tailwindが探している変数名「--font-geist-sans」に
-// Noto Sans JP を割り当てることで、設定変更なしで強制適用させます。
+// 1. 英語・数字用 (世界で一番使われている標準フォント)
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+// 2. 日本語用 (クセがなく読みやすい定番フォント)
 const notoSansJP = Noto_Sans_JP({
   subsets: ["latin"],
   weight: ["400", "500", "700", "900"],
-  preload: true,
+  variable: "--font-noto-sans-jp",
   display: "swap",
-  variable: "--font-geist-sans", // ← 変数名をあえて既存のものに合わせる
 });
 
 export const viewport: Viewport = {
@@ -56,8 +62,6 @@ export const metadata: Metadata = {
   },
 };
 
-// ... (上のimportなどはそのまま)
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -65,12 +69,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      {/* 修正ポイント: 
-        tracking-normal を追加して、文字間隔を標準に戻します。
-        (お好みで leading-relaxed を足すと行間も少し広がり、より読みやすくなります)
-      */}
       <body
-        className={`${notoSansJP.variable} antialiased bg-slate-50 text-slate-900 font-sans tracking-normal`}
+        className={`${inter.variable} ${notoSansJP.variable} antialiased bg-slate-50 text-slate-900 tracking-normal`}
+        // ★ここがポイント: 英数字はInter、日本語はNoto、それ以外はシステムフォントという優先順位を強制指定します
+        style={{ fontFamily: "var(--font-inter), var(--font-noto-sans-jp), sans-serif" }}
       >
         {children}
       </body>
