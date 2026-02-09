@@ -27,25 +27,29 @@ export default function FloatingFilter({ slug, tags, assignees, selectedTags }: 
 
   return (
     <>
-      {/* ★修正: fixed配置を削除し、w-14 h-14 だけ残す */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className={`
-          w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all active:scale-90 relative
-          ${isActive 
-            ? "bg-[#00c2e8] text-white shadow-cyan-200/50" 
-            : "bg-white text-slate-500 shadow-slate-200/50"}
-        `}
-      >
-        <Filter className="w-6 h-6" />
+      {/* トリガーボタン */}
+      <div className="relative z-10">
+        <button
+          onClick={() => setIsOpen(true)}
+          className={`
+            w-14 h-14 bg-white rounded-full shadow-xl flex items-center justify-center transition-all active:scale-90 border border-slate-50
+            ${isActive 
+              ? "text-[#00c2e8] shadow-cyan-100/50" // 選択中: アイコンだけ水色
+              : "text-slate-600 shadow-slate-200/50"} // 通常: グレー
+          `}
+        >
+          <Filter className="w-6 h-6" />
+        </button>
+
+        {/* バッジ（資料ボタンとデザイン統一・色は水色） */}
         {isActive && (
-          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white">
+          <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-[#00c2e8] text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-sm border-2 border-white pointer-events-none animate-in zoom-in duration-300">
             {selectedTags.length}
           </span>
         )}
-      </button>
+      </div>
 
-      {/* メニュー (ポータル的に画面全体に広がるのでfixedでOK) */}
+      {/* メニュー */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none">
           <div 
